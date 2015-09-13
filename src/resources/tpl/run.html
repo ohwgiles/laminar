@@ -1,0 +1,13 @@
+<div class="container-fluid">
+<div class="row">
+<div class="col-xs-12">
+ <dl class="dl-horizontal">
+  <dt style="vertical-align:bottom;"></dt><dd><h3><span ng-bind-html="runIcon(job.result)"></span> {{name}} #{{num}}</h3></dd>
+  <dt><a class="btn btn-default" href="jobs/{{name}}">&lt; Job</a></dt><dd><a class="btn btn-default" href="jobs/{{name}}/{{num}}/log">Log output</a></dd>
+  <dt></dt><dd>&nbsp;</dd>
+  <dt>Reason</dt><dd>{{job.reason}}</dd>
+  <dt>Started</dt><dd>{{job.when}}</dd>
+ </dl>
+</div>
+</div>
+</div>

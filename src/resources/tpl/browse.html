@@ -1,0 +1,16 @@
+<div class="container-fluid">
+<div class="row">
+<div class="col-xs-12">
+ <h3>Browse jobs</h3>
+ <div class="form-inline form-group">
+  <label for="jobFilter">Filter</label>
+  <input id="jobFilter" ng-model="search.name">
+ </div>
+ <table class="table table-bordered">
+  <tr class="animate-repeat" ng-repeat="job in jobs | filter:search:strict">
+   <td><a href="jobs/{{job.name}}">{{job.name}}</a></td>
+  </tr>
+ </table>
+</div>
+</div>
+</div>

@@ -1,0 +1,22 @@
+<div class="container-fluid">
+<div class="row">
+<div class="col-xs-12">
+ <h3>{{name}}</h3>
+ <table class="table table-bordered">
+  <tr class="animate-repeat" ng-repeat="job in jobsQueued track by $index">
+   <td><i>queued</i></td>
+  </tr>
+  <tr class="animate-repeat" ng-repeat="job in jobsRunning track by $index">
+   <td><a href="jobs/{{job.name}}/{{job.number}}">#{{job.number}}</a> progressbar?</td>
+  </tr>
+  <tr class="animate-repeat" ng-repeat="job in jobsRecent track by $index">
+   <td><span ng-bind-html="runIcon(job.result)"></span> <a href="jobs/{{job.name}}/{{job.number}}">#{{job.number}}</a></td>
+  </tr>
+ </table>
+</div>
+<div class="col-sm-7 col-md-8 col-lg-9">
+ 
+</div>
+</div>
+</div>
+

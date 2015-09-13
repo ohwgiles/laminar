@@ -1,0 +1,45 @@
+<!doctype html>
+<html ng-app="laminar">
+<head>
+ <base href="/">
+ <meta charset="utf-8">
+ <meta http-equiv="X-UA-Compatible" content="IE=edge">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <title>Laminar</title>
+ <script src="/js/angular.min.js"></script>
+ <script src="/js/angular-route.min.js"></script>
+ <script src="/js/angular-sanitize.min.js"></script>
+ <script src="/js/ansi_up.js" type="text/javascript"></script>
+ <script src="/js/Chart.min.js"></script>
+ <script src="/js/Chart.HorizontalBar.js"></script>
+ <link href="/css/bootstrap.min.css" rel="stylesheet">
+ <script src="/js/app.js"></script>
+ <style>
+  body, html { height: 100%; }
+  .navbar { margin-bottom: 0;  }
+  .navbar-brand { padding: 13px 15px; font-family: 'Cantarell';}
+  .navbar-inverse { border: 0; }
+  canvas {
+   width: 100% !important;
+   max-width: 800px;
+   height: auto !important;
+  }
+  .progress {
+   height: 10px;
+   margin-bottom: 0;
+  }
+ </style>
+</head>
+<body>
+ <nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">laminar</a>
+   <ul class="nav navbar-nav">
+    <li ng-class="{active:active('/')}"><a href="/jobs">Jobs</a></li>
+   </ul>
+  </div>
+ </nav>
+ <div ng-view></div>
+</body>
+</html>
+
