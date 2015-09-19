@@ -299,9 +299,9 @@ bool Laminar::loadConfiguration() {
     if(nm.empty()) {
         // add a default node
         Node node;
-        node.name = "default";
+        node.name = "";
         node.numExecutors = 6;
-        nm.emplace("default", std::move(node));
+        nm.emplace("", std::move(node));
     }
 
     nodes = nm;
