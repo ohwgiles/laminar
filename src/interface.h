@@ -107,6 +107,11 @@ struct LaminarInterface {
     // arbitrary parameters on a run (usually itself) to be available in
     // the environment of subsequent scripts.
     virtual bool setParam(std::string job, int buildNum, std::string param, std::string value) = 0;
+
+    // Fetches the content of an artifact given its filename relative to
+    // $LAMINAR_HOME/archive. This shouldn't be used, because the sysadmin
+    // should have configured a real webserver to serve these things.
+    virtual bool getArtefact(std::string path, std::string& result) = 0;
 };
 
 #endif // INTERFACE_H

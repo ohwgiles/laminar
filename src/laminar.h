@@ -53,6 +53,7 @@ public:
     void deregisterClient(LaminarClient* client) override;
     void sendStatus(LaminarClient* client) override;
     bool setParam(std::string job, int buildNum, std::string param, std::string value) override;
+    bool getArtefact(std::string path, std::string& result) override;
 
 private:
     bool loadConfiguration();
@@ -85,6 +86,7 @@ private:
     std::string homeDir;
     std::set<LaminarClient*> clients;
     bool eraseWorkdir;
+    std::string archiveUrl;
 };
 
 #endif // _LAMINAR_LAMINAR_H_

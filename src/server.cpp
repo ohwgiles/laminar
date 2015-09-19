@@ -168,7 +168,17 @@ public:
         wss.set_http_handler([this](websocketpp::connection_hdl hdl){
             websocket::connection_ptr c = wss.get_con_from_hdl(hdl);
             const char* start, *end;
-            if(resources.handleRequest(c->get_resource(), &start, &end)) {
+            std::string resource = c->get_resource();
+            if(resource.compare(0, strlen("/archive/"), "/archive/") == 0) {
+                std::string file(resource.substr(strlen("/archive/")));
+                std::string content;
+                if(laminar.getArtefact(file, content)) {
+                    c->set_status(websocketpp::http::status_code::ok);
+                    c->set_body(content);
+                } else {
+                    c->set_status(websocketpp::http::status_code::not_found);
+                }
+            } else if(resources.handleRequest(resource, &start, &end)) {
                 c->set_status(websocketpp::http::status_code::ok);
                 c->append_header("Content-Encoding", "gzip");
                 c->set_body(std::string(start, end));

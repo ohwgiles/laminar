@@ -7,6 +7,7 @@
   <dt></dt><dd>&nbsp;</dd>
   <dt>Reason</dt><dd>{{job.reason}}</dd>
   <dt>Started</dt><dd>{{job.when}}</dd>
+  <dt>Artifacts</dt><dd><ul><li ng-repeat="art in job.artifacts"><a href="{{art.url}}" target="_self">{{art.filename}}</a></li></ul></dd>
  </dl>
 </div>
 </div>

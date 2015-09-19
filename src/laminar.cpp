@@ -21,6 +21,7 @@
 #include "conf.h"
 
 #include <sys/wait.h>
+#include <fstream>
 #include <kj/debug.h>
 
 #include <boost/filesystem.hpp>
@@ -56,12 +57,15 @@ namespace {
 // Default values when none were supplied in $LAMINAR_CONF_FILE (/etc/laminar.conf)
 constexpr const char* INTADDR_RPC_DEFAULT = "unix:\0laminar";
 constexpr const char* INTADDR_HTTP_DEFAULT = "*:8080";
-constexpr const char* BASE_CFG_DIR = "/home/og/dev/laminar/cfg";
+constexpr const char* ARCHIVE_URL_DEFAULT = "/archive";
 }
 
 typedef std::string str;
 
 Laminar::Laminar() {
+    archiveUrl = ARCHIVE_URL_DEFAULT;
+    if(char* envArchive = getenv("LAMINAR_ARCHIVE_URL"))
+        archiveUrl = envArchive;
     eraseWorkdir = true;
     homeDir = getenv("LAMINAR_HOME") ?: "/var/lib/laminar";
 
@@ -125,6 +129,20 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("result", to_string(RunState(result)));
             j.set("reason", reason);
         });
+        j.startArray("artifacts");
+        fs::path dir(fs::path(homeDir)/"archive"/client->scope.job/std::to_string(client->scope.num));
+        fs::recursive_directory_iterator rdt(dir);
+        int prefixLen = (fs::path(homeDir)/"archive").string().length();
+        int scopeLen = dir.string().length();
+        for(fs::directory_entry e : rdt) {
+            if(!fs::is_regular_file(e))
+                continue;
+            j.StartObject();
+            j.set("url", archiveUrl + e.path().string().substr(prefixLen));
+            j.set("filename", e.path().string().substr(scopeLen+1));
+            j.EndObject();
+        }
+        j.EndArray();
         j.EndObject();
         client->sendMessage(j.str());
     } else if(client->scope.type == MonitorScope::JOB) {
@@ -555,4 +573,27 @@ void Laminar::runFinished(const Run * r) {
 
     // will delete the job
     activeJobs.get<2>().erase(r);
+}
+
+bool Laminar::getArtefact(std::string path, std::string& result) {
+    if(archiveUrl != ARCHIVE_URL_DEFAULT) {
+        // we shouldn't have got here. Probably an invalid link.
+        return false;
+    }
+    // Reads in the whole file into the given string reference.
+    // This is a terrible way to serve files (especially large ones).
+    fs::path file(fs::path(homeDir)/"archive"/path);
+    // no support for browsing archived directories
+    if(fs::is_directory(file))
+        return false;
+    std::ifstream fstr(file.string());
+    fstr.seekg(0, std::ios::end);
+    size_t sz = fstr.tellg();
+    if(fstr.rdstate() == 0) {
+        result.resize(sz);
+        fstr.seekg(0);
+        fstr.read(&result[0], sz);
+        return true;
+    }
+    return false;
 }
