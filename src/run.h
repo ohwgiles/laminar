@@ -21,6 +21,7 @@
 
 #include <string>
 #include <queue>
+#include <list>
 #include <functional>
 #include <ostream>
 #include <unordered_map>
@@ -57,6 +58,9 @@ public:
     // adds a script to the queue of scripts to be executed by this run
     void addScript(std::string script);
 
+    // adds an environment file that will be sourced before this run
+    void addEnv(std::string path);
+
     // called when a process owned by this run has been reaped. The status
     // may be used to set the run's job status
     void reaped(int status);
@@ -85,6 +89,7 @@ public:
 private:
     std::queue<std::string> scripts;
     std::string currentScript;
+    std::list<std::string> env;
 };
 
 

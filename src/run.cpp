@@ -17,7 +17,7 @@
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
 #include "run.h"
-
+#include "conf.h"
 #include <iostream>
 #include <kj/debug.h>
 
@@ -25,7 +25,6 @@
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
-
 
 std::string to_string(const RunState& rs) {
     switch(rs) {
@@ -47,8 +46,8 @@ Run::Run() {
 
 Run::~Run() {
     KJ_DBG("Run destroyed");
-    //delete log;
 }
+
 std::string Run::reason() const {
     if(!parentName.empty()) {
         return std::string("Triggered by upstream ") + parentName + " #" + std::to_string(parentBuild);
@@ -81,6 +80,13 @@ bool Run::step() {
 
             chdir(wd.c_str());
 
+            for(std::string file : env) {
+                StringMap vars = parseConfFile(file.c_str());
+                for(auto& it : vars) {
+                    setenv(it.first.c_str(), it.second.c_str(), true);
+                }
+            }
+
             setenv("PATH", PATH.c_str(), true);
             setenv("lBuildNum", buildNum.c_str(), true);
             setenv("lJobName", name.c_str(), true);
@@ -109,6 +115,9 @@ bool Run::step() {
 }
 void Run::addScript(std::string script) {
     scripts.push(script);
+}
+void Run::addEnv(std::string path) {
+    env.push_back(path);
 }
 void Run::reaped(int status) {
     procStatus = status;

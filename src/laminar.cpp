@@ -460,6 +460,14 @@ void Laminar::assignNewJobs() {
                 if(fs::exists(cfgDir/"after"))
                     run->addScript((cfgDir/"after").string());
 
+                // add environment files
+                if(fs::exists(cfgDir/"env"))
+                    run->addEnv((cfgDir/"env").string());
+                if(fs::exists(cfgDir/"nodes"/node.name/"env"))
+                    run->addEnv((cfgDir/"nodes"/node.name/"env").string());
+                if(fs::exists(cfgDir/"jobs"/run->name/"env"))
+                    run->addEnv((cfgDir/"jobs"/run->name/"env").string());
+
                 KJ_LOG(INFO, "Queued job to node", run->name, run->build, node.name);
 
                 // notify clients
