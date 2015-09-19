@@ -16,34 +16,29 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#include "laminar.h"
+#ifndef _LAMINAR_CONF_H_
+#define _LAMINAR_CONF_H_
 
-#include <signal.h>
-#include <kj/debug.h>
+#include <unordered_map>
 
-std::function<void()> sigHandler;
-static void __sigHandler(int) { sigHandler(); }
-
-int main(int argc, char** argv) {
-    for(int i = 1; i < argc; ++i) {
-        if(strcmp(argv[i], "-v") == 0) {
-            kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
-        }
+class StringMap : public std::unordered_map<std::string, std::string> {
+public:
+    template<typename T>
+    T get(std::string key, T fallback = T()) {
+        auto it = find(key);
+        return it != end() ? convert<T>(it->second) : fallback;
     }
+private:
+    template<typename T>
+    T convert(std::string e) { return e; }
+};
+template <>
+int StringMap::convert(std::string e);
 
-    do {
-        Laminar laminar;
-        sigHandler = [&](){
-            KJ_LOG(INFO, "Received SIGINT");
-            laminar.stop();
-        };
-        signal(SIGINT, &__sigHandler);
-        signal(SIGTERM, &__sigHandler);
+// Reads a file by line into a list of key/value pairs
+// separated by the first '=' character. Discards lines
+// beginning with '#'
+StringMap parseConfFile(const char* path);
 
-        laminar.run();
-    } while(false);
 
-    KJ_DBG("end of main");
-    return 0;
-}
-
+#endif // _LAMINAR_CONF_H_

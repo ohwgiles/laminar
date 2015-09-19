@@ -30,7 +30,6 @@
 typedef std::unordered_map<std::string,Node> NodeMap;
 
 struct Server;
-struct _dictionary_; // from iniparser
 
 // The main class implementing the application's business logic.
 // It owns a Server to manage the HTTP/websocket and Cap'n Proto RPC
@@ -38,7 +37,7 @@ struct _dictionary_; // from iniparser
 // the LaminarClient objects (see interface.h)
 class Laminar : public LaminarInterface {
 public:
-    Laminar(const char* configFile);
+    Laminar();
     ~Laminar();
 
     // Runs the application forever
@@ -81,7 +80,6 @@ private:
     RunSet activeJobs;
     Database* db;
     Server* srv;
-    _dictionary_* conf;
     NodeMap nodes;
     std::string homeDir;
     std::set<LaminarClient*> clients;

@@ -18,9 +18,9 @@
 ///
 #include "laminar.h"
 #include "server.h"
+#include "conf.h"
 
 #include <sys/wait.h>
-#include <iniparser.h>
 #include <kj/debug.h>
 
 #include <boost/filesystem.hpp>
@@ -61,11 +61,8 @@ constexpr const char* BASE_CFG_DIR = "/home/og/dev/laminar/cfg";
 
 typedef std::string str;
 
-Laminar::Laminar(const char* configFile) {
-    // read params from config file
-    conf = iniparser_load(configFile);
-    KJ_REQUIRE(conf != nullptr, "Could not parse", configFile);
-    homeDir = iniparser_getstring(conf, ":LAMINAR_HOME", "/var/lib/laminar");
+Laminar::Laminar() {
+    homeDir = getenv("LAMINAR_HOME") ?: "/var/lib/laminar";
 
     db = new Database((fs::path(homeDir)/"laminar.sqlite").string().c_str());
     // Prepare database for first use
@@ -253,14 +250,13 @@ void Laminar::sendStatus(LaminarClient* client) {
 }
 
 Laminar::~Laminar() {
-    iniparser_freedict(conf);
     delete db;
     delete srv;
 }
 
 void Laminar::run() {
-    const char* listen_rpc = iniparser_getstring(conf, ":LAMINAR_BIND_RPC", INTADDR_RPC_DEFAULT);
-    const char* listen_http = iniparser_getstring(conf, ":LAMINAR_BIND_HTTP", INTADDR_HTTP_DEFAULT);
+    const char* listen_rpc = getenv("LAMINAR_BIND_RPC") ?: INTADDR_RPC_DEFAULT;
+    const char* listen_http = getenv("LAMINAR_BIND_HTTP") ?: INTADDR_HTTP_DEFAULT;
 
     srv = new Server(*this, listen_rpc, listen_http);
 
@@ -275,30 +271,25 @@ void Laminar::stop() {
 bool Laminar::loadConfiguration() {
     NodeMap nm;
 
-    fs::directory_iterator dit(fs::path(homeDir)/"cfg"/"nodes");
-    for(fs::directory_entry& it : dit) {
-        if(!fs::is_directory(it.status()))
-            continue;
+    fs::path nodeCfg = fs::path(homeDir)/"cfg"/"nodes";
 
-        fs::directory_entry config(it.path()/"config");
-        if(!fs::is_regular_file(config.status()))
-            continue;
+    if(fs::is_directory(nodeCfg)) {
+        fs::directory_iterator dit(nodeCfg);
+        for(fs::directory_entry& it : dit) {
+            if(!fs::is_directory(it.status()))
+                continue;
 
-        dictionary* ini = iniparser_load(config.path().string().c_str());
-        if(!ini) {
-            KJ_LOG(ERROR, "Could not parse node config", config.path().string());
-            continue;
+            fs::directory_entry config(it.path()/"config");
+            if(!fs::is_regular_file(config.status()))
+                continue;
+
+            StringMap conf = parseConfFile(config.path().string().c_str());
+
+            Node node;
+            node.name = it.path().filename().string();
+            node.numExecutors = conf.get<int>("EXECUTORS", 6);
+            nm.emplace(node.name, std::move(node));
         }
-
-        int executors = iniparser_getint(ini, ":EXECUTORS", 6);
-
-        Node node;
-        node.name = it.path().filename().string();
-        node.numExecutors = executors;
-        nm.emplace(node.name, std::move(node));
-
-        iniparser_freedict(ini);
-
     }
 
     if(nm.empty()) {

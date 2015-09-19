@@ -16,34 +16,24 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#include "laminar.h"
+#include "conf.h"
 
-#include <signal.h>
-#include <kj/debug.h>
+#include <fstream>
 
-std::function<void()> sigHandler;
-static void __sigHandler(int) { sigHandler(); }
+template <>
+int StringMap::convert(std::string e) { return atoi(e.c_str()); }
 
-int main(int argc, char** argv) {
-    for(int i = 1; i < argc; ++i) {
-        if(strcmp(argv[i], "-v") == 0) {
-            kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
+StringMap parseConfFile(const char* path) {
+    StringMap result;
+    std::fstream f(path);
+    std::string line;
+    while(std::getline(f, line)) {
+        if(line[0] == '#')
+            continue;
+        int p = line.find('=');
+        if(p > 0) {
+            result.emplace(line.substr(0, p), line.substr(p+1));
         }
     }
-
-    do {
-        Laminar laminar;
-        sigHandler = [&](){
-            KJ_LOG(INFO, "Received SIGINT");
-            laminar.stop();
-        };
-        signal(SIGINT, &__sigHandler);
-        signal(SIGTERM, &__sigHandler);
-
-        laminar.run();
-    } while(false);
-
-    KJ_DBG("end of main");
-    return 0;
+    return result;
 }
-
