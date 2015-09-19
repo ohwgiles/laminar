@@ -89,4 +89,6 @@ target_link_libraries(laminard capnp capnp-rpc kj-async kj boost_filesystem boos
 add_executable(laminarc src/client.cpp laminar.capnp.c++)
 target_link_libraries(laminarc capnp capnp-rpc kj-async kj)
 
-
+install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
+install(FILES laminar.service DESTINATION usr/lib/systemd/system)
+install(FILES laminar.conf DESTINATION etc)

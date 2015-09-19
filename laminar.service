@@ -1,0 +1,11 @@
+[Unit]
+Description=Laminar continuous integration service
+
+[Service]
+User=laminar
+EnvironmentFile=-/etc/laminar.conf
+ExecStart=/usr/bin/laminard
+
+[Install]
+WantedBy=multi-user.target
+
