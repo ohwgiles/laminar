@@ -87,6 +87,7 @@ bool Run::step() {
             setenv("lResult", to_string(result).c_str(), true);
             setenv("lLastResult", to_string(lastResult).c_str(), true);
             setenv("lWorkspace", (fs::path(laminarHome)/"run"/name/"workspace").string().c_str(), true);
+            setenv("lArchive", (fs::path(laminarHome)/"archive"/name/buildNum.c_str()).string().c_str(), true);
             for(auto& pair : params) {
                 setenv(pair.first.c_str(), pair.second.c_str(), false);
             }

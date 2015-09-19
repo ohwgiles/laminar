@@ -432,12 +432,19 @@ void Laminar::assignNewJobs() {
                     run->lastResult = RunState(result);
                 });
 
+                // create a working directory (different to a workspace!)
                 fs::path wd = fs::path(homeDir)/"run"/run->name/std::to_string(run->build);
-                if(!fs::is_directory(wd) && !fs::create_directory(wd)) {
+                if(!fs::create_directory(wd)) {
                     KJ_LOG(ERROR, "Could not create working directory", wd.string());
                     break;
                 }
                 run->wd = wd.string();
+                // create an archive directory
+                fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(run->build);
+                if(!fs::create_directories(archive)) {
+                    KJ_LOG(ERROR, "Could not create archive directory", archive.string());
+                    break;
+                }
 
                 // add scripts
                 fs::path cfgDir = fs::path(homeDir)/"cfg";
