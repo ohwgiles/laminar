@@ -1,0 +1,21 @@
+#!/bin/bash
+
+cat <<EOF
+<!doctype html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laminar</title>
+<link href="/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="col-xs-12">
+<h2>Test report for $lJobName #$lBuildNum</h2>
+EOF
+xsltproc $(dirname ${BASH_SOURCE[0]})/testreport.xsl $1;
+cat <<EOF
+</div>
+</body>
+</html>
+EOF
