@@ -59,6 +59,7 @@ private:
     void reapAdvance();
     void assignNewJobs();
     bool stepRun(std::shared_ptr<Run> run);
+    void runFinished(const Run*);
 
     std::list<std::shared_ptr<Run>> queuedJobs;
 

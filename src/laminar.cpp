@@ -496,42 +496,7 @@ void Laminar::assignNewJobs() {
                 }
 
                 // setup run completion handler
-                run->notifyCompletion = [=,&node](const Run* r) {
-                    node.busyExecutors--;
-                    KJ_LOG(INFO, "Run completed", r->name, to_string(r->result));
-                    time_t completedAt = time(0);
-                    db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?)")
-                     .bind(r->name, r->build, node.name, r->queuedAt, r->startedAt, completedAt, int(r->result),
-                           r->log, r->parentName, r->parentBuild, r->reason())
-                     .exec();
-
-                    // notify clients
-                    Json j;
-                    j.set("type", "job_completed")
-                            .startObject("data")
-                            .set("name", r->name)
-                            .set("number", r->build)
-                            .set("duration", completedAt - r->startedAt)
-                            .set("started", r->startedAt)
-                            .set("result", to_string(r->result))
-                            .EndObject();
-                    const char* msg = j.str();
-                    for(LaminarClient* c : clients) {
-                        if(c->scope.wantsStatus(r->name, r->build))
-                            c->sendMessage(msg);
-                    }
-
-                    // wake the waiters
-                    for(Waiter& waiter : waiters[r])
-                        waiter.release(r->result);
-                    waiters.erase(r);
-
-                    // remove the workdir
-                    fs::remove_all(wd);
-
-                    // will delete the job
-                    activeJobs.get<2>().erase(r);
-                };
+                run->notifyCompletion = [this](const Run* r) { runFinished(r); };
 
                 // trigger the first step of the run
                 if(stepRun(run)) {
@@ -551,4 +516,43 @@ void Laminar::assignNewJobs() {
             ++it;
 
     }
+}
+
+void Laminar::runFinished(const Run * r) {
+    Node* node = r->node;
+
+    node->busyExecutors--;
+    KJ_LOG(INFO, "Run completed", r->name, to_string(r->result));
+    time_t completedAt = time(0);
+    db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+     .bind(r->name, r->build, node->name, r->queuedAt, r->startedAt, completedAt, int(r->result),
+           r->log, r->parentName, r->parentBuild, r->reason())
+     .exec();
+
+    // notify clients
+    Json j;
+    j.set("type", "job_completed")
+            .startObject("data")
+            .set("name", r->name)
+            .set("number", r->build)
+            .set("duration", completedAt - r->startedAt)
+            .set("started", r->startedAt)
+            .set("result", to_string(r->result))
+            .EndObject();
+    const char* msg = j.str();
+    for(LaminarClient* c : clients) {
+        if(c->scope.wantsStatus(r->name, r->build))
+            c->sendMessage(msg);
+    }
+
+    // wake the waiters
+    for(Waiter& waiter : waiters[r])
+        waiter.release(r->result);
+    waiters.erase(r);
+
+    // remove the workdir
+    fs::remove_all(r->wd);
+
+    // will delete the job
+    activeJobs.get<2>().erase(r);
 }
