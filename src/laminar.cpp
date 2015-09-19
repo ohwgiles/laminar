@@ -425,6 +425,12 @@ void Laminar::assignNewJobs() {
                 run->startedAt = time(0);
                 run->build = ++buildNums[run->name];
                 run->laminarHome = homeDir;
+                // set the last known result if exists
+                db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+                 .bind(run->name)
+                 .fetch<int>([=](int result){
+                    run->lastResult = RunState(result);
+                });
 
                 fs::path wd = fs::path(homeDir)/"run"/run->name/std::to_string(run->build);
                 if(!fs::is_directory(wd) && !fs::create_directory(wd)) {

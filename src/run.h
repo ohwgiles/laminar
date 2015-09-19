@@ -66,6 +66,7 @@ public:
     std::function<void(const Run*)> notifyCompletion;
     Node* node;
     RunState result;
+    RunState lastResult;
     std::string laminarHome;
     std::string name;
     std::string wd;
