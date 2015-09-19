@@ -83,6 +83,7 @@ private:
     NodeMap nodes;
     std::string homeDir;
     std::set<LaminarClient*> clients;
+    bool eraseWorkdir;
 };
 
 #endif // _LAMINAR_LAMINAR_H_

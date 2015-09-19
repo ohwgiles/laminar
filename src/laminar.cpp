@@ -62,6 +62,7 @@ constexpr const char* BASE_CFG_DIR = "/home/og/dev/laminar/cfg";
 typedef std::string str;
 
 Laminar::Laminar() {
+    eraseWorkdir = true;
     homeDir = getenv("LAMINAR_HOME") ?: "/var/lib/laminar";
 
     db = new Database((fs::path(homeDir)/"laminar.sqlite").string().c_str());
@@ -269,6 +270,9 @@ void Laminar::stop() {
 }
 
 bool Laminar::loadConfiguration() {
+    if(getenv("LAMINAR_KEEP_WORKDIR"))
+        eraseWorkdir = false;
+
     NodeMap nm;
 
     fs::path nodeCfg = fs::path(homeDir)/"cfg"/"nodes";
@@ -492,7 +496,7 @@ void Laminar::assignNewJobs() {
                 }
 
                 // setup run completion handler
-                run->notifyCompletion = [&](const Run* r) {
+                run->notifyCompletion = [=,&node](const Run* r) {
                     node.busyExecutors--;
                     KJ_LOG(INFO, "Run completed", r->name, to_string(r->result));
                     time_t completedAt = time(0);
@@ -521,6 +525,9 @@ void Laminar::assignNewJobs() {
                     for(Waiter& waiter : waiters[r])
                         waiter.release(r->result);
                     waiters.erase(r);
+
+                    // remove the workdir
+                    fs::remove_all(wd);
 
                     // will delete the job
                     activeJobs.get<2>().erase(r);
