@@ -146,9 +146,6 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			}
 		}
 	});
-	$scope.active = function(url) {
-		return false;
-	}
 	$scope.runIcon = Laminar.runIcon;
 	timeUpdater = $interval(function() {
 		$scope.jobsRunning.forEach(function(o){
