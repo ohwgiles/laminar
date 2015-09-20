@@ -13,7 +13,7 @@ cat <<EOF
 <div class="col-xs-12">
 <h2>Test report for $lJobName #$lBuildNum</h2>
 EOF
-xsltproc $(dirname ${BASH_SOURCE[0]})/testreport.xsl $1;
+xsltproc "$(dirname ${BASH_SOURCE[0]})/testreport.xsl" "$1";
 cat <<EOF
 </div>
 </body>
