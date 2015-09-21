@@ -174,6 +174,7 @@ public:
                 std::string content;
                 if(laminar.getArtefact(file, content)) {
                     c->set_status(websocketpp::http::status_code::ok);
+                    c->append_header("Content-Transfer-Encoding", "binary");
                     c->set_body(content);
                 } else {
                     c->set_status(websocketpp::http::status_code::not_found);
@@ -181,11 +182,14 @@ public:
             } else if(resources.handleRequest(resource, &start, &end)) {
                 c->set_status(websocketpp::http::status_code::ok);
                 c->append_header("Content-Encoding", "gzip");
-                c->set_body(std::string(start, end));
+                c->append_header("Content-Transfer-Encoding", "binary");
+                std::string response(start,end);
+                c->set_body(response);
             } else {
                 // 404
                 c->set_status(websocketpp::http::status_code::not_found);
             }
+            c->lc->close();
         });
 
         // Handle new websocket connection. Parse the URL to determine
@@ -223,7 +227,9 @@ public:
         });
 
         wss.set_close_handler([this](websocketpp::connection_hdl hdl){
-            laminar.deregisterClient(wss.get_con_from_hdl(hdl)->lc);
+            websocket::connection_ptr c = wss.get_con_from_hdl(hdl);
+            laminar.deregisterClient(c->lc);
+            c->lc->close();
         });
     }
 
@@ -266,7 +272,8 @@ struct Server::WebsocketConnection : public LaminarClient, public std::streambuf
         stream(kj::mv(stream)),
         out(this),
         cn(http.newConnection(this)),
-        writePaf(kj::newPromiseAndFulfiller<void>())
+        writePaf(kj::newPromiseAndFulfiller<void>()),
+        closeOnComplete(false)
     {
         cn->register_ostream(&out);
         cn->start();
@@ -278,7 +285,7 @@ struct Server::WebsocketConnection : public LaminarClient, public std::streambuf
     }
 
     kj::Promise<void> pend() {
-        return stream->tryRead(ibuf, 1, 1024).then([this](size_t sz){
+        return stream->tryRead(ibuf, 1, sizeof(ibuf)).then([this](size_t sz){
             cn->read_all(ibuf, sz);
             if(sz == 0 || cn->get_state() == websocketpp::session::state::closed) {
                 cn->eof();
@@ -298,15 +305,21 @@ struct Server::WebsocketConnection : public LaminarClient, public std::streambuf
             if(payload.empty()) {
                 return kj::Promise<void>(kj::READY_NOW);
             } else {
-                return stream->write(payload.data(), payload.length()).then([this]{
-                    return writeTask();
-                });
+                return stream->write(payload.data(), payload.size()).then([this](){
+                    return closeOnComplete ? kj::Promise<void>(kj::READY_NOW) : writeTask();
+                }).attach(kj::mv(payload));
             }
         });
     }
 
     void sendMessage(std::string payload) override {
         cn->send(payload, websocketpp::frame::opcode::text);
+    }
+
+    void close() override {
+        closeOnComplete = true;
+        outputBuffer.clear();
+        writePaf.fulfiller->fulfill();
     }
 
     std::streamsize xsputn(const char* s, std::streamsize sz) override {
@@ -320,8 +333,8 @@ struct Server::WebsocketConnection : public LaminarClient, public std::streambuf
     websocket::connection_ptr cn;
     std::string outputBuffer;
     kj::PromiseFulfillerPair<void> writePaf;
-    // TODO: think about this size
-    char ibuf[1024];
+    char ibuf[131072];
+    bool closeOnComplete;
 };
 
 Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
@@ -331,30 +344,17 @@ Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
     ioContext(kj::setupAsyncIo()),
     tasks(*this)
 {
+    // RPC task
+    tasks.add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress, 0)
+              .then([this](kj::Own<kj::NetworkAddress>&& addr) {
+        acceptRpcClient(addr->listen());
+    }));
 
-    { // RPC task
-        auto paf = kj::newPromiseAndFulfiller<uint>();
-        tasks.add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress, 0)
-                  .then(kj::mvCapture(paf.fulfiller,
-                                      [this](kj::Own<kj::PromiseFulfiller<uint>>&& portFulfiller,
-                                      kj::Own<kj::NetworkAddress>&& addr) {
-            auto listener = addr->listen();
-            portFulfiller->fulfill(listener->getPort());
-            acceptRpcClient(kj::mv(listener));
-        })));
-    }
-
-    { // HTTP task
-        auto paf = kj::newPromiseAndFulfiller<uint>();
-        tasks.add(ioContext.provider->getNetwork().parseAddress(httpBindAddress, 0)
-                  .then(kj::mvCapture(paf.fulfiller,
-                                      [this](kj::Own<kj::PromiseFulfiller<uint>>&& portFulfiller,
-                                      kj::Own<kj::NetworkAddress>&& addr) {
-            auto listener = addr->listen();
-            portFulfiller->fulfill(listener->getPort());
-            acceptHttpClient(kj::mv(listener));
-        })));
-    }
+    // HTTP task
+    tasks.add(ioContext.provider->getNetwork().parseAddress(httpBindAddress, 0)
+              .then([this](kj::Own<kj::NetworkAddress>&& addr) {
+        acceptHttpClient(addr->listen());
+    }));
 }
 
 Server::~Server() {
@@ -392,7 +392,10 @@ void Server::acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener) {
                             kj::Own<kj::AsyncIoStream>&& connection) {
             acceptHttpClient(kj::mv(listener));
             auto conn = kj::heap<WebsocketConnection>(kj::mv(connection), *httpInterface);
-            return conn->pend().exclusiveJoin(conn->writeTask()).attach(std::move(conn));
+            auto promises = kj::heapArrayBuilder<kj::Promise<void>>(2);
+            promises.add(std::move(conn->pend()));
+            promises.add(std::move(conn->writeTask()));
+            return kj::joinPromises(promises.finish()).attach(std::move(conn));
         }))
     );
 }
@@ -412,9 +415,8 @@ void Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
 // handles stdout/stderr from a child process by sending it to the provided
 // callback function
 kj::Promise<void> Server::handleProcessOutput(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> readCb) {
-    // TODO think about this size
-    static char* buffer = new char[1024];
-    return stream->tryRead(buffer, 1, 1024).then([this,stream,readCb](size_t sz) {
+    static char* buffer = new char[131072];
+    return stream->tryRead(buffer, 1, sizeof(buffer)).then([this,stream,readCb](size_t sz) {
         readCb(buffer, sz);
         if(sz > 0) {
             return handleProcessOutput(stream, readCb);

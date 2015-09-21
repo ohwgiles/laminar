@@ -69,6 +69,7 @@ struct MonitorScope {
 // registerClient and deregisterClient
 struct LaminarClient {
     virtual void sendMessage(std::string payload) = 0;
+    virtual void close() = 0;
     MonitorScope scope;
 };
 
