@@ -189,7 +189,7 @@ public:
                 // 404
                 c->set_status(websocketpp::http::status_code::not_found);
             }
-            c->lc->close();
+            c->lc->close(false);
         });
 
         // Handle new websocket connection. Parse the URL to determine
@@ -303,10 +303,11 @@ struct Server::WebsocketConnection : public LaminarClient, public std::streambuf
             payload.swap(outputBuffer);
             writePaf = kj::newPromiseAndFulfiller<void>();
             if(payload.empty()) {
+                stream->shutdownWrite();
                 return kj::Promise<void>(kj::READY_NOW);
             } else {
                 return stream->write(payload.data(), payload.size()).then([this](){
-                    return closeOnComplete ? kj::Promise<void>(kj::READY_NOW) : writeTask();
+                    return closeOnComplete ? stream->shutdownWrite(), kj::Promise<void>(kj::READY_NOW) : writeTask();
                 }).attach(kj::mv(payload));
             }
         });
@@ -316,10 +317,12 @@ struct Server::WebsocketConnection : public LaminarClient, public std::streambuf
         cn->send(payload, websocketpp::frame::opcode::text);
     }
 
-    void close() override {
+    void close(bool now) override {
         closeOnComplete = true;
-        outputBuffer.clear();
-        writePaf.fulfiller->fulfill();
+        if(now) {
+            outputBuffer.clear();
+            writePaf.fulfiller->fulfill();
+        }
     }
 
     std::streamsize xsputn(const char* s, std::streamsize sz) override {
