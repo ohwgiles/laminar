@@ -16,10 +16,11 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef NODE_H
-#define NODE_H
+#ifndef _LAMINAR_NODE_H_
+#define _LAMINAR_NODE_H_
 
 #include <string>
+#include <set>
 
 class Run;
 
@@ -32,10 +33,11 @@ public:
     std::string name;
     int numExecutors;
     int busyExecutors = 0;
+    std::set<std::string> tags;
 
     // Attempts to queue the given run to this node. Returns true if succeeded.
     bool queue(const Run& run);
 };
 
 
-#endif // NODE_H
+#endif // _LAMINAR_NODE_H_

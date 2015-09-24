@@ -310,6 +310,17 @@ bool Laminar::loadConfiguration() {
             Node node;
             node.name = it.path().filename().string();
             node.numExecutors = conf.get<int>("EXECUTORS", 6);
+
+            std::string tags = conf.get<std::string>("TAGS");
+            if(!tags.empty()) {
+                std::istringstream iss(tags);
+                std::set<std::string> tagList;
+                std::copy(std::istream_iterator<std::string>(iss),
+                          std::istream_iterator<std::string>(),
+                          std::inserter(tagList, tagList.begin()));
+                node.tags = tagList;
+            }
+
             nm.emplace(node.name, std::move(node));
         }
     }
@@ -323,6 +334,32 @@ bool Laminar::loadConfiguration() {
     }
 
     nodes = nm;
+
+    fs::path jobsDir = fs::path(homeDir)/"cfg"/"jobs";
+    if(fs::is_directory(jobsDir)) {
+        fs::directory_iterator dit(jobsDir);
+        for(fs::directory_entry& it : dit) {
+            if(!fs::is_directory(it.status()))
+                continue;
+
+            fs::directory_entry config(it.path()/"config");
+            if(!fs::is_regular_file(config.status()))
+                continue;
+
+            StringMap conf = parseConfFile(config.path().string().c_str());
+
+            std::string tags = conf.get<std::string>("TAGS");
+            if(!tags.empty()) {
+                std::istringstream iss(tags);
+                std::set<std::string> tagList;
+                std::copy(std::istream_iterator<std::string>(iss),
+                          std::istream_iterator<std::string>(),
+                          std::inserter(tagList, tagList.begin()));
+                jobTags[it.path().filename().string()] = tagList;
+            }
+
+        }
+    }
 
     return true;
 }
@@ -425,6 +462,29 @@ void Laminar::reapAdvance() {
     assignNewJobs();
 }
 
+bool Laminar::nodeCanQueue(const Node& node, const Run& run) const {
+    // if a node is too busy, it can't take the job
+    if(node.busyExecutors >= node.numExecutors)
+        return false;
+
+    auto it = jobTags.find(run.name);
+    // if both nodes have no tags, it's OK
+    if(it == jobTags.end() && node.tags.size() == 0)
+        return true;
+
+    // but if just one of them does, don't allow the build
+    if(it == jobTags.end() || node.tags.size() == 0)
+        return false;
+
+    // in other cases, allow the build if they have a tag in common
+    for(const std::string& tag : it->second) {
+        if(node.tags.find(tag) != node.tags.end())
+            return true;
+    }
+
+    return false;
+}
+
 void Laminar::assignNewJobs() {
     auto it = queuedJobs.begin();
     while(it != queuedJobs.end()) {
@@ -432,7 +492,7 @@ void Laminar::assignNewJobs() {
         for(auto& sn : nodes) {
             Node& node = sn.second;
             std::shared_ptr<Run> run = *it;
-            if(node.queue(*run)) {
+            if(nodeCanQueue(node, *run)) {
                 node.busyExecutors++;
                 run->node = &node;
                 run->startedAt = time(0);

@@ -91,7 +91,8 @@ bool Run::step() {
             setenv("PATH", PATH.c_str(), true);
             setenv("lBuildNum", buildNum.c_str(), true);
             setenv("lJobName", name.c_str(), true);
-            setenv("lNode", node->name.c_str(), true);
+            if(!node->name.empty())
+                setenv("lNode", node->name.c_str(), true);
             setenv("lResult", to_string(result).c_str(), true);
             setenv("lLastResult", to_string(lastResult).c_str(), true);
             setenv("lWorkspace", (fs::path(laminarHome)/"run"/name/"workspace").string().c_str(), true);

@@ -61,6 +61,7 @@ private:
     void assignNewJobs();
     bool stepRun(std::shared_ptr<Run> run);
     void runFinished(const Run*);
+    bool nodeCanQueue(const Node&, const Run&) const;
 
     std::list<std::shared_ptr<Run>> queuedJobs;
 
@@ -78,6 +79,8 @@ private:
     std::unordered_map<const Run*,std::list<Waiter>> waiters;
 
     std::unordered_map<std::string, uint> buildNums;
+
+    std::unordered_map<std::string, std::set<std::string>> jobTags;
 
     RunSet activeJobs;
     Database* db;
