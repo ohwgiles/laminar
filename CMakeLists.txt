@@ -57,7 +57,7 @@ add_custom_command(OUTPUT laminar.capnp.c++ laminar.capnp.h
 
 # Zip and compile statically served resources
 generate_compressed_bins(${CMAKE_SOURCE_DIR}/src/resources index.html js/app.js
-    tpl/home.html tpl/job.html tpl/run.html tpl/log.html tpl/browse.html
+    tpl/home.html tpl/job.html tpl/run.html tpl/browse.html
     favicon.ico favicon-152.png icon.png)
 # Download 3rd-party frontend JS libs...
 file(DOWNLOAD https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js

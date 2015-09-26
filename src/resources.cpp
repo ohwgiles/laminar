@@ -37,7 +37,6 @@ Resources::Resources()
     INIT_RESOURCE("/tpl/home.html", tpl_home_html);
     INIT_RESOURCE("/tpl/job.html", tpl_job_html);
     INIT_RESOURCE("/tpl/run.html", tpl_run_html);
-    INIT_RESOURCE("/tpl/log.html", tpl_log_html);
     INIT_RESOURCE("/tpl/browse.html", tpl_browse_html);
     INIT_RESOURCE("/js/angular.min.js", js_angular_min_js);
     INIT_RESOURCE("/js/angular-route.min.js", js_angular_route_min_js);

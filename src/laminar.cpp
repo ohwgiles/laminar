@@ -118,48 +118,52 @@ void Laminar::sendStatus(LaminarClient* client) {
                 client->sendMessage(log);
             });
         }
-    } else if(client->scope.type == MonitorScope::RUN) {
-        Json j;
-        j.set("type", "status");
-        j.startObject("data");
-        db->stmt("SELECT startedAt, result, reason FROM builds WHERE name = ? AND number = ?")
+        return;
+    }
+
+    Json j;
+    j.set("type", "status");
+    j.startObject("data");
+    j.set("title", getenv("LAMINAR_TITLE") ?: "");
+    if(client->scope.type == MonitorScope::RUN) {
+        db->stmt("SELECT queuedAt,startedAt,completedAt, result, reason FROM builds WHERE name = ? AND number = ?")
         .bind(client->scope.job, client->scope.num)
-        .fetch<time_t, int, std::string>([&](time_t started, int result, std::string reason) {
+        .fetch<time_t, time_t, time_t, int, std::string>([&](time_t queued, time_t started, time_t completed, int result, std::string reason) {
+            j.set("queued", started-queued);
             j.set("started", started);
+            j.set("completed", completed);
+            j.set("duration", completed-started);
             j.set("result", to_string(RunState(result)));
             j.set("reason", reason);
         });
+        j.set("latestNum", int(buildNums[client->scope.job]));
         j.startArray("artifacts");
         fs::path dir(fs::path(homeDir)/"archive"/client->scope.job/std::to_string(client->scope.num));
-        fs::recursive_directory_iterator rdt(dir);
-        int prefixLen = (fs::path(homeDir)/"archive").string().length();
-        int scopeLen = dir.string().length();
-        for(fs::directory_entry e : rdt) {
-            if(!fs::is_regular_file(e))
-                continue;
-            j.StartObject();
-            j.set("url", archiveUrl + e.path().string().substr(prefixLen));
-            j.set("filename", e.path().string().substr(scopeLen+1));
-            j.EndObject();
+        if(fs::is_directory(dir)) {
+            fs::recursive_directory_iterator rdt(dir);
+            int prefixLen = (fs::path(homeDir)/"archive").string().length();
+            int scopeLen = dir.string().length();
+            for(fs::directory_entry e : rdt) {
+                if(!fs::is_regular_file(e))
+                    continue;
+                j.StartObject();
+                j.set("url", archiveUrl + e.path().string().substr(prefixLen));
+                j.set("filename", e.path().string().substr(scopeLen+1));
+                j.EndObject();
+            }
         }
         j.EndArray();
-        j.EndObject();
-        client->sendMessage(j.str());
     } else if(client->scope.type == MonitorScope::JOB) {
-        Json j;
-        j.set("type", "status");
-        j.startObject("data");
         j.startArray("recent");
-        db->stmt("SELECT * FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 5")
+        db->stmt("SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 25")
         .bind(client->scope.job)
-        .fetch<str,int,str,time_t,time_t,time_t,int>([&](str name,int build,str node,time_t,time_t started,time_t completed,int result){
+        .fetch<int,time_t,time_t,int,str>([&](int build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
-            j.set("name", name)
-             .set("number", build)
-             .set("node", node)
+            j.set("number", build)
              .set("duration", completed - started)
              .set("started", started)
              .set("result", to_string(RunState(result)))
+             .set("reason", reason)
              .EndObject();
         });
         j.EndArray();
@@ -168,45 +172,52 @@ void Laminar::sendStatus(LaminarClient* client) {
         for(auto it = p.first; it != p.second; ++it) {
             const std::shared_ptr<Run> run = *it;
             j.StartObject();
-            j.set("name", run->name);
             j.set("number", run->build);
             j.set("node", run->node->name);
             j.set("started", run->startedAt);
             j.EndObject();
         }
         j.EndArray();
-        j.startArray("queued");
+        int nQueued = 0;
         for(const std::shared_ptr<Run> run : queuedJobs) {
             if (run->name == client->scope.job) {
-                j.StartObject();
-                j.set("name", run->name);
-                j.EndObject();
+                nQueued++;
             }
         }
-        j.EndArray();
-        j.EndObject();
-        client->sendMessage(j.str());
+        j.set("nQueued", nQueued);
+        db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result = ? ORDER BY completedAt DESC LIMIT 1")
+        .bind(client->scope.job, int(RunState::SUCCESS))
+        .fetch<int,time_t>([&](int build, time_t started){
+            j.startObject("lastSuccess");
+            j.set("number", build).set("started", started);
+            j.EndObject();
+        });
+        db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result <> ? ORDER BY completedAt DESC LIMIT 1")
+        .bind(client->scope.job, int(RunState::SUCCESS))
+        .fetch<int,time_t>([&](int build, time_t started){
+            j.startObject("lastFailed");
+            j.set("number", build).set("started", started);
+            j.EndObject();
+        });
 
     } else if(client->scope.type == MonitorScope::ALL) {
-        Json j;
-        j.set("type", "status");
-        j.startObject("data");
         j.startArray("jobs");
-        db->stmt("SELECT name FROM builds GROUP BY name")
-        .fetch<str>([&](str name){
+        db->stmt("SELECT name,number,startedAt,result FROM builds GROUP BY name ORDER BY number DESC")
+        .fetch<str,int,time_t,int>([&](str name,int number, time_t started, int result){
             j.StartObject();
-            j.set("name", name)
-             .EndObject();
+            j.set("name", name);
+            j.set("number", number).set("result", to_string(RunState(result))).set("started", started);
+            j.startArray("tags");
+            for(const str& t: jobTags[name]) {
+                j.String(t.c_str());
+            }
+            j.EndArray();
+            j.EndObject();
         });
         j.EndArray();
-        j.EndObject();
-        client->sendMessage(j.str());
     } else { // Home page
-        Json j;
-        j.set("type", "status");
-        j.startObject("data");
         j.startArray("recent");
-        db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 5")
+        db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 15")
         .fetch<str,int,str,time_t,time_t,time_t,int>([&](str name,int build,str node,time_t,time_t started,time_t completed,int result){
             j.StartObject();
             j.set("name", name)
@@ -262,10 +273,18 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set(job.c_str(), count);
         });
         j.EndObject();
-
+        j.startObject("timePerJob");
+        db->stmt("SELECT name, AVG(completedAt-startedAt) FROM builds WHERE completedAt > ? GROUP BY name")
+                .bind(time(0) - 7 * 86400)
+                .fetch<str, int>([&](str job, int time){
+            j.set(job.c_str(), time);
+        });
         j.EndObject();
-        client->sendMessage(j.str());
+
     }
+    j.EndObject();
+    client->sendMessage(j.str());
+
 }
 
 Laminar::~Laminar() {

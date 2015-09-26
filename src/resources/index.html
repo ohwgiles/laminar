@@ -17,11 +17,14 @@
  <script src="/js/app.js"></script>
  <style>
   body, html { height: 100%; }
+  .navbar { margin-bottom: 0; }
   .navbar-brand { margin: 0 -15px; padding: 7px 15px }
+  .navbar-brand>img { display: inline; }
   a.navbar-btn { color: #9d9d9d; }
   a.navbar-btn.active { color: #fff; }
   a.navbar-btn:hover { color: #fff; text-decoration: none; }
   a.navbar-btn:focus { color: #fff; }
+  dt,dd { line-height: 2; }
   canvas {
    width: 100% !important;
    max-width: 800px;
@@ -37,11 +40,15 @@
  <nav class="navbar navbar-inverse">
   <div class="container-fluid">
    <div>
-    <a class="navbar-brand" href="/"><img src="/icon.png"></a>
-    <a class="btn navbar-btn" href="/jobs">Jobs</a>
+    <a class="navbar-brand" href="/"><img src="/icon.png">{{title}}</a>
+    <a class="btn navbar-btn pull-right" href="/jobs">Jobs</a>
    </div>
   </div>
  </nav>
+ <ol class="breadcrumb">
+  <li ng-repeat="n in bc.nodes track by $index"><a href="{{n.href}}">{{n.label}}</a></li>
+  <li class="active">{{bc.current}}</li>
+ </ol>
  <div ng-view></div>
 </body>
 </html>

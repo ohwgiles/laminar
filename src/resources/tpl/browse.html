@@ -1,14 +1,19 @@
 <div class="container-fluid">
 <div class="row">
 <div class="col-xs-12">
- <h3>Browse jobs</h3>
- <div class="form-inline form-group">
-  <label for="jobFilter">Filter</label>
-  <input id="jobFilter" ng-model="search.name">
+ <div class="pull-right">
+  <input class="form-control" id="jobFilter" ng-model="search.name" placeholder="Filter...">
  </div>
- <table class="table table-bordered">
-  <tr class="animate-repeat" ng-repeat="job in jobs | filter:search:strict">
+ <ul class="nav nav-tabs">
+  <li ng-class="{active:activeTag(null)}"><a href ng-click="currentTag = null">All Jobs</a></li>
+  <li ng-repeat="tag in tags" ng-class="{active:activeTag(tag)}"><a href ng-click="$parent.currentTag = tag">{{tag}}</a></li>
+ </ul>
+ <style>table#joblist tr:first-child td { border-top: 0; }</style>
+ <table class="table table-striped" id="joblist">
+  <tr class="animate-repeat" ng-repeat="job in jobs | filter:bytag | filter:search">
    <td><a href="jobs/{{job.name}}">{{job.name}}</a></td>
+   <td class="text-center"><span ng-bind-html="runIcon(job.result)"></span> <a href="jobs/{{job.name}}/{{job.numberumber}}">#{{job.number}}</a></td>
+   <td class="text-center">{{formatDate(job.started)}}</a></td>
   </tr>
  </table>
 </div>

@@ -1,13 +1,3 @@
-Laminar = {
-	runIcon: function(result) {
-		return result === "success" ? '<span style="color:forestgreen">✔</span>' : '<span style="color:crimson;">✘</span>';
-	},
-	jobFormatter: function(o) {
-		o.duration = o.duration + "s"
-		o.when = (new Date(1000 * o.started)).toLocaleString();
-		return o;
-	}
-};
 angular.module('laminar',['ngRoute','ngSanitize'])
 .config(function($routeProvider, $locationProvider, $sceProvider) {
 	$routeProvider
@@ -27,10 +17,6 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 		templateUrl: 'tpl/run.html',
 		controller: 'RunController'
 	})
-	.when('/jobs/:name/:num/log', {
-		templateUrl: 'tpl/log.html',
-		controller: 'LogController'
-	})
 	$locationProvider.html5Mode(true);
 	$sceProvider.enabled(false);
 })
@@ -44,19 +30,23 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			};
 		},
 		logListener: function(callback) {
-			var ws = new WebSocket("ws://" + location.host + $location.path());
+			var ws = new WebSocket("ws://" + location.host + $location.path() + '/log');
 			ws.onmessage = function(message) {
 				callback(message.data);
 			};
 		}
 	};
 })
-.controller('mainController', function($scope, $ws, $interval){
+.controller('mainController', function($rootScope, $scope, $ws, $interval){
+	$rootScope.bc = {
+		nodes: [],
+		current: 'Home'
+	};
+
 	$scope.jobsQueued = [];
 	$scope.jobsRunning = [];
 	$scope.jobsRecent = [];
-		
-	var chtUtilization, chtBuildsPerDay, chtBuildsPerJob;
+	var chtUtilization, chtBuildsPerDay, chtBuildsPerJob, chtTimePerJob;
 	
 	var updateUtilization = function(busy) {
 		chtUtilization.segments[0].value += busy ? 1 : -1;
@@ -66,16 +56,18 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			
 	$ws.statusListener({
 		status: function(data) {
+			$rootScope.title = data.title;
 			// populate jobs
 			$scope.jobsQueued = data.queued;
 			$scope.jobsRunning = data.running;
-			$scope.jobsRecent = data.recent.map(Laminar.jobFormatter);
+			$scope.jobsRecent = data.recent;
+
 			$scope.$apply();
 			
 			// setup charts
 			chtUtilization = new Chart(document.getElementById("chartUtil").getContext("2d")).Pie(
-				[{value: data.executorsBusy, color:"sandybrown", label: "Busy"},
-				 {value: data.executorsTotal, color: "steelblue", label: "Idle"}],
+				[{value: data.executorsBusy, color:"tan", label: "Busy"},
+				 {value: data.executorsTotal, color: "darkseagreen", label: "Idle"}],
 				{animationEasing: 'easeInOutQuad'}
 			);
 			chtBuildsPerDay = new Chart(document.getElementById("chartBpd").getContext("2d")).Line({
@@ -104,8 +96,15 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			chtBuildsPerJob = new Chart(document.getElementById("chartBpj").getContext("2d")).HorizontalBar({
 				labels: Object.keys(data.buildsPerJob),
 				datasets: [{
-					fillColor: "steelblue",
+					fillColor: "lightsteelblue",
 					data: Object.keys(data.buildsPerJob).map(function(e){return data.buildsPerJob[e];})
+				}]
+			},{});
+			chtTimePerJob = new Chart(document.getElementById("chartTpj").getContext("2d")).HorizontalBar({
+				labels: Object.keys(data.timePerJob),
+				datasets: [{
+					fillColor: "lightsteelblue",
+					data: Object.keys(data.timePerJob).map(function(e){return data.timePerJob[e];})
 				}]
 			},{});
 		},
@@ -130,7 +129,7 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 				var job = $scope.jobsRunning[i];
 				if(job.name == data.name && job.number == data.number) {
 					$scope.jobsRunning.splice(i,1);
-					$scope.jobsRecent.splice(0,0,Laminar.jobFormatter(data));
+					$scope.jobsRecent.splice(0,0,data);
 					$scope.$apply();
 					
 					break;
@@ -146,7 +145,6 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			}
 		}
 	});
-	$scope.runIcon = Laminar.runIcon;
 	timeUpdater = $interval(function() {
 		$scope.jobsRunning.forEach(function(o){
 			if(o.etc) {
@@ -166,34 +164,82 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 		$interval.cancel(timeUpdater);
 	});
 })
-.controller('BrowseController', function($scope, $ws, $interval){
+.controller('BrowseController', function($rootScope, $scope, $ws, $interval){
+	$rootScope.bc = {
+		nodes: [{ href: '/', label: 'Home' }],
+		current: 'Jobs'
+	};
+
+	$scope.currentTag = null;
+	$scope.activeTag = function(t) {
+		return $scope.currentTag === t;
+	};
+	$scope.bytag = function(job) {
+		if($scope.currentTag === null) return true;
+		return job.tags.indexOf($scope.currentTag) >= 0;
+	};
+
 	$scope.jobs = [];
 	$ws.statusListener({
 		status: function(data) {
+			$rootScope.title = data.title;
 			$scope.jobs = data.jobs;
+			var tags = {};
+			for(var i in data.jobs) {
+				for(var j in data.jobs[i].tags) {
+					tags[data.jobs[i].tags[j]] = true;
+				}
+			}
+			$scope.tags = Object.keys(tags);
 			$scope.$apply();
 		},
 	});
 })
-.controller('JobController', function($scope, $routeParams, $ws) {
+.controller('JobController', function($rootScope, $scope, $routeParams, $ws) {
+	$rootScope.bc = {
+		nodes: [{ href: '/', label: 'Home' },{ href: '/jobs', label: 'Jobs' }],
+		current: $routeParams.name
+	};
+	
 	$scope.name = $routeParams.name;
-	$scope.jobsQueued = [];
 	$scope.jobsRunning = [];
 	$scope.jobsRecent = [];
+
 	$ws.statusListener({
 		status: function(data) {
-			$scope.jobsQueued = data.queued.filter(function(e){return e.name == $routeParams.name;});
-			$scope.jobsRunning = data.running.filter(function(e){return e.name == $routeParams.name;});
-			$scope.jobsRecent = data.recent.filter(function(e){return e.name == $routeParams.name;});
+			$rootScope.title = data.title;
+
+			$scope.jobsRunning = data.running;
+			$scope.jobsRecent = data.recent;
+			$scope.lastSuccess = data.lastSuccess;
+			$scope.lastFailed = data.lastFailed;
 			$scope.$apply();
-		},
-		job_queued: function(data) {
-			if(data.name == $routeParams.name) {
-				$scope.jobsQueued.splice(0,0,data);
-				$scope.$apply();
+			
+			var chtBt = new Chart(document.getElementById("chartBt").getContext("2d")).Bar({
+				labels: data.recent.map(function(e){return '#' + e.number;}),
+				datasets: [{
+					fillColor: "darkseagreen",
+					strokeColor: "forestgreen",
+					data: data.recent.map(function(e){return e.duration;})
+				}]
+			},
+			{barValueSpacing: 1,barStrokeWidth: 1,barDatasetSpacing:0}
+			);
+
+			for(var i = 0; i < data.recent.length; ++i) {
+				if(data.recent[i].result != "success") {
+					chtBt.datasets[0].bars[i].fillColor = "darksalmon";
+					chtBt.datasets[0].bars[i].strokeColor = "crimson";
+				}
 			}
+			chtBt.update();
+			
+		},
+		job_queued: function() {
+			$scope.nQueued++;
 		},
 		job_started: function(data) {
+			$scope.nQueued--;
 			if(data.name == $routeParams.name) {
 				$scope.jobsQueued.splice($scope.jobsQueued.length - 1,1);
 				$scope.jobsRunning.splice(0,0,data);
@@ -212,36 +258,62 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			}
 		}
 	});
-	$scope.runIcon = Laminar.runIcon;
 })
-.controller('RunController', function($scope, $routeParams, $ws) {
+.controller('RunController', function($rootScope, $scope, $routeParams, $ws) {
+	$rootScope.bc = {
+		nodes: [{ href: '/', label: 'Home' },
+		{ href: '/jobs', label: 'Jobs' },
+		{ href: '/jobs/'+$routeParams.name, label: $routeParams.name }
+		],
+		current: '#' + $routeParams.num
+	};
+
 	$scope.name = $routeParams.name;
-	$scope.num = $routeParams.num;
+	$scope.num = parseInt($routeParams.num);
 	$ws.statusListener({
 		status: function(data) {
-			$scope.job = Laminar.jobFormatter(data);
+			$rootScope.title = data.title;
+			$scope.job = data;
+			$scope.$apply();
+		},
+		job_started: function() {
+			$scope.job.latestNum++;
 			$scope.$apply();
 		},
 		job_completed: function(data) {
-			$scope.job = Laminar.jobFormatter(data);
+			$scope.job = data;
 			$scope.$apply();
 		}
 	});
-	$scope.runIcon = Laminar.runIcon;
-})
-.controller('LogController', function($scope, $routeParams, $ws) {
-	$scope.name = $routeParams.name;
-	$scope.num = $routeParams.num;
-	$scope._log = ""
-	$ws.logListener(function(data) {
-		$scope._log += ansi_up.ansi_to_html(data);
-		$scope.$apply();
-		window.scrollTo(0, document.body.scrollHeight);
-	});
-	$scope.log = function() {
-		// TODO sanitize
-		return ansi_up.ansi_to_html($scope._log);
-	}
 	
+	$scope.log = ""
+	$scope.autoscroll = false;
+	var firstLog = false;
+	$ws.logListener(function(data) {
+		$scope.log += ansi_up.ansi_to_html(data.replace('<','&lt;').replace('>','&gt;'));
+		$scope.$apply();
+		if(!firstLog) {
+			firstLog = true;
+		} else if($scope.autoscroll) {
+			window.scrollTo(0, document.body.scrollHeight);
+		}
+	});
+
 })
-.run(function() {});
+.run(function($rootScope) {
+	angular.extend($rootScope, {
+		runIcon: function(result) {
+			return result === "success" ? '<span style="color:forestgreen;font-family:\'Zapf Dingbats\';">✔</span>' : result === "failed" ? '<span style="color:crimson;">✘</span>' : '';
+		},
+		formatDate: function(unix) {
+			// TODO reimplement when toLocaleDateString() accepts formatting
+			// options on most browsers
+			var d = new Date(1000 * unix);
+			return d.getHours() + ':' + d.getMinutes() + ' on ' + 
+				['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' '
+				+ d.getDate() + '. ' + ['Jan','Feb','Mar','Apr','May','Jun',
+				'Jul','Aug','Sep', 'Oct','Nov','Dec'][d.getMonth()] + ' '
+				+ d.getFullYear();
+		}
+	});
+});
