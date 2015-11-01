@@ -184,6 +184,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("number", run->build);
             j.set("node", run->node->name);
             j.set("started", run->startedAt);
+            j.set("reason", run->reason());
             j.EndObject();
         }
         j.EndArray();
@@ -245,6 +246,11 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("number", run->build);
             j.set("node", run->node->name);
             j.set("started", run->startedAt);
+            db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+             .bind(run->name)
+             .fetch<int>([&](int etc){
+                j.set("etc", time(0) + etc);
+            });
             j.EndObject();
         }
         j.EndArray();
@@ -585,6 +591,7 @@ void Laminar::assignNewJobs() {
                  .startObject("data")
                  .set("queueIndex", std::distance(it,queuedJobs.begin()))
                  .set("name", run->name)
+                 .set("queued", run->startedAt - run->queuedAt)
                  .set("started", run->startedAt)
                  .set("number", run->build)
                  .set("reason", run->reason());
@@ -644,6 +651,8 @@ void Laminar::runFinished(const Run * r) {
             .startObject("data")
             .set("name", r->name)
             .set("number", r->build)
+            .set("queued", r->startedAt - r->queuedAt)
+            .set("completed", completedAt)
             .set("duration", completedAt - r->startedAt)
             .set("started", r->startedAt)
             .set("result", to_string(r->result))

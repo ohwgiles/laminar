@@ -5,7 +5,7 @@
  <nav class="pull-left">
   <ul class="pagination" style="margin:15px 20px">
    <li><a href="jobs/{{name}}/{{num-1}}">&laquo;</a></li>
-   <li ng-show="job.latestNum > num"><a ng-href="jobs/{{name}}/{{num+1}}">&raquo;</a></li>
+   <li ng-show="latestNum > num"><a ng-href="jobs/{{name}}/{{num+1}}">&raquo;</a></li>
   </ul>
  </nav>
  <div style="clear:both;"></div>
@@ -13,8 +13,8 @@
   <dt>Reason</dt><dd>{{job.reason}}</dd>
   <dt>Queued for</dt><dd>{{job.queued}}s</dd>
   <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
-  <dt>Completed</dt><dd>{{formatDate(job.completed)}}</dd>
-  <dt>Duration</dt><dd>{{job.duration}}s</dd>
+  <dt ng-show="job.result">Completed</dt><dd ng-show="job.result">{{formatDate(job.completed)}}</dd>
+  <dt ng-show="job.result">Duration</dt><dd ng-show="job.result">{{job.duration}}s</dd>
  </dl>
 </div>
 <div class="col-sm-7 col-md-6 col-lg-5">

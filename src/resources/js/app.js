@@ -181,6 +181,15 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			$scope.tags = Object.keys(tags);
 			$scope.$apply();
 		},
+		job_completed: function(data) {
+			for(var i in $scope.jobs) {
+				if($scope.jobs[i].name === data.name) {
+					$scope.jobs[i] = data;
+					$scope.$apply;
+					break;
+				}
+			}
+		}
 	});
 })
 .controller('JobController', function($rootScope, $scope, $routeParams, $ws) {
@@ -228,16 +237,13 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 		},
 		job_started: function(data) {
 			$scope.nQueued--;
-			if(data.name == $routeParams.name) {
-				$scope.jobsQueued.splice($scope.jobsQueued.length - 1,1);
-				$scope.jobsRunning.splice(0,0,data);
-				$scope.$apply();
-			}
+			$scope.jobsRunning.splice(0,0,data);
+			$scope.$apply();
 		},
 		job_completed: function(data) {
 			for(var i = 0; i < $scope.jobsRunning.length; ++i) {
 				var job = $scope.jobsRunning[i];
-				if(job.name == data.name && job.number == data.number) {
+				if(job.number === data.number) {
 					$scope.jobsRunning.splice(i,1);
 					$scope.jobsRecent.splice(0,0,data);
 					$scope.$apply();
@@ -258,15 +264,17 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 
 	$scope.name = $routeParams.name;
 	$scope.num = parseInt($routeParams.num);
+
 	$ws.statusListener({
 		status: function(data) {
 			$rootScope.title = data.title;
 			$rootScope.updateProgress(data);
 			$scope.job = data;
+			$scope.latestNum = data.latestNum;
 			$scope.$apply();
 		},
 		job_started: function() {
-			$scope.job.latestNum++;
+			$scope.latestNum++;
 			$scope.$apply();
 		},
 		job_completed: function(data) {

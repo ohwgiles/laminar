@@ -12,7 +12,7 @@
  <table class="table table-striped" id="joblist">
   <tr class="animate-repeat" ng-repeat="job in jobs | filter:bytag | filter:search">
    <td><a href="jobs/{{job.name}}">{{job.name}}</a></td>
-   <td class="text-center"><span ng-bind-html="runIcon(job.result)"></span> <a href="jobs/{{job.name}}/{{job.numberumber}}">#{{job.number}}</a></td>
+   <td class="text-center"><span ng-bind-html="runIcon(job.result)"></span> <a href="jobs/{{job.name}}/{{job.number}}">#{{job.number}}</a></td>
    <td class="text-center">{{formatDate(job.started)}}</a></td>
   </tr>
  </table>
