@@ -30,6 +30,7 @@
 typedef std::unordered_map<std::string,Node> NodeMap;
 
 struct Server;
+class Json;
 
 // The main class implementing the application's business logic.
 // It owns a Server to manage the HTTP/websocket and Cap'n Proto RPC
@@ -62,6 +63,13 @@ private:
     bool stepRun(std::shared_ptr<Run> run);
     void runFinished(const Run*);
     bool nodeCanQueue(const Node&, const Run&) const;
+    // expects that Json has started an array
+    void populateArtifacts(Json& out, std::string job, int num) const;
+
+    Run* activeRun(std::string name, int num) {
+        auto it = activeJobs.get<1>().find(std::make_tuple(name, num));
+        return it == activeJobs.get<1>().end() ? nullptr : it->get();
+    }
 
     std::list<std::shared_ptr<Run>> queuedJobs;
 

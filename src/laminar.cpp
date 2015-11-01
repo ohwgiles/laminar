@@ -30,8 +30,6 @@ namespace fs = boost::filesystem;
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-namespace {
-
 // rapidjson::Writer with a StringBuffer is used a lot in Laminar for
 // preparing JSON messages to send to Websocket clients. A small wrapper
 // class here reduces verbosity later for this common use case.
@@ -50,8 +48,6 @@ template<> Json& Json::set(const char* key, const char* value) { String(key); St
 template<> Json& Json::set(const char* key, std::string value) { String(key); String(value.c_str()); return *this; }
 template<> Json& Json::set(const char* key, int value) { String(key); Int(value); return *this; }
 template<> Json& Json::set(const char* key, time_t value) { String(key); Int64(value); return *this; }
-
-}
 
 namespace {
 // Default values when none were supplied in $LAMINAR_CONF_FILE (/etc/laminar.conf)
@@ -97,20 +93,36 @@ void Laminar::deregisterClient(LaminarClient* client) {
 }
 
 bool Laminar::setParam(std::string job, int buildNum, std::string param, std::string value) {
-    auto it = activeJobs.get<1>().find(std::make_tuple(job, buildNum));
-    if(it == activeJobs.get<1>().end())
-        return false;
-    std::shared_ptr<Run> run = *it;
-    run->params[param] = value;
-    return true;
+    if(Run* run = activeRun(job, buildNum)) {
+        run->params[param] = value;
+        return true;
+    }
+    return false;
+}
+
+
+void Laminar::populateArtifacts(Json &j, std::string job, int num) const {
+    fs::path dir(fs::path(homeDir)/"archive"/job/std::to_string(num));
+    if(fs::is_directory(dir)) {
+        fs::recursive_directory_iterator rdt(dir);
+        int prefixLen = (fs::path(homeDir)/"archive").string().length();
+        int scopeLen = dir.string().length();
+        for(fs::directory_entry e : rdt) {
+            if(!fs::is_regular_file(e))
+                continue;
+            j.StartObject();
+            j.set("url", archiveUrl + e.path().string().substr(prefixLen));
+            j.set("filename", e.path().string().substr(scopeLen+1));
+            j.EndObject();
+        }
+    }
 }
 
 void Laminar::sendStatus(LaminarClient* client) {
     if(client->scope.type == MonitorScope::LOG) {
         // If the requested job is currently in progress
-        auto it = activeJobs.get<1>().find(std::make_tuple(client->scope.job, client->scope.num));
-        if(it != activeJobs.get<1>().end()) {
-            client->sendMessage((*it)->log.c_str());
+        if(const Run* run = activeRun(client->scope.job, client->scope.num)) {
+            client->sendMessage(run->log.c_str());
         } else { // it must be finished, fetch it from the database
             db->stmt("SELECT output FROM builds WHERE name = ? AND number = ?")
               .bind(client->scope.job, client->scope.num)
@@ -136,22 +148,19 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("result", to_string(RunState(result)));
             j.set("reason", reason);
         });
+        if(const Run* run = activeRun(client->scope.job, client->scope.num)) {
+            j.set("queued", run->startedAt - run->queuedAt);
+            j.set("started", run->startedAt);
+            j.set("reason", run->reason());
+            db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+             .bind(run->name)
+             .fetch<int>([&](int etc){
+                j.set("etc", time(0) + etc);
+            });
+        }
         j.set("latestNum", int(buildNums[client->scope.job]));
         j.startArray("artifacts");
-        fs::path dir(fs::path(homeDir)/"archive"/client->scope.job/std::to_string(client->scope.num));
-        if(fs::is_directory(dir)) {
-            fs::recursive_directory_iterator rdt(dir);
-            int prefixLen = (fs::path(homeDir)/"archive").string().length();
-            int scopeLen = dir.string().length();
-            for(fs::directory_entry e : rdt) {
-                if(!fs::is_regular_file(e))
-                    continue;
-                j.StartObject();
-                j.set("url", archiveUrl + e.path().string().substr(prefixLen));
-                j.set("filename", e.path().string().substr(scopeLen+1));
-                j.EndObject();
-            }
-        }
+        populateArtifacts(j, client->scope.job, client->scope.num);
         j.EndArray();
     } else if(client->scope.type == MonitorScope::JOB) {
         j.startArray("recent");
@@ -433,10 +442,9 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 }
 
 kj::Promise<RunState> Laminar::waitForRun(std::string name, int buildNum) {
-    auto it = activeJobs.get<1>().find(std::make_tuple(name, buildNum));
-    if(it == activeJobs.get<1>().end())
-        return RunState::UNKNOWN;
-    return waitForRun(it->get());
+    if(const Run* run = activeRun(name, buildNum))
+        return waitForRun(run);
+    return RunState::UNKNOWN;
 }
 
 kj::Promise<RunState> Laminar::waitForRun(const Run* run) {
@@ -635,7 +643,11 @@ void Laminar::runFinished(const Run * r) {
             .set("duration", completedAt - r->startedAt)
             .set("started", r->startedAt)
             .set("result", to_string(r->result))
-            .EndObject();
+            .set("reason", r->reason());
+    j.startArray("artifacts");
+    populateArtifacts(j, r->name, r->build);
+    j.EndArray();
+    j.EndObject();
     const char* msg = j.str();
     for(LaminarClient* c : clients) {
         if(c->scope.wantsStatus(r->name, r->build))
