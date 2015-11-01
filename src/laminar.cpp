@@ -528,27 +528,17 @@ void Laminar::assignNewJobs() {
             Node& node = sn.second;
             std::shared_ptr<Run> run = *it;
             if(nodeCanQueue(node, *run)) {
-                node.busyExecutors++;
-                run->node = &node;
-                run->startedAt = time(0);
-                run->build = ++buildNums[run->name];
-                run->laminarHome = homeDir;
-                // set the last known result if exists
-                db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
-                 .bind(run->name)
-                 .fetch<int>([=](int result){
-                    run->lastResult = RunState(result);
-                });
 
+                int buildNum = buildNums[run->name] + 1;
                 // create a working directory (different to a workspace!)
-                fs::path wd = fs::path(homeDir)/"run"/run->name/std::to_string(run->build);
+                fs::path wd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
                 if(!fs::create_directory(wd)) {
                     KJ_LOG(ERROR, "Could not create working directory", wd.string());
                     break;
                 }
                 run->wd = wd.string();
                 // create an archive directory
-                fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(run->build);
+                fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
                 if(!fs::create_directories(archive)) {
                     KJ_LOG(ERROR, "Could not create archive directory", archive.string());
                     break;
@@ -584,6 +574,21 @@ void Laminar::assignNewJobs() {
                     run->addEnv((cfgDir/"nodes"/node.name/"env").string());
                 if(fs::exists(cfgDir/"jobs"/run->name/"env"))
                     run->addEnv((cfgDir/"jobs"/run->name/"env").string());
+
+                // start the job
+                node.busyExecutors++;
+                run->node = &node;
+                run->startedAt = time(0);
+                run->laminarHome = homeDir;
+                run->build = buildNum;
+                // set the last known result if exists
+                db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+                 .bind(run->name)
+                 .fetch<int>([=](int result){
+                    run->lastResult = RunState(result);
+                });
+                // update next build number
+                buildNums[run->name] = buildNum;
 
                 KJ_LOG(INFO, "Queued job to node", run->name, run->build, node.name);
 
