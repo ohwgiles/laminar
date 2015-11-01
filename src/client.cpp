@@ -79,6 +79,8 @@ int main(int argc, char** argv) {
         return EINVAL;
     }
 
+    int ret = 0;
+
     capnp::EzRpcClient client(address);
     LaminarCi::Client laminar = client.getMain<LaminarCi>();
 
@@ -124,7 +126,7 @@ int main(int argc, char** argv) {
         // pend on the promises
         for(auto& p : promises) {
             if(p.wait(waitScope).getResult() != LaminarCi::JobResult::SUCCESS) {
-                return EFAILED;
+                ret = EFAILED;
             }
         }
     } else if(strcmp(argv[1], "set") == 0) {
@@ -161,5 +163,5 @@ int main(int argc, char** argv) {
         return EINVAL;
     }
 
-    return 0;
+    return ret;
 }
