@@ -58,6 +58,7 @@ namespace {
 LaminarCi::JobResult fromRunState(RunState state) {
     switch(state) {
     case RunState::SUCCESS: return LaminarCi::JobResult::SUCCESS;
+    case RunState::FAILED: return LaminarCi::JobResult::FAILED;
     default:
         KJ_DBG("TODO log state", to_string(state));
         return LaminarCi::JobResult::UNKNOWN;
