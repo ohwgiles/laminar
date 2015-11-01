@@ -59,9 +59,9 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			$rootScope.title = data.title;
 			// populate jobs
 			$scope.jobsQueued = data.queued;
+			data.running.forEach($rootScope.updateProgress);
 			$scope.jobsRunning = data.running;
 			$scope.jobsRecent = data.recent;
-
 			$scope.$apply();
 			
 			// setup charts
@@ -145,20 +145,8 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			}
 		}
 	});
-	timeUpdater = $interval(function() {
-		$scope.jobsRunning.forEach(function(o){
-			if(o.etc) {
-				var d = new Date();
-				var p = (d.getTime()/1000 - o.started) / (o.etc - o.started);
-				if(p > 1.2) {
-					o.overtime = true;
-				} else if(p >= 1) {
-					o.progress = 99;
-				} else {
-					o.progress = 100 * p;
-				}
-			}
-		});
+	var timeUpdater = $interval(function() {
+		$scope.jobsRunning.forEach($rootScope.updateProgress);
 	}, 1000);
 	$scope.$on('$destroy', function() {
 		$interval.cancel(timeUpdater);
@@ -259,7 +247,7 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 		}
 	});
 })
-.controller('RunController', function($rootScope, $scope, $routeParams, $ws) {
+.controller('RunController', function($rootScope, $scope, $routeParams, $ws, $interval) {
 	$rootScope.bc = {
 		nodes: [{ href: '/', label: 'Home' },
 		{ href: '/jobs', label: 'Jobs' },
@@ -273,6 +261,7 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 	$ws.statusListener({
 		status: function(data) {
 			$rootScope.title = data.title;
+			$rootScope.updateProgress(data);
 			$scope.job = data;
 			$scope.$apply();
 		},
@@ -298,7 +287,13 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			window.scrollTo(0, document.body.scrollHeight);
 		}
 	});
-
+	
+	var timeUpdater = $interval(function() {
+		$rootScope.updateProgress($scope.job);
+	}, 1000);
+	$scope.$on('$destroy', function() {
+		$interval.cancel(timeUpdater);
+	});
 })
 .run(function($rootScope) {
 	angular.extend($rootScope, {
@@ -309,11 +304,26 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			// TODO reimplement when toLocaleDateString() accepts formatting
 			// options on most browsers
 			var d = new Date(1000 * unix);
-			return d.getHours() + ':' + d.getMinutes() + ' on ' + 
+			var m = d.getMinutes();
+			if(m < 10) m = '0' + m;
+			return d.getHours() + ':' + m + ' on ' + 
 				['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' '
 				+ d.getDate() + '. ' + ['Jan','Feb','Mar','Apr','May','Jun',
 				'Jul','Aug','Sep', 'Oct','Nov','Dec'][d.getMonth()] + ' '
 				+ d.getFullYear();
+		},
+		updateProgress: function(o){
+			if(o.etc) {
+				var d = new Date();
+				var p = (d.getTime()/1000 - o.started) / (o.etc - o.started);
+				if(p > 1.2) {
+					o.overtime = true;
+				} else if(p >= 1) {
+					o.progress = 99;
+				} else {
+					o.progress = 100 * p;
+				}
+			}
 		}
 	});
 });

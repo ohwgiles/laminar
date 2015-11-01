@@ -30,6 +30,7 @@ Resources::Resources()
     INIT_RESOURCE("/", index_html);
     INIT_RESOURCE("/favicon.ico", favicon_ico);
     INIT_RESOURCE("/favicon-152.png", favicon_152_png);
+    INIT_RESOURCE("/progress.png", progress_png);
     INIT_RESOURCE("/icon.png", icon_png);
     INIT_RESOURCE("/js/app.js", js_app_js);
     INIT_RESOURCE("/js/Chart.HorizontalBar.js", js_Chart_HorizontalBar_js);

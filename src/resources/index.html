@@ -32,8 +32,29 @@
   }
   .progress {
    height: 10px;
+   margin-top: 5px;
    margin-bottom: 0;
   }
+  .spin {
+	  -webkit-animation: rotation 2s infinite linear;
+  }
+  @-webkit-keyframes rotation {
+    from {-webkit-transform: rotate(0deg);}
+    to   {-webkit-transform: rotate(359deg);}
+  }
+  img.spin.small {
+	  width: 11px;
+	  height: 11px;
+  }
+  img.spin {
+    -webkit-animation:spin 4s linear infinite;
+    -moz-animation:spin 4s linear infinite;
+    animation:spin 4s linear infinite;
+}
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
+
  </style>
 </head>
 <body>

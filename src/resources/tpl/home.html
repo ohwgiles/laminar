@@ -6,7 +6,7 @@
    <td><a href="jobs/{{job.name}}">{{job.name}}</a> <i>queued</i></td>
   </tr>
   <tr class="animate-repeat" ng-repeat="job in jobsRunning track by $index">
-   <td><a href="jobs/{{job.name}}">{{job.name}}</a> <a href="jobs/{{job.name}}/{{job.number}}">#{{job.number}}</a> <div class="progress">
+   <td><img class="spin small" src="/progress.png"> <a href="jobs/{{job.name}}">{{job.name}}</a> <a href="jobs/{{job.name}}/{{job.number}}">#{{job.number}}</a> <div class="progress">
     <div class="progress-bar progress-bar-{{job.overtime?'warning':'info'}} progress-bar-striped {{job.etc?'':'active'}}" style="width:{{!job.etc?'100':job.progress}}%"></div>
     </div>
    </td>

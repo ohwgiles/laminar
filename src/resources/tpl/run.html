@@ -1,7 +1,7 @@
 <div class="container-fluid">
 <div class="row">
 <div class="col-sm-5 col-md-6 col-lg-7">
- <h3 style="float:left"><span ng-bind-html="runIcon(job.result)"></span> {{name}} #{{num}}</h3>
+ <h3 style="float:left"><img class="spin" src="/progress.png" ng-hide="job.result"><span ng-bind-html="runIcon(job.result)"></span> {{name}} #{{num}}</h3>
  <nav class="pull-left">
   <ul class="pagination" style="margin:15px 20px">
    <li><a href="jobs/{{name}}/{{num-1}}">&laquo;</a></li>
@@ -18,6 +18,9 @@
  </dl>
 </div>
 <div class="col-sm-7 col-md-6 col-lg-5">
+ <div class="progress" ng-hide="job.result">
+  <div class="progress-bar progress-bar-{{job.overtime?'warning':'info'}} progress-bar-striped {{job.etc?'':'active'}}" style="width:{{!job.etc?'100':job.progress}}%;"></div>
+ </div>
  <div class="panel panel-default" ng-show="job.artifacts.length">
   <div class="panel-heading">Artifacts</div>
   <div class="panel-body">
