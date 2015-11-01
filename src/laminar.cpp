@@ -596,7 +596,11 @@ void Laminar::assignNewJobs() {
                 j.EndObject();
                 const char* msg = j.str();
                 for(LaminarClient* c : clients) {
-                    if(c->scope.wantsStatus(run->name, run->build))
+                    if(c->scope.wantsStatus(run->name, run->build)
+                        // The run page also should know that another job has started
+                        // (so maybe it can show a previously hidden "next" button).
+                        // Hence this small hack:
+                            || (c->scope.type == MonitorScope::Type::RUN && c->scope.job == run->name))
                         c->sendMessage(msg);
                 }
 
