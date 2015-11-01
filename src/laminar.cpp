@@ -399,8 +399,10 @@ bool Laminar::loadConfiguration() {
 }
 
 std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
-    if(!fs::exists(fs::path(homeDir)/"cfg"/"jobs"/name))
+    if(!fs::exists(fs::path(homeDir)/"cfg"/"jobs"/name)) {
+        KJ_LOG(ERROR, "Non-existent job", name);
         return nullptr;
+    }
 
     // attempt to create a workspace for this job if it doesn't exist
     if(!fs::exists(fs::path(homeDir)/"run"/name/"workspace")) {
