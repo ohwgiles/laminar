@@ -104,15 +104,14 @@ bool Laminar::setParam(std::string job, int buildNum, std::string param, std::st
 void Laminar::populateArtifacts(Json &j, std::string job, int num) const {
     fs::path dir(fs::path(homeDir)/"archive"/job/std::to_string(num));
     if(fs::is_directory(dir)) {
-        fs::recursive_directory_iterator rdt(dir);
         int prefixLen = (fs::path(homeDir)/"archive").string().length();
         int scopeLen = dir.string().length();
-        for(fs::directory_entry e : rdt) {
-            if(!fs::is_regular_file(e))
+        for(fs::recursive_directory_iterator it(dir); it != fs::recursive_directory_iterator(); ++it) {
+            if(!fs::is_regular_file(*it))
                 continue;
             j.StartObject();
-            j.set("url", archiveUrl + e.path().string().substr(prefixLen));
-            j.set("filename", e.path().string().substr(scopeLen+1));
+            j.set("url", archiveUrl + it->path().string().substr(prefixLen));
+            j.set("filename", it->path().string().substr(scopeLen+1));
             j.EndObject();
         }
     }
@@ -330,19 +329,18 @@ bool Laminar::loadConfiguration() {
     fs::path nodeCfg = fs::path(homeDir)/"cfg"/"nodes";
 
     if(fs::is_directory(nodeCfg)) {
-        fs::directory_iterator dit(nodeCfg);
-        for(fs::directory_entry& it : dit) {
-            if(!fs::is_directory(it.status()))
+        for(fs::directory_iterator it(nodeCfg); it != fs::directory_iterator(); ++it) {
+            if(!fs::is_directory(it->status()))
                 continue;
 
-            fs::directory_entry config(it.path()/"config");
+            fs::directory_entry config(it->path()/"config");
             if(!fs::is_regular_file(config.status()))
                 continue;
 
             StringMap conf = parseConfFile(config.path().string().c_str());
 
             Node node;
-            node.name = it.path().filename().string();
+            node.name = it->path().filename().string();
             node.numExecutors = conf.get<int>("EXECUTORS", 6);
 
             std::string tags = conf.get<std::string>("TAGS");
@@ -371,12 +369,11 @@ bool Laminar::loadConfiguration() {
 
     fs::path jobsDir = fs::path(homeDir)/"cfg"/"jobs";
     if(fs::is_directory(jobsDir)) {
-        fs::directory_iterator dit(jobsDir);
-        for(fs::directory_entry& it : dit) {
-            if(!fs::is_directory(it.status()))
+        for(fs::directory_iterator it(jobsDir); it != fs::directory_iterator(); ++it) {
+            if(!fs::is_directory(it->status()))
                 continue;
 
-            fs::directory_entry config(it.path()/"config");
+            fs::directory_entry config(it->path()/"config");
             if(!fs::is_regular_file(config.status()))
                 continue;
 
@@ -389,7 +386,7 @@ bool Laminar::loadConfiguration() {
                 std::copy(std::istream_iterator<std::string>(iss),
                           std::istream_iterator<std::string>(),
                           std::inserter(tagList, tagList.begin()));
-                jobTags[it.path().filename().string()] = tagList;
+                jobTags[it->path().filename().string()] = tagList;
             }
 
         }

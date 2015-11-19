@@ -107,17 +107,15 @@ private:
 
 namespace bmi = boost::multi_index;
 
-struct _same {
+struct _run_same {
     typedef const Run* result_type;
     const Run* operator()(const std::shared_ptr<Run>& run) const {
         return run.get();
     }
 };
 
-struct RunSet: public boost::multi_index_container<
-    std::shared_ptr<Run>,
-    // A single Run can be fetched by...
-    bmi::indexed_by<
+// A single Run can be fetched by...
+struct _run_index : bmi::indexed_by<
         // their current running pid
         bmi::hashed_unique<bmi::member<Run, pid_t, &Run::pid>>,
         bmi::hashed_unique<bmi::composite_key<
@@ -127,12 +125,17 @@ struct RunSet: public boost::multi_index_container<
             bmi::member<Run, int, &Run::build>
         >>,
         // or a pointer to a Run object.
-        bmi::hashed_unique<_same>,
+        bmi::hashed_unique<_run_same>,
         // A group of Runs can be fetched by the time they started
         bmi::ordered_non_unique<bmi::member<Run, time_t, &Run::startedAt>>,
         // or by their job name
         bmi::ordered_non_unique<bmi::member<Run, std::string, &Run::name>>
     >
+{};
+
+struct RunSet: public boost::multi_index_container<
+    std::shared_ptr<Run>,
+    _run_index
 > {
     // TODO: getters for each index
 };
