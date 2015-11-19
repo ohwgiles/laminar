@@ -84,11 +84,11 @@ generate_compressed_bins(${CMAKE_BINARY_DIR} js/angular.min.js js/angular-route.
 add_executable(laminard src/database.cpp src/main.cpp src/server.cpp src/laminar.cpp
     src/conf.cpp src/resources.cpp src/run.cpp laminar.capnp.c++ ${COMPRESSED_BINS})
 # TODO: some alternative to boost::filesystem?
-target_link_libraries(laminard capnp capnp-rpc kj-async kj boost_filesystem boost_system sqlite3)
+target_link_libraries(laminard capnp-rpc capnp kj-async kj pthread boost_filesystem boost_system sqlite3)
 
 ## Client
 add_executable(laminarc src/client.cpp laminar.capnp.c++)
-target_link_libraries(laminarc capnp capnp-rpc kj-async kj)
+target_link_libraries(laminarc capnp-rpc capnp kj-async kj pthread)
 
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
 install(FILES laminar.service DESTINATION usr/lib/systemd/system)
