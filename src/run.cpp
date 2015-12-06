@@ -101,9 +101,10 @@ bool Run::step() {
             for(auto& pair : params) {
                 setenv(pair.first.c_str(), pair.second.c_str(), false);
             }
-            printf("[laminar] Executing %s\n", currentScript.c_str());
+            fprintf(stderr, "[laminar] Executing %s\n", currentScript.c_str());
             execl(currentScript.c_str(), currentScript.c_str(), NULL);
-            LLOG(FATAL, "execl returned", strerror(errno));
+            // cannot use LLOG because stdout/stderr are captured
+            fprintf(stderr, "[laminar] Failed to execute %s\n", currentScript.c_str());
             _exit(1);
         }
 
