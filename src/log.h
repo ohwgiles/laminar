@@ -16,34 +16,22 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#include "laminar.h"
-#include "log.h"
+#ifndef _LAMINAR_LOG_H_
+#define _LAMINAR_LOG_H_
 
-#include <signal.h>
+#include <kj/debug.h>
 
-std::function<void()> sigHandler;
-static void __sigHandler(int) { sigHandler(); }
+// Simple override to prevent full paths to source files from
+// appearing in log messages. Assumes / is the path separator.
+// @see kj/debug.h
 
-int main(int argc, char** argv) {
-    for(int i = 1; i < argc; ++i) {
-        if(strcmp(argv[i], "-v") == 0) {
-            kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
-        }
-    }
+#define _LBASENAME(path) strrchr(path, '/') ? strrchr(path, '/') + 1 : path
 
-    do {
-        Laminar laminar;
-        sigHandler = [&](){
-            LLOG(INFO, "Received SIGINT");
-            laminar.stop();
-        };
-        signal(SIGINT, &__sigHandler);
-        signal(SIGTERM, &__sigHandler);
+#define LLOG(severity, ...) \
+  if (!::kj::_::Debug::shouldLog(::kj::_::Debug::Severity::severity)) {} else \
+    ::kj::_::Debug::log(_LBASENAME(__FILE__), __LINE__, ::kj::_::Debug::Severity::severity, \
+                        #__VA_ARGS__, __VA_ARGS__)
 
-        laminar.run();
-    } while(false);
 
-    LLOG(INFO, "end of main");
-    return 0;
-}
+#endif // _LAMINAR_LOG_H_
 

@@ -19,10 +19,10 @@
 #include "laminar.h"
 #include "server.h"
 #include "conf.h"
+#include "log.h"
 
 #include <sys/wait.h>
 #include <fstream>
-#include <kj/debug.h>
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -404,14 +404,14 @@ bool Laminar::loadConfiguration() {
 
 std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
     if(!fs::exists(fs::path(homeDir)/"cfg"/"jobs"/name)) {
-        KJ_LOG(ERROR, "Non-existent job", name);
+        LLOG(ERROR, "Non-existent job", name);
         return nullptr;
     }
 
     // attempt to create a workspace for this job if it doesn't exist
     if(!fs::exists(fs::path(homeDir)/"run"/name/"workspace")) {
         if(!fs::create_directories(fs::path(homeDir)/"run"/name/"workspace")) {
-            KJ_LOG(ERROR, "Could not create job workspace", name);
+            LLOG(ERROR, "Could not create job workspace", name);
             return nullptr;
         }
     }
@@ -428,7 +428,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
             } else if(it->first == "=reason") {
                 run->reasonMsg = it->second;
             } else {
-                KJ_LOG(ERROR, "Unknown internal job parameter", it->first);
+                LLOG(ERROR, "Unknown internal job parameter", it->first);
             }
             it = params.erase(it);
         } else
@@ -486,7 +486,7 @@ void Laminar::reapAdvance() {
     pid_t pid = waitpid(-1, &ret, 0);
     // TODO: handle signalled child processes
     if(pid > 0) {
-        KJ_LOG(INFO, "Reaping", pid);
+        LLOG(INFO, "Reaping", pid);
         auto it = activeJobs.get<0>().find(pid);
         std::shared_ptr<Run> run = *it;
         bool completed = true;
@@ -537,16 +537,16 @@ void Laminar::assignNewJobs() {
                 // create a working directory (different to a workspace!)
                 fs::path wd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
                 if(!fs::create_directory(wd)) {
-                    KJ_LOG(ERROR, "Could not create working directory", wd.string());
+                    LLOG(ERROR, "Could not create working directory", wd.string());
                     break;
                 }
                 run->wd = wd.string();
                 // create an archive directory
                 fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
                 if(fs::is_directory(archive)) {
-                    KJ_LOG(WARNING, "Archive directory already exists", archive.string());
+                    LLOG(WARNING, "Archive directory already exists", archive.string());
                 } else if(!fs::create_directories(archive)) {
-                    KJ_LOG(ERROR, "Could not create archive directory", archive.string());
+                    LLOG(ERROR, "Could not create archive directory", archive.string());
                     break;
                 }
 
@@ -596,7 +596,7 @@ void Laminar::assignNewJobs() {
                 // update next build number
                 buildNums[run->name] = buildNum;
 
-                KJ_LOG(INFO, "Queued job to node", run->name, run->build, node.name);
+                LLOG(INFO, "Queued job to node", run->name, run->build, node.name);
 
                 // notify clients
                 Json j;
@@ -630,7 +630,7 @@ void Laminar::assignNewJobs() {
                 // trigger the first step of the run
                 if(stepRun(run)) {
                     // should never happen
-                    KJ_LOG(INFO, "No steps for run");
+                    LLOG(INFO, "No steps for run");
                     run->complete();
                 }
 
@@ -651,7 +651,7 @@ void Laminar::runFinished(const Run * r) {
     Node* node = r->node;
 
     node->busyExecutors--;
-    KJ_LOG(INFO, "Run completed", r->name, to_string(r->result));
+    LLOG(INFO, "Run completed", r->name, to_string(r->result));
     time_t completedAt = time(0);
     db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?)")
      .bind(r->name, r->build, node->name, r->queuedAt, r->startedAt, completedAt, int(r->result),

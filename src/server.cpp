@@ -20,12 +20,12 @@
 #include "interface.h"
 #include "laminar.capnp.h"
 #include "resources.h"
+#include "log.h"
 
 #include <capnp/ez-rpc.h>
 #include <capnp/rpc-twoparty.h>
 #include <capnp/rpc.capnp.h>
 #include <kj/async-io.h>
-#include <kj/debug.h>
 #include <kj/threadlocal.h>
 
 #include <websocketpp/config/core.hpp>
@@ -58,9 +58,9 @@ namespace {
 LaminarCi::JobResult fromRunState(RunState state) {
     switch(state) {
     case RunState::SUCCESS: return LaminarCi::JobResult::SUCCESS;
-    case RunState::FAILED: return LaminarCi::JobResult::FAILED;
+    case RunState::FAILED:  return LaminarCi::JobResult::FAILED;
+    case RunState::ABORTED: return LaminarCi::JobResult::ABORTED;
     default:
-        KJ_DBG("TODO log state", to_string(state));
         return LaminarCi::JobResult::UNKNOWN;
     }
 }
@@ -81,7 +81,7 @@ public:
     // Start a job, without waiting for it to finish
     kj::Promise<void> trigger(TriggerContext context) override {
         std::string jobName = context.getParams().getJobName();
-        KJ_LOG(INFO, "RPC trigger", jobName);
+        LLOG(INFO, "RPC trigger", jobName);
         ParamMap params;
         for(auto p : context.getParams().getParams()) {
             params[p.getName().cStr()] = p.getValue().cStr();
@@ -96,7 +96,7 @@ public:
     // Start a job and wait for the result
     kj::Promise<void> start(StartContext context) override {
         std::string jobName = context.getParams().getJobName();
-        KJ_LOG(INFO, "RPC start", jobName);
+        LLOG(INFO, "RPC start", jobName);
         ParamMap params;
         for(auto p : context.getParams().getParams()) {
             params[p.getName().cStr()] = p.getValue().cStr();
@@ -116,7 +116,7 @@ public:
     kj::Promise<void> pend(PendContext context) override {
         std::string jobName = context.getParams().getJobName();
         int buildNum = context.getParams().getBuildNum();
-        KJ_LOG(INFO, "RPC pend", jobName, buildNum);
+        LLOG(INFO, "RPC pend", jobName, buildNum);
 
         kj::Promise<RunState> promise = laminar.waitForRun(jobName, buildNum);
 
@@ -129,7 +129,7 @@ public:
     kj::Promise<void> set(SetContext context) override {
         std::string jobName = context.getParams().getJobName();
         int buildNum = context.getParams().getBuildNum();
-        KJ_LOG(INFO, "RPC set", jobName, buildNum);
+        LLOG(INFO, "RPC set", jobName, buildNum);
 
         LaminarCi::MethodResult result = laminar.setParam(jobName, buildNum,
             context.getParams().getParam().getName(), context.getParams().getParam().getValue())

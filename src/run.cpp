@@ -19,9 +19,9 @@
 #include "run.h"
 #include "node.h"
 #include "conf.h"
-#include <iostream>
-#include <kj/debug.h>
+#include "log.h"
 
+#include <iostream>
 #include <unistd.h>
 
 #include <boost/filesystem.hpp>
@@ -47,7 +47,7 @@ Run::Run() {
 }
 
 Run::~Run() {
-    KJ_DBG("Run destroyed");
+    LLOG(INFO, "Run destroyed");
 }
 
 std::string Run::reason() const {
@@ -103,11 +103,11 @@ bool Run::step() {
             }
             printf("[laminar] Executing %s\n", currentScript.c_str());
             execl(currentScript.c_str(), currentScript.c_str(), NULL);
-            KJ_LOG(FATAL, "execl returned", strerror(errno));
+            LLOG(FATAL, "execl returned", strerror(errno));
             _exit(1);
         }
 
-        KJ_LOG(INFO, "Forked", currentScript, pid);
+        LLOG(INFO, "Forked", currentScript, pid);
         close(pfd[1]);
         fd = pfd[0];
         this->pid = pid;
