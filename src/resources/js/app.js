@@ -213,20 +213,20 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 			$scope.$apply();
 			
 			var chtBt = new Chart(document.getElementById("chartBt").getContext("2d")).Bar({
-				labels: data.recent.map(function(e){return '#' + e.number;}),
+				labels: data.recent.map(function(e){return '#' + e.number;}).reverse(),
 				datasets: [{
 					fillColor: "darkseagreen",
 					strokeColor: "forestgreen",
-					data: data.recent.map(function(e){return e.duration;})
+					data: data.recent.map(function(e){return e.duration;}).reverse()
 				}]
 			},
 			{barValueSpacing: 1,barStrokeWidth: 1,barDatasetSpacing:0}
 			);
 
-			for(var i = 0; i < data.recent.length; ++i) {
+			for(var i = 0, n = data.recent.length; i < n; ++i) {
 				if(data.recent[i].result != "success") {
-					chtBt.datasets[0].bars[i].fillColor = "darksalmon";
-					chtBt.datasets[0].bars[i].strokeColor = "crimson";
+					chtBt.datasets[0].bars[n-i-1].fillColor = "darksalmon";
+					chtBt.datasets[0].bars[n-i-1].strokeColor = "crimson";
 				}
 			}
 			chtBt.update();
