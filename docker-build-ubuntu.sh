@@ -10,7 +10,7 @@ SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 docker run -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output ubuntu bash -xe <<EOS
 
 apt-get update
-apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.54-dev
+apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.55-dev
 
 mkdir /build
 cd /build
@@ -54,7 +54,7 @@ Version: $VERSION
 Section: 
 Priority: optional
 Architecture: amd64
-Depends: libboost-filesystem1.54.0
+Depends: libboost-filesystem1.55.0
 Description: Lightweight Continuous Integration Service
 EOF
 cat <<EOF > laminar/DEBIAN/postinst
