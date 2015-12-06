@@ -61,7 +61,7 @@ private:
     void reapAdvance();
     void assignNewJobs();
     bool stepRun(std::shared_ptr<Run> run);
-    void runFinished(const Run*);
+    void runFinished(Run*);
     bool nodeCanQueue(const Node&, const Run&) const;
     // expects that Json has started an array
     void populateArtifacts(Json& out, std::string job, int num) const;

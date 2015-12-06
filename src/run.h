@@ -68,7 +68,7 @@ public:
 
     std::string reason() const;
 
-    std::function<void(const Run*)> notifyCompletion;
+    std::function<void(Run*)> notifyCompletion;
     Node* node;
     RunState result;
     RunState lastResult;

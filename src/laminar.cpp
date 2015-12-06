@@ -23,6 +23,7 @@
 
 #include <sys/wait.h>
 #include <fstream>
+#include <zlib.h>
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -71,7 +72,7 @@ Laminar::Laminar() {
     db->exec("CREATE TABLE IF NOT EXISTS builds("
              "name TEXT, number INT UNSIGNED, node TEXT, queuedAt INT, "
              "startedAt INT, completedAt INT, result INT, output TEXT, "
-             "parentJob TEXT, parentBuild INT, reason TEXT,"
+             "outputLen INT, parentJob TEXT, parentBuild INT, reason TEXT, "
              "PRIMARY KEY (name, number))");
     db->exec("CREATE INDEX IF NOT EXISTS idx_completion_time ON builds("
              "completedAt DESC)");
@@ -128,10 +129,16 @@ void Laminar::sendStatus(LaminarClient* client) {
         if(const Run* run = activeRun(client->scope.job, client->scope.num)) {
             client->sendMessage(run->log.c_str());
         } else { // it must be finished, fetch it from the database
-            db->stmt("SELECT output FROM builds WHERE name = ? AND number = ?")
+            db->stmt("SELECT output, outputLen FROM builds WHERE name = ? AND number = ?")
               .bind(client->scope.job, client->scope.num)
-              .fetch<const char*>([=](const char* log) {
-                client->sendMessage(log);
+              .fetch<str,int>([=](str zipped, unsigned long sz) {
+                std::string log(sz+1,'\0');
+                int res = ::uncompress((unsigned char*)&log[0], &sz,
+                        (unsigned char*)zipped.data(), zipped.size());
+                if(res == Z_OK)
+                    client->sendMessage(log);
+                else
+                    LLOG(ERROR, "Failed to uncompress log", res);
             });
         }
         return;
@@ -625,7 +632,7 @@ void Laminar::assignNewJobs() {
                 }
 
                 // setup run completion handler
-                run->notifyCompletion = [this](const Run* r) { runFinished(r); };
+                run->notifyCompletion = [this](Run* r) { runFinished(r); };
 
                 // trigger the first step of the run
                 if(stepRun(run)) {
@@ -647,15 +654,24 @@ void Laminar::assignNewJobs() {
     }
 }
 
-void Laminar::runFinished(const Run * r) {
+void Laminar::runFinished(Run * r) {
     Node* node = r->node;
 
     node->busyExecutors--;
     LLOG(INFO, "Run completed", r->name, to_string(r->result));
     time_t completedAt = time(0);
-    db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+
+    // compress log
+    std::string zipped(r->log.size(), '\0');
+    size_t logsize = r->log.length();
+    size_t zippedSize = zipped.size();
+    ::compress((unsigned char*)&zipped[0], &zippedSize,
+            (unsigned char*)&r->log[0], logsize);
+    zipped.resize(zippedSize);
+
+    db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
      .bind(r->name, r->build, node->name, r->queuedAt, r->startedAt, completedAt, int(r->result),
-           r->log, r->parentName, r->parentBuild, r->reason())
+           zipped, logsize, r->parentName, r->parentBuild, r->reason())
      .exec();
 
     // notify clients
