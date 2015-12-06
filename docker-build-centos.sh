@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=0.1
+VERSION=0.2
 
 OUTPUT_DIR=$PWD
 
@@ -8,7 +8,7 @@ SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
 docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output centos bash -xe <<EOS
 
-yum -y install rpm-build cmake make gcc gcc-c++ wget sqlite-devel boost-devel
+yum -y install rpm-build cmake make gcc gcc-c++ wget sqlite-devel boost-devel zlib-devel
 
 mkdir /build
 cd /build
@@ -47,7 +47,7 @@ Version: $VERSION
 Release: 1
 License: GPL
 BuildRequires: systemd-units
-Requires: boost-filesystem
+Requires: boost-filesystem zlib
 
 %description
 Lightweight Continuous Integration Service
@@ -55,7 +55,7 @@ Lightweight Continuous Integration Service
 %prep
 
 %build
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ %{_sourcedir}/laminar-0.1
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ %{_sourcedir}/laminar-$VERSION
 pwd
 make
 
@@ -76,5 +76,5 @@ chown -R laminar: %{_sharedstatedir}/laminar
 EOF
 
 rpmbuild -ba laminar.spec
-mv rpmbuild/RPMS/x86_64/laminar-0.1-1.x86_64.rpm /output/
+mv rpmbuild/RPMS/x86_64/laminar-$VERSION-1.x86_64.rpm /output/
 EOS

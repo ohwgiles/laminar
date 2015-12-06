@@ -1,16 +1,15 @@
 #!/bin/bash
 
-VERSION=0.1
+VERSION=0.2
 
 OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
-#docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output ubuntu bash -xe <<EOS
-docker run -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output ubuntu bash -xe <<EOS
+docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output ubuntu bash -xe <<EOS
 
 apt-get update
-apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.55-dev
+apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.55-dev zlib1g-dev
 
 mkdir /build
 cd /build
@@ -55,7 +54,7 @@ Section:
 Priority: optional
 Architecture: amd64
 Maintainer: Oliver Giles <web ohwg net>
-Depends: libboost-filesystem1.55.0
+Depends: libboost-filesystem1.55.0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 cat <<EOF > laminar/DEBIAN/postinst
