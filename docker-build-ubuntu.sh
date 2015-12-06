@@ -67,5 +67,5 @@ EOF
 chmod +x laminar/DEBIAN/postinst
 
 dpkg-deb --build laminar
-mv laminar.deb /output/laminar_$VERSION-1_amd64.deb
+mv laminar.deb /output/laminar-$VERSION-1-amd64.deb
 EOS
