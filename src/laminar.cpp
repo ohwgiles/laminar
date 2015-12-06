@@ -536,7 +536,9 @@ void Laminar::assignNewJobs() {
                 run->wd = wd.string();
                 // create an archive directory
                 fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
-                if(!fs::create_directories(archive)) {
+                if(fs::is_directory(archive)) {
+                    KJ_LOG(WARNING, "Archive directory already exists", archive.string());
+                } else if(!fs::create_directories(archive)) {
                     KJ_LOG(ERROR, "Could not create archive directory", archive.string());
                     break;
                 }
