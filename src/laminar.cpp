@@ -69,7 +69,12 @@ Laminar::Laminar() {
     // Prepare database for first use
     // TODO: error handling
     db->exec("CREATE TABLE IF NOT EXISTS builds("
-            "name TEXT, number INT UNSIGNED, node TEXT, queuedAt INT, startedAt INT, completedAt INT, result INT, output TEXT, parentJob TEXT, parentBuild INT, reason TEXT)");
+             "name TEXT, number INT UNSIGNED, node TEXT, queuedAt INT, "
+             "startedAt INT, completedAt INT, result INT, output TEXT, "
+             "parentJob TEXT, parentBuild INT, reason TEXT,"
+             "PRIMARY KEY (name, number))");
+    db->exec("CREATE INDEX IF NOT EXISTS idx_completion_time ON builds("
+             "completedAt DESC)");
 
     // retrieve the last build numbers
     db->stmt("SELECT name, MAX(number) FROM builds GROUP BY name")
