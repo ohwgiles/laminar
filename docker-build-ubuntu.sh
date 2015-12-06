@@ -54,6 +54,7 @@ Version: $VERSION
 Section: 
 Priority: optional
 Architecture: amd64
+Maintainer: Oliver Giles <web ohwg net>
 Depends: libboost-filesystem1.55.0
 Description: Lightweight Continuous Integration Service
 EOF
