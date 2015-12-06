@@ -1,7 +1,7 @@
 <div class="container-fluid">
 <div class="row">
 <div class="col-sm-5 col-md-6 col-lg-7">
- <h3 style="float:left"><img class="spin" src="/progress.png" ng-hide="job.result"><span ng-bind-html="runIcon(job.result)"></span> {{name}} #{{num}}</h3>
+ <h3 style="float:left"><img class="spin" src="/progress.png" ng-show="job.result === 'running'"><span ng-bind-html="runIcon(job.result)"></span> {{name}} #{{num}}</h3>
  <nav class="pull-left">
   <ul class="pagination" style="margin:15px 20px">
    <li ng-show="num > 1"><a href="jobs/{{name}}/{{num-1}}">&laquo;</a></li>
@@ -13,12 +13,12 @@
   <dt>Reason</dt><dd>{{job.reason}}</dd>
   <dt>Queued for</dt><dd>{{job.queued}}s</dd>
   <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
-  <dt ng-show="job.result">Completed</dt><dd ng-show="job.result">{{formatDate(job.completed)}}</dd>
-  <dt ng-show="job.result">Duration</dt><dd ng-show="job.result">{{job.duration}}s</dd>
+  <dt ng-show="runComplete(job)">Completed</dt><dd ng-show="runComplete(job)">{{formatDate(job.completed)}}</dd>
+  <dt ng-show="runComplete(job)">Duration</dt><dd ng-show="runComplete(job)">{{job.duration}}s</dd>
  </dl>
 </div>
 <div class="col-sm-7 col-md-6 col-lg-5">
- <div class="progress" ng-hide="job.result">
+ <div class="progress" ng-show="job.result == 'running'">
   <div class="progress-bar progress-bar-{{job.overtime?'warning':'info'}} progress-bar-striped {{job.etc?'':'active'}}" style="width:{{!job.etc?'100':job.progress}}%;"></div>
  </div>
  <div class="panel panel-default" ng-show="job.artifacts.length">

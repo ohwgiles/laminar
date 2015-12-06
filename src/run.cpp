@@ -30,6 +30,7 @@ namespace fs = boost::filesystem;
 std::string to_string(const RunState& rs) {
     switch(rs) {
     case RunState::PENDING: return "pending";
+    case RunState::RUNNING: return "running";
     case RunState::ABORTED: return "aborted";
     case RunState::FAILED: return "failed";
     case RunState::SUCCESS: return "success";

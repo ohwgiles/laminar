@@ -29,6 +29,7 @@
 enum class RunState {
     UNKNOWN,
     PENDING,
+    RUNNING,
     ABORTED,
     FAILED,
     SUCCESS

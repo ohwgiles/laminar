@@ -156,6 +156,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("queued", run->startedAt - run->queuedAt);
             j.set("started", run->startedAt);
             j.set("reason", run->reason());
+            j.set("result", to_string(RunState::RUNNING));
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
              .fetch<int>([&](int etc){
@@ -188,6 +189,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("number", run->build);
             j.set("node", run->node->name);
             j.set("started", run->startedAt);
+            j.set("result", to_string(RunState::RUNNING));
             j.set("reason", run->reason());
             j.EndObject();
         }

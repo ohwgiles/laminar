@@ -306,7 +306,10 @@ angular.module('laminar',['ngRoute','ngSanitize'])
 .run(function($rootScope) {
 	angular.extend($rootScope, {
 		runIcon: function(result) {
-			return result === "success" ? '<span style="color:forestgreen;font-family:\'Zapf Dingbats\';">✔</span>' : result === "failed" ? '<span style="color:crimson;">✘</span>' : '';
+			return result === "success" ? '<span style="color:forestgreen;font-family:\'Zapf Dingbats\';">✔</span>' : result === "failed" || result === "aborted" ? '<span style="color:crimson;">✘</span>' : '';
+		},
+		runComplete: function(run) {
+			return !!run && (run.result === 'aborted' || run.result === 'failed' || run.result === 'success');
 		},
 		formatDate: function(unix) {
 			// TODO reimplement when toLocaleDateString() accepts formatting
