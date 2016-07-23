@@ -50,14 +50,14 @@ void Database::Statement::bindValue(int i, const char* e) {
     sqlite3_bind_text(stmt, i, e, -1, NULL);
 }
 
-void Database::Statement::bindValue(int i, std::string e) {
-    sqlite3_bind_blob(stmt, i, e.data(), e.size(), NULL);
+void Database::Statement::bindValue(int i, const std::string& e) {
+    sqlite3_bind_text(stmt, i, e.data(), e.size(), NULL);
 }
 
 template<> std::string Database::Statement::fetchColumn(int col) {
     int sz = sqlite3_column_bytes(stmt, col);
     std::string res(sz, '\0');
-    memcpy(&res[0], sqlite3_column_blob(stmt, col), sz);
+    memcpy(&res[0], sqlite3_column_text(stmt, col), sz);
     return res;
 }
 

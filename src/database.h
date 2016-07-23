@@ -55,9 +55,12 @@ private:
         ~Statement();
 
         // Bind several parameters in a single call. They are bound
-        // by index in the order passed into this function
+        // by index in the order passed into this function. Must be
+        // passed by reference because arguments may be std::strings,
+        // which must be passed by reference because sqlite requires
+        // the bound string's lifetime to exist until sqlite3_step
         template<typename...Args>
-        Statement& bind(Args...args) {
+        Statement& bind(const Args&...args) {
             return bindRecursive<Args...>(1, args...);
         }
         // Fetch columns. Supply a callback that will be executed for
@@ -100,7 +103,7 @@ private:
         bool row();
 
         template<typename T, typename...Args>
-        Statement& bindRecursive(int i, T v, Args...args) {
+        Statement& bindRecursive(int i, const T& v, const Args&...args) {
             bindValue(i, v); // specialization must exist for T
             return bindRecursive(i + 1, args...);
         }
@@ -112,7 +115,7 @@ private:
         // Bind value specializations
         void bindValue(int i, int e);
         void bindValue(int i, const char* e);
-        void bindValue(int i, std::string e);
+        void bindValue(int i, const std::string& e);
 
         // Declaration for fetch column interface,
         // intentionally missing definition

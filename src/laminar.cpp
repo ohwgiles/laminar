@@ -669,9 +669,10 @@ void Laminar::runFinished(Run * r) {
             (unsigned char*)&r->log[0], logsize);
     zipped.resize(zippedSize);
 
+    std::string reason = r->reason();
     db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
      .bind(r->name, r->build, node->name, r->queuedAt, r->startedAt, completedAt, int(r->result),
-           zipped, logsize, r->parentName, r->parentBuild, r->reason())
+           zipped, logsize, r->parentName, r->parentBuild, reason)
      .exec();
 
     // notify clients
