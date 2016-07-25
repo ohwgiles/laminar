@@ -22,6 +22,7 @@
 #include "log.h"
 
 #include <sys/wait.h>
+#include <sys/signalfd.h>
 #include <fstream>
 #include <zlib.h>
 
@@ -326,6 +327,19 @@ void Laminar::run() {
 
     srv = new Server(*this, listen_rpc, listen_http);
 
+    // handle SIGCHLD
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &mask, NULL);
+    int sigchld = signalfd(-1, &mask, 0);
+    srv->addDescriptor(sigchld, [this](char* buf, size_t sz){
+        struct signalfd_siginfo* siginfo = (struct signalfd_siginfo*) buf;
+        KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
+        reapAdvance();
+        assignNewJobs();
+    });
+
     srv->start();
 }
 
@@ -474,25 +488,24 @@ kj::Promise<RunState> Laminar::waitForRun(const Run* run) {
 bool Laminar::stepRun(std::shared_ptr<Run> run) {
     bool complete = run->step();
     if(!complete) {
-        srv->addProcess(run->fd, [=](char* b,size_t n){
+        srv->addDescriptor(run->fd, [=](char* b,size_t n){
             std::string s(b,n);
             run->log += s;
             for(LaminarClient* c : clients) {
                 if(c->scope.wantsLog(run->name, run->build))
                     c->sendMessage(s);
             }
-        }, [this,run](){ reapAdvance();});
+        });
     }
     return complete;
 }
 
+// Reaps a zombie and steps the corresponding Run to its next state.
+// Should be called on SIGCHLD
 void Laminar::reapAdvance() {
     int ret = 0;
-    // TODO: If we pass WNOHANG here for better asynchronicity, how do
-    // we re-schedule a poll to wait for finished child processes?
-    pid_t pid = waitpid(-1, &ret, 0);
-    // TODO: handle signalled child processes
-    if(pid > 0) {
+    pid_t pid;
+    while((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
         LLOG(INFO, "Reaping", pid);
         auto it = activeJobs.get<0>().find(pid);
         std::shared_ptr<Run> run = *it;
@@ -505,7 +518,6 @@ void Laminar::reapAdvance() {
         if(completed)
             run->complete();
     }
-    assignNewJobs();
 }
 
 bool Laminar::nodeCanQueue(const Node& node, const Run& run) const {

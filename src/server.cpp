@@ -33,6 +33,10 @@
 
 #include <sys/eventfd.h>
 
+// Size of buffer used to read from file descriptors. Should be
+// a multiple of sizeof(struct signalfd_siginfo) == 128
+#define PROC_IO_BUFSIZE 4096
+
 // Configuration struct for the websocketpp template library.
 struct wsconfig : public websocketpp::config::core {
 //    static const websocketpp::log::level elog_level =
@@ -371,22 +375,22 @@ void Server::start() {
     // this eventfd is just to allow us to quit the server at some point
     // in the future by adding this event to the async loop. I couldn't see
     // a simpler way...
-    efd = eventfd(0,0);
+    efd_quit = eventfd(0,0);
     kj::Promise<void> quit = kj::evalLater([this](){
         static uint64_t _;
-        auto wakeEvent = ioContext.lowLevelProvider->wrapInputFd(efd);
+        auto wakeEvent = ioContext.lowLevelProvider->wrapInputFd(efd_quit);
         return wakeEvent->read(&_, sizeof(uint64_t)).attach(std::move(wakeEvent));
     });
     quit.wait(ioContext.waitScope);
 }
 
 void Server::stop() {
-    eventfd_write(efd, 1);
+    eventfd_write(efd_quit, 1);
 }
 
-void Server::addProcess(int fd, std::function<void(char*,size_t)> readCb, std::function<void()> cb) {
+void Server::addDescriptor(int fd, std::function<void(char*,size_t)> cb) {
     auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd);
-    tasks.add(handleProcessOutput(event,readCb).attach(std::move(event)).then(std::move(cb)));
+    tasks.add(handleFdRead(event, cb).attach(std::move(event)));
 }
 
 void Server::acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener) {
@@ -416,14 +420,15 @@ void Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
     );
 }
 
-// handles stdout/stderr from a child process by sending it to the provided
-// callback function
-kj::Promise<void> Server::handleProcessOutput(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> readCb) {
-    static char* buffer = new char[131072];
-    return stream->tryRead(buffer, 1, sizeof(buffer)).then([this,stream,readCb](size_t sz) {
-        readCb(buffer, sz);
+// returns a promise which will read a chunk of data from the file descriptor
+// wrapped by stream and invoke the provided callback with the read data.
+// Repeats until ::read returns <= 0
+kj::Promise<void> Server::handleFdRead(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> cb) {
+    static char* buffer = new char[PROC_IO_BUFSIZE];
+    return stream->tryRead(buffer, 1, PROC_IO_BUFSIZE).then([this,stream,cb](size_t sz) {
         if(sz > 0) {
-            return handleProcessOutput(stream, readCb);
+            cb(buffer, sz);
+            return handleFdRead(stream, cb);
         }
         return kj::Promise<void>(kj::READY_NOW);
     });

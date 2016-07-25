@@ -23,6 +23,7 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <signal.h>
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -68,7 +69,13 @@ bool Run::step() {
         int pfd[2];
         pipe(pfd);
         pid_t pid = fork();
-        if(pid == 0) {
+        if(pid == 0) { // child
+            // reset signal mask (SIGCHLD blocked in Laminar::start)
+            sigset_t mask;
+            sigemptyset(&mask);
+            sigaddset(&mask, SIGCHLD);
+            sigprocmask(SIG_UNBLOCK, &mask, NULL);
+
             close(pfd[0]);
             dup2(pfd[1], 1);
             dup2(pfd[1], 2);

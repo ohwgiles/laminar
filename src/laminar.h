@@ -36,7 +36,7 @@ class Json;
 // It owns a Server to manage the HTTP/websocket and Cap'n Proto RPC
 // interfaces and communicates via the LaminarInterface methods and
 // the LaminarClient objects (see interface.h)
-class Laminar : public LaminarInterface {
+class Laminar final : public LaminarInterface {
 public:
     Laminar();
     ~Laminar();

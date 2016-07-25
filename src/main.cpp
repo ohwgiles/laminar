@@ -21,8 +21,11 @@
 
 #include <signal.h>
 
-std::function<void()> sigHandler;
-static void __sigHandler(int) { sigHandler(); }
+static Laminar* laminar;
+
+static void laminar_quit(int) {
+    laminar->stop();
+}
 
 int main(int argc, char** argv) {
     for(int i = 1; i < argc; ++i) {
@@ -31,19 +34,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    do {
-        Laminar laminar;
-        sigHandler = [&](){
-            LLOG(INFO, "Received SIGINT");
-            laminar.stop();
-        };
-        signal(SIGINT, &__sigHandler);
-        signal(SIGTERM, &__sigHandler);
+    laminar = new Laminar;
 
-        laminar.run();
-    } while(false);
+    signal(SIGINT, &laminar_quit);
+    signal(SIGTERM, &laminar_quit);
+    laminar->run();
 
-    LLOG(INFO, "end of main");
+    delete laminar;
+
+    LLOG(INFO, "Clean exit");
     return 0;
 }
-

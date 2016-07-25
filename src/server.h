@@ -26,8 +26,8 @@
 
 struct LaminarInterface;
 
-// This class abstracts the HTTP/Websockets and Cap'n Proto RPC interfaces.
-// It also manages the program's asynchronous event loop
+// This class abstracts the HTTP/Websockets and Cap'n Proto RPC interfaces
+// and manages the program's asynchronous event loop
 class Server final : public kj::TaskSet::ErrorHandler {
 public:
     // Initializes the server with a LaminarInterface to handle requests from
@@ -38,22 +38,26 @@ public:
     ~Server();
     void start();
     void stop();
-    void addProcess(int fd, std::function<void(char*,size_t)> readCb, std::function<void()> cb);
+
+    // add a file descriptor to be monitored for output. The callback will be
+    // invoked with the read data
+    void addDescriptor(int fd, std::function<void(char*,size_t)> cb);
 
 private:
     void acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener);
     void acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
-    kj::Promise<void> handleProcessOutput(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> readCb);
+    kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> cb);
 
     void taskFailed(kj::Exception&& exception) override {
         kj::throwFatalException(kj::mv(exception));
     }
 
 private:
-    int efd;
-    capnp::Capability::Client rpcInterface;
     struct WebsocketConnection;
     struct HttpImpl;
+
+    int efd_quit;
+    capnp::Capability::Client rpcInterface;
     HttpImpl* httpInterface;
     kj::AsyncIoContext ioContext;
     kj::TaskSet tasks;
