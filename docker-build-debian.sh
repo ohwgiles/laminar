@@ -6,7 +6,7 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
-docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output ubuntu bash -xe <<EOS
+docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output debian:stable bash -xe <<EOS
 
 apt-get update
 apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.55-dev zlib1g-dev
