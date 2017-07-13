@@ -58,14 +58,13 @@ add_custom_command(OUTPUT laminar.capnp.c++ laminar.capnp.h
 # Zip and compile statically served resources
 generate_compressed_bins(${CMAKE_SOURCE_DIR}/src/resources index.html js/app.js
     tpl/home.html tpl/job.html tpl/run.html tpl/browse.html
-    favicon.ico favicon-152.png icon.png progress.png)
+    favicon.ico favicon-152.png icon.png progress.gif)
+
 # Download 3rd-party frontend JS libs...
-file(DOWNLOAD https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js
-        js/angular.min.js EXPECTED_MD5 b1137641dbb512a60e83d673f7e2d98f)
-file(DOWNLOAD https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular-route.min.js
-        js/angular-route.min.js EXPECTED_MD5 28ef7d7b4349ae0dce602748185ef32a)
-file(DOWNLOAD https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular-sanitize.min.js
-        js/angular-sanitize.min.js EXPECTED_MD5 0854eae86bcdf5f92b1ab2b458d8d054)
+file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue/2.3.4/vue.min.js
+        js/vue.min.js EXPECTED_MD5 ae2fca1cfa0e31377819b1b0ffef704c)
+file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue-router/2.7.0/vue-router.min.js
+        js/vue-router.min.js EXPECTED_MD5 5d3e35710dbe02de78c39e3e439b8d4e)
 file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v1.3.0/ansi_up.js
         js/ansi_up.js EXPECTED_MD5 158566dc1ff8f2804de972f7e841e2f6)
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js
@@ -75,9 +74,8 @@ file(DOWNLOAD https://raw.githubusercontent.com/tomsouthall/Chart.HorizontalBar.
 file(DOWNLOAD https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css
         css/bootstrap.min.css EXPECTED_MD5 5d5357cb3704e1f43a1f5bfed2aebf42)
 # ...and compile them
-generate_compressed_bins(${CMAKE_BINARY_DIR} js/angular.min.js js/angular-route.min.js
-    js/angular-sanitize.min.js js/ansi_up.js js/Chart.min.js js/Chart.HorizontalBar.js
-    css/bootstrap.min.css)
+generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
+    js/ansi_up.js js/Chart.min.js js/Chart.HorizontalBar.js css/bootstrap.min.css)
 # (see resources.cpp where these are fetched)
 
 ## Server

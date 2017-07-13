@@ -30,7 +30,7 @@ Resources::Resources()
     INIT_RESOURCE("/", index_html);
     INIT_RESOURCE("/favicon.ico", favicon_ico);
     INIT_RESOURCE("/favicon-152.png", favicon_152_png);
-    INIT_RESOURCE("/progress.png", progress_png);
+    INIT_RESOURCE("/progress.gif", progress_gif);
     INIT_RESOURCE("/icon.png", icon_png);
     INIT_RESOURCE("/js/app.js", js_app_js);
     INIT_RESOURCE("/js/Chart.HorizontalBar.js", js_Chart_HorizontalBar_js);
@@ -39,9 +39,8 @@ Resources::Resources()
     INIT_RESOURCE("/tpl/job.html", tpl_job_html);
     INIT_RESOURCE("/tpl/run.html", tpl_run_html);
     INIT_RESOURCE("/tpl/browse.html", tpl_browse_html);
-    INIT_RESOURCE("/js/angular.min.js", js_angular_min_js);
-    INIT_RESOURCE("/js/angular-route.min.js", js_angular_route_min_js);
-    INIT_RESOURCE("/js/angular-sanitize.min.js", js_angular_sanitize_min_js);
+    INIT_RESOURCE("/js/vue.min.js", js_vue_min_js);
+    INIT_RESOURCE("/js/vue-router.min.js", js_vue_router_min_js);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js);
     INIT_RESOURCE("/js/Chart.min.js", js_Chart_min_js);
     INIT_RESOURCE("/js/Chart.HorizontalBar.js", js_Chart_HorizontalBar_js);

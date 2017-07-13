@@ -1,5 +1,5 @@
 <!doctype html>
-<html ng-app="laminar">
+<html>
 <head>
  <base href="/">
  <meta charset="utf-8">
@@ -8,14 +8,13 @@
  <meta name="apple-mobile-web-app-capable" content="yes" />
  <link rel="apple-touch-icon-precomposed" href="/favicon-152.png">
  <title>Laminar</title>
- <script src="/js/angular.min.js"></script>
- <script src="/js/angular-route.min.js"></script>
- <script src="/js/angular-sanitize.min.js"></script>
- <script src="/js/ansi_up.js" type="text/javascript"></script>
+ <script src="/js/vue.min.js"></script>
+ <script src="/js/vue-router.min.js"></script>
+ <script src="/js/ansi_up.js"></script>
  <script src="/js/Chart.min.js"></script>
  <script src="/js/Chart.HorizontalBar.js"></script>
  <link href="/css/bootstrap.min.css" rel="stylesheet">
- <script src="/js/app.js"></script>
+ <script src="/js/app.js" defer></script>
  <style>
   body, html { height: 100%; }
   .navbar { margin-bottom: 0; }
@@ -36,42 +35,187 @@
    margin-top: 5px;
    margin-bottom: 0;
   }
-  .spin {
-	  -webkit-animation: rotation 2s infinite linear;
-  }
-  @-webkit-keyframes rotation {
-    from {-webkit-transform: rotate(0deg);}
-    to   {-webkit-transform: rotate(359deg);}
-  }
-  img.spin.small {
-	  width: 11px;
-	  height: 11px;
-  }
-  img.spin {
-    -webkit-animation:spin 4s linear infinite;
-    -moz-animation:spin 4s linear infinite;
-    animation:spin 4s linear infinite;
-}
-@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
-@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
-@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
-
+  table#joblist tr:first-child td { border-top: 0; }
  </style>
 </head>
 <body>
- <nav class="navbar navbar-inverse">
-  <div class="container-fluid">
-   <div>
-    <a class="navbar-brand" href="/"><img src="/icon.png">{{title}}</a>
-    <a class="btn navbar-btn pull-right" href="/jobs">Jobs</a>
+ <template id="home"><div>
+  <ol class="breadcrumb"><li class="active">Home</li></ol>
+  <div class="container-fluid"><div class="row">
+   <div class="col-sm-5 col-md-4 col-lg-3 dash">
+    <table class="table table-bordered">
+     <tr v-for="job in jobsQueued">
+      <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <i>queued</i></td>
+     </tr>
+     <tr v-for="job in jobsRunning">
+      <td><img class="spin small" src="/progress.gif"> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link> <div class="progress">
+       <div class="progress-bar progress-bar-striped" :class="'progress-bar-'+(job.overtime?'warning':'info')" :class="job.etc?'':'active'" :style="'width:'+(!job.etc?'100':job.progress)+'%'"></div>
+       </div>
+      </td>
+     </tr>
+     <tr v-for="job in jobsRecent">
+      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link><br><small>Took {{job.duration}}s at {{formatDate(job.started)}}</small></td>
+     </tr>
+    </table>
    </div>
+   <div class="col-sm-7 col-md-8 col-lg-9"><div class="row">
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Total builds per day this week</div>
+      <div class="panel-body">
+       <canvas id="chartBpd"></canvas>
+      </div>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Builds per job in the last 24 hours</div>
+      <div class="panel-body" id="chartStatus">
+       <canvas id="chartBpj"></canvas>
+      </div>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Average build time per job this week</div>
+      <div class="panel-body">
+       <canvas id="chartTpj"></canvas>
+      </div>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Current executor utilization</div>
+      <div class="panel-body">
+       <canvas id="chartUtil"></canvas>
+      </div>
+     </div>
+    </div>
+   </div></div>
+  </div></div> 
+ </div></template>
+ 
+ <template id="jobs"><div>
+  <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li class="active">Jobs</li></ol>
+  <div class="container-fluid"><div class="row">
+   <div class="col-xs-12">
+    <div class="pull-right">
+     <input class="form-control" id="jobFilter" v-model="search" placeholder="Filter...">
+    </div>
+    <ul class="nav nav-tabs">
+     <li :class="{'active':tag==null}"><a href v-on:click.prevent="tag = null">All Jobs</a></li>
+     <li v-for="t in tags" :class="{'active':t==tag}"><a href v-on:click.prevent="tag = t">{{t}}</a></li>
+    </ul>
+    <table class="table table-striped" id="joblist">
+     <tr   v-for="job in filteredJobs">
+      <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td>
+      <td class="text-center"><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></td>
+      <td class="text-center">{{formatDate(job.started)}}</td>
+     </tr>
+    </table>
+   </div>
+  </div></div>
+ </div></template>
+ 
+ <template id="job"><div>
+  <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li><router-link to="/jobs">Jobs</router-link></li><li class="active">{{$route.params.name}}</li></ol></ol>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-sm-5 col-md-6 col-lg-7">
+    <h3>{{$route.params.name}}</h3>
+    <dl class="dl-horizontal">
+     <dt>Last Successful Run</dt>
+     <dd><router-link v-if="lastSuccess" :to="'/jobs/'+$route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</dd>
+     <dt>Last Failed Run</dt>
+     <dd><router-link v-if="lastFailed" :to="'/jobs/'+$route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</dd>
+    </dl>
+    </div>
+    <div class="col-sm-7 col-md-6 col-lg-5">
+    <div class="panel panel-default">
+      <div class="panel-heading">Build time</div>
+      <div class="panel-body">
+      <canvas id="chartBt"></canvas>
+      </div>
+    </div>
+    </div>
+   </div>
+   <div class="row"><div class="col-xs-12">
+    <table class="table table-striped"><thead>
+     <tr><th>Run</th><th class="text-center">Started</th><th class="text-center">Duration</th><th class="text-center hidden-xs">Reason</th></tr></thead>
+     <tr v-show="nQueued">
+      <td colspan="4"><i>{{nQueued}} run(s) queued</i></td>
+     </tr>
+     <tr v-for="job in jobsRunning" track-by="$index">
+      <td><img class="spin small" src="/progress.gif"> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+      <td class="text-center">{{formatDate(job.started)}}</td>
+      <td class="text-center">--</td>
+      <td class="text-center hidden-xs">{{job.reason}}</td>
+     </tr>
+     <tr v-for="job in jobsRecent" track-by="$index">
+      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+      <td class="text-center">{{formatDate(job.started)}}</td>
+      <td class="text-center">{{job.duration + " seconds"}}</td>
+      <td class="text-center hidden-xs">{{job.reason}}</td>
+     </tr>
+    </table>
+   </div></div>
   </div>
- </nav>
- <ol class="breadcrumb">
-  <li ng-repeat="n in bc.nodes track by $index"><a href="{{n.href}}">{{n.label}}</a></li>
-  <li class="active">{{bc.current}}</li>
- </ol>
- <div ng-view></div>
+ </div></template>
+ 
+ <template id="run"><div>
+  <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li><router-link to="/jobs">Jobs</router-link></li><li><router-link :to="'/jobs/'+$route.params.name">{{$route.params.name}}</router-link></li><li class="active">#{{$route.params.number}}</li></ol></ol>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-sm-5 col-md-6 col-lg-7">
+     <h3 style="float:left"><img class="spin" src="/progress.gif" v-show="job.result === 'running'"><span v-html="runIcon(job.result)"></span> {{$route.params.name}} #{{$route.params.number}}</h3>
+     <nav class="pull-left">
+      <ul class="pagination" style="margin:15px 20px">
+       <li v-show="$route.params.number > 1"><router-link :to="'/jobs/'+$route.params.name+'/'+($route.params.number-1)">&laquo;</router-link></li>
+       <li v-show="latestNum > $route.params.number"><router-link :to="'/jobs/'+$route.params.name+'/'+(parseInt($route.params.number)+1)">&raquo;</router-link></li>
+      </ul>
+     </nav>
+     <div style="clear:both;"></div>
+     <dl class="dl-horizontal">
+      <dt>Reason</dt><dd>{{job.reason}}</dd>
+      <dt>Queued for</dt><dd>{{job.queued}}s</dd>
+      <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
+      <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
+      <dt v-show="runComplete(job)">Duration</dt><dd v-show="runComplete(job)">{{job.duration}}s</dd>
+     </dl>
+    </div>
+    <div class="col-sm-7 col-md-6 col-lg-5">
+     <div class="progress" v-show="job.result == 'running'">
+      <div class="progress-bar  progress-bar-striped" :class="'progress-bar-'+(job.overtime?'warning':'info')" :class="job.etc?'':'active'" :style="{width:!job.etc?100:job.progress + '%'}"></div>
+     </div>
+     <div class="panel panel-default" v-show="job.artifacts.length">
+      <div class="panel-heading">Artifacts</div>
+      <div class="panel-body">
+       <ul class="list-unstyled" style="margin-bottom: 0">
+        <li v-for="art in job.artifacts"><router-link :to="art.url" target="_self">{{art.filename}}</router-link></li>
+       </ul>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="row"><div class="col-xs-12">
+    <button type="button" class="btn btn-default btn-xs pull-right" :class="{'active':autoscroll}" v-on:click="autoscroll = !autoscroll" style="margin-top:10px">Autoscroll</button>
+    <h4>Console output</h4>
+    <pre v-html="log"></pre>
+   </div></div>
+  </div>
+ </div></template>
+
+ <div id="app">
+  <nav class="navbar navbar-inverse">
+   <div class="container-fluid">
+    <div>
+     <router-link to="/" class="navbar-brand"><img src="/icon.png">{{title}}</router-link>
+     <router-link to="/jobs" class="btn navbar-btn pull-right">Jobs</router-link>
+    </div>
+   </div>
+  </nav>
+  <router-view></router-view>
+ </div>
 </body>
 </html>
 
