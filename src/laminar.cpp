@@ -167,8 +167,8 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("result", to_string(RunState::RUNNING));
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<int>([&](int etc){
-                j.set("etc", time(0) + etc);
+             .fetch<int>([&](int lastRuntime){
+                j.set("etc", run->startedAt + lastRuntime);
             });
         }
         j.set("latestNum", int(buildNums[client->scope.job]));
@@ -262,8 +262,8 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("started", run->startedAt);
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<int>([&](int etc){
-                j.set("etc", time(0) + etc);
+             .fetch<int>([&](int lastRuntime){
+                j.set("etc", run->startedAt + lastRuntime);
             });
             j.EndObject();
         }
