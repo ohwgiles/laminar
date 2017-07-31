@@ -35,10 +35,6 @@ Resources::Resources()
     INIT_RESOURCE("/js/app.js", js_app_js);
     INIT_RESOURCE("/js/Chart.HorizontalBar.js", js_Chart_HorizontalBar_js);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js);
-    INIT_RESOURCE("/tpl/home.html", tpl_home_html);
-    INIT_RESOURCE("/tpl/job.html", tpl_job_html);
-    INIT_RESOURCE("/tpl/run.html", tpl_run_html);
-    INIT_RESOURCE("/tpl/browse.html", tpl_browse_html);
     INIT_RESOURCE("/js/vue.min.js", js_vue_min_js);
     INIT_RESOURCE("/js/vue-router.min.js", js_vue_router_min_js);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js);
