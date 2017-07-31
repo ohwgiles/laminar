@@ -58,6 +58,13 @@ constexpr const char* INTADDR_HTTP_DEFAULT = "*:8080";
 constexpr const char* ARCHIVE_URL_DEFAULT = "/archive";
 }
 
+// helper for appending to boost::filesystem::path
+fs::path operator+(fs::path p, const char* ext) {
+    std::string leaf = p.leaf().string();
+    leaf += ext;
+    return p.remove_leaf()/leaf;
+}
+
 typedef std::string str;
 
 Laminar::Laminar() {
@@ -398,10 +405,10 @@ bool Laminar::loadConfiguration() {
     fs::path jobsDir = fs::path(homeDir)/"cfg"/"jobs";
     if(fs::is_directory(jobsDir)) {
         for(fs::directory_iterator it(jobsDir); it != fs::directory_iterator(); ++it) {
-            if(!fs::is_directory(it->status()))
+            if(fs::is_directory(it->status()))
                 continue;
 
-            fs::directory_entry config(it->path()/"config");
+            fs::directory_entry config(it->path()+".config");
             if(!fs::is_regular_file(config.status()))
                 continue;
 
@@ -424,7 +431,7 @@ bool Laminar::loadConfiguration() {
 }
 
 std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
-    if(!fs::exists(fs::path(homeDir)/"cfg"/"jobs"/name)) {
+    if(!fs::exists(fs::path(homeDir)/"cfg"/"jobs"/name+".run")) {
         LLOG(ERROR, "Non-existent job", name);
         return nullptr;
     }
@@ -575,19 +582,19 @@ void Laminar::assignNewJobs() {
                 if(fs::exists(cfgDir/"before"))
                     run->addScript((cfgDir/"before").string());
                 // per-node before-run script
-                if(fs::exists(cfgDir/"nodes"/node.name/"before"))
+                if(fs::exists(cfgDir/"nodes"/node.name+".before"))
                     run->addScript((cfgDir/"before").string());
                 // job before-run script
-                if(fs::exists(cfgDir/"jobs"/run->name/"before"))
-                    run->addScript((cfgDir/"jobs"/run->name/"before").string());
+                if(fs::exists(cfgDir/"jobs"/run->name+".before"))
+                    run->addScript((cfgDir/"jobs"/run->name+".before").string());
                 // main run script. must exist.
-                run->addScript((cfgDir/"jobs"/run->name/"run").string());
+                run->addScript((cfgDir/"jobs"/run->name+".run").string());
                 // job after-run script
-                if(fs::exists(cfgDir/"jobs"/run->name/"after"))
-                    run->addScript((cfgDir/"jobs"/run->name/"after").string());
+                if(fs::exists(cfgDir/"jobs"/run->name+".after"))
+                    run->addScript((cfgDir/"jobs"/run->name+".after").string());
                 // per-node after-run script
-                if(fs::exists(cfgDir/"nodes"/node.name/"after"))
-                    run->addScript((cfgDir/"nodes"/node.name/"after").string());
+                if(fs::exists(cfgDir/"nodes"/node.name+".after"))
+                    run->addScript((cfgDir/"nodes"/node.name+".after").string());
                 // global after-run script
                 if(fs::exists(cfgDir/"after"))
                     run->addScript((cfgDir/"after").string());
@@ -595,10 +602,10 @@ void Laminar::assignNewJobs() {
                 // add environment files
                 if(fs::exists(cfgDir/"env"))
                     run->addEnv((cfgDir/"env").string());
-                if(fs::exists(cfgDir/"nodes"/node.name/"env"))
-                    run->addEnv((cfgDir/"nodes"/node.name/"env").string());
-                if(fs::exists(cfgDir/"jobs"/run->name/"env"))
-                    run->addEnv((cfgDir/"jobs"/run->name/"env").string());
+                if(fs::exists(cfgDir/"nodes"/node.name+".env"))
+                    run->addEnv((cfgDir/"nodes"/node.name+".env").string());
+                if(fs::exists(cfgDir/"jobs"/run->name+".env"))
+                    run->addEnv((cfgDir/"jobs"/run->name+".env").string());
 
                 // start the job
                 node.busyExecutors++;
