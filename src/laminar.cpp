@@ -29,6 +29,8 @@
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
+#define COMPRESS_LOG_MIN_SIZE 1024
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -139,14 +141,18 @@ void Laminar::sendStatus(LaminarClient* client) {
         } else { // it must be finished, fetch it from the database
             db->stmt("SELECT output, outputLen FROM builds WHERE name = ? AND number = ?")
               .bind(client->scope.job, client->scope.num)
-              .fetch<str,int>([=](str zipped, unsigned long sz) {
+              .fetch<str,int>([=](str maybeZipped, unsigned long sz) {
                 std::string log(sz+1,'\0');
-                int res = ::uncompress((unsigned char*)&log[0], &sz,
-                        (unsigned char*)zipped.data(), zipped.size());
-                if(res == Z_OK)
-                    client->sendMessage(log);
-                else
-                    LLOG(ERROR, "Failed to uncompress log", res);
+                if(sz < COMPRESS_LOG_MIN_SIZE) {
+                    int res = ::uncompress((unsigned char*)&log[0], &sz,
+                         (unsigned char*)maybeZipped.data(), maybeZipped.size());
+                    if(res == Z_OK)
+                        client->sendMessage(log);
+                    else
+                        LLOG(ERROR, "Failed to uncompress log");
+                } else {
+                    client->sendMessage(maybeZipped);
+                }
             });
         }
         return;
@@ -680,17 +686,22 @@ void Laminar::runFinished(Run * r) {
     time_t completedAt = time(0);
 
     // compress log
-    std::string zipped(r->log.size(), '\0');
+    std::string maybeZipped = r->log;
     size_t logsize = r->log.length();
-    size_t zippedSize = zipped.size();
-    ::compress((unsigned char*)&zipped[0], &zippedSize,
-            (unsigned char*)&r->log[0], logsize);
-    zipped.resize(zippedSize);
+    if(r->log.length() >= COMPRESS_LOG_MIN_SIZE) {
+        std::string zipped(r->log.size(), '\0');
+        size_t zippedSize = zipped.size();
+        if(::compress((unsigned char*)&zipped[0], &zippedSize,
+            (unsigned char*)&r->log[0], logsize) == Z_OK) {
+            zipped.resize(zippedSize);
+            std::swap(maybeZipped, zipped);
+        }
+    }
 
     std::string reason = r->reason();
     db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
      .bind(r->name, r->build, node->name, r->queuedAt, r->startedAt, completedAt, int(r->result),
-           zipped, logsize, r->parentName, r->parentBuild, reason)
+           maybeZipped, logsize, r->parentName, r->parentBuild, reason)
      .exec();
 
     // notify clients
