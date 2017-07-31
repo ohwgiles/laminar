@@ -518,7 +518,6 @@ void Laminar::reapAdvance() {
         std::shared_ptr<Run> run = *it;
         bool completed = true;
         activeJobs.get<0>().modify(it, [&](std::shared_ptr<Run> run){
-            close(run->fd);
             run->reaped(ret);
             completed = stepRun(run);
         });

@@ -389,7 +389,7 @@ void Server::stop() {
 }
 
 void Server::addDescriptor(int fd, std::function<void(char*,size_t)> cb) {
-    auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd);
+    auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
     tasks.add(handleFdRead(event, cb).attach(std::move(event)));
 }
 
