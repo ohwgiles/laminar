@@ -371,17 +371,13 @@ bool Laminar::loadConfiguration() {
 
     if(fs::is_directory(nodeCfg)) {
         for(fs::directory_iterator it(nodeCfg); it != fs::directory_iterator(); ++it) {
-            if(!fs::is_directory(it->status()))
+            if(!fs::is_regular_file(it->status()) || it->path().extension() != ".conf")
                 continue;
 
-            fs::directory_entry config(it->path()/"config");
-            if(!fs::is_regular_file(config.status()))
-                continue;
-
-            StringMap conf = parseConfFile(config.path().string().c_str());
+            StringMap conf = parseConfFile(it->path().string().c_str());
 
             Node node;
-            node.name = it->path().filename().string();
+            node.name = it->path().stem().string();
             node.numExecutors = conf.get<int>("EXECUTORS", 6);
 
             std::string tags = conf.get<std::string>("TAGS");
@@ -411,14 +407,10 @@ bool Laminar::loadConfiguration() {
     fs::path jobsDir = fs::path(homeDir)/"cfg"/"jobs";
     if(fs::is_directory(jobsDir)) {
         for(fs::directory_iterator it(jobsDir); it != fs::directory_iterator(); ++it) {
-            if(fs::is_directory(it->status()))
+            if(!fs::is_regular_file(it->status()) || it->path().extension() != ".conf")
                 continue;
 
-            fs::directory_entry config(it->path()+".config");
-            if(!fs::is_regular_file(config.status()))
-                continue;
-
-            StringMap conf = parseConfFile(config.path().string().c_str());
+            StringMap conf = parseConfFile(it->path().string().c_str());
 
             std::string tags = conf.get<std::string>("TAGS");
             if(!tags.empty()) {
@@ -427,7 +419,7 @@ bool Laminar::loadConfiguration() {
                 std::copy(std::istream_iterator<std::string>(iss),
                           std::istream_iterator<std::string>(),
                           std::inserter(tagList, tagList.begin()));
-                jobTags[it->path().filename().string()] = tagList;
+                jobTags[it->path().stem().string()] = tagList;
             }
 
         }
