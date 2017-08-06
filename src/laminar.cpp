@@ -588,7 +588,7 @@ void Laminar::assignNewJobs() {
                     run->addScript((cfgDir/"before").string());
                 // per-node before-run script
                 if(fs::exists(cfgDir/"nodes"/node.name+".before"))
-                    run->addScript((cfgDir/"before").string());
+                    run->addScript((cfgDir/"nodes"/node.name+".before").string());
                 // job before-run script
                 if(fs::exists(cfgDir/"jobs"/run->name+".before"))
                     run->addScript((cfgDir/"jobs"/run->name+".before").string());
