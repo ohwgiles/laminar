@@ -529,16 +529,16 @@ bool Laminar::nodeCanQueue(const Node& node, const Run& run) const {
     if(node.busyExecutors >= node.numExecutors)
         return false;
 
-    auto it = jobTags.find(run.name);
-    // if both nodes have no tags, it's OK
-    if(it == jobTags.end() && node.tags.size() == 0)
+    // if the node has no tags, allow the build
+    if(node.tags.size() == 0)
         return true;
 
-    // but if just one of them does, don't allow the build
-    if(it == jobTags.end() || node.tags.size() == 0)
+    auto it = jobTags.find(run.name);
+    // if the job has no tags, it cannot be run on this node
+    if(it == jobTags.end())
         return false;
 
-    // in other cases, allow the build if they have a tag in common
+    // otherwise, allow the build if job and node have a tag in common
     for(const std::string& tag : it->second) {
         if(node.tags.find(tag) != node.tags.end())
             return true;
