@@ -57,7 +57,10 @@ public:
     void complete();
 
     // adds a script to the queue of scripts to be executed by this run
-    void addScript(std::string script);
+    void addScript(std::string scriptPath, std::string scriptWorkingDir);
+
+    // adds a script to the queue using the runDir as the scripts CWD
+    void addScript(std::string script) { addScript(script, runDir); }
 
     // adds an environment file that will be sourced before this run
     void addEnv(std::string path);
@@ -74,7 +77,7 @@ public:
     RunState lastResult;
     std::string laminarHome;
     std::string name;
-    std::string wd;
+    std::string runDir;
     std::string parentName;
     int parentBuild = 0;
     std::string reasonMsg;
@@ -88,8 +91,14 @@ public:
     time_t queuedAt;
     time_t startedAt;
 private:
-    std::queue<std::string> scripts;
-    std::string currentScript;
+
+    struct Script {
+        std::string path;
+        std::string cwd;
+    };
+
+    std::queue<Script> scripts;
+    Script currentScript;
     std::list<std::string> env;
 };
 

@@ -557,13 +557,13 @@ void Laminar::assignNewJobs() {
             if(nodeCanQueue(node, *run)) {
 
                 int buildNum = buildNums[run->name] + 1;
-                // create a working directory (different to a workspace!)
-                fs::path wd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
-                if(!fs::create_directory(wd)) {
-                    LLOG(ERROR, "Could not create working directory", wd.string());
+                // create the run directory (different to a workspace!)
+                fs::path rd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
+                if(!fs::create_directory(rd)) {
+                    LLOG(ERROR, "Could not create working directory", rd.string());
                     break;
                 }
-                run->wd = wd.string();
+                run->runDir = rd.string();
                 // create an archive directory
                 fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
                 if(fs::is_directory(archive)) {
@@ -723,8 +723,8 @@ void Laminar::runFinished(Run * r) {
         waiter.release(r->result);
     waiters.erase(r);
 
-    // remove the workdir
-    fs::remove_all(r->wd);
+    // remove the rundir
+    fs::remove_all(r->runDir);
 
     // will delete the job
     activeJobs.get<2>().erase(r);

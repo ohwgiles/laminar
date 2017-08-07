@@ -59,7 +59,7 @@ std::string Run::reason() const {
 }
 
 bool Run::step() {
-    if(!currentScript.empty() && procStatus != 0)
+    if(!currentScript.path.empty() && procStatus != 0)
         result = RunState::FAILED;
 
     if(scripts.size()) {
@@ -87,7 +87,7 @@ bool Run::step() {
                 PATH.append(p);
             }
 
-            chdir(wd.c_str());
+            chdir(currentScript.cwd.c_str());
 
             for(std::string file : env) {
                 StringMap vars = parseConfFile(file.c_str());
@@ -108,14 +108,14 @@ bool Run::step() {
             for(auto& pair : params) {
                 setenv(pair.first.c_str(), pair.second.c_str(), false);
             }
-            fprintf(stderr, "[laminar] Executing %s\n", currentScript.c_str());
-            execl(currentScript.c_str(), currentScript.c_str(), NULL);
+            fprintf(stderr, "[laminar] Executing %s\n", currentScript.path.c_str());
+            execl(currentScript.path.c_str(), currentScript.path.c_str(), NULL);
             // cannot use LLOG because stdout/stderr are captured
-            fprintf(stderr, "[laminar] Failed to execute %s\n", currentScript.c_str());
+            fprintf(stderr, "[laminar] Failed to execute %s\n", currentScript.path.c_str());
             _exit(1);
         }
 
-        LLOG(INFO, "Forked", currentScript, pid);
+        LLOG(INFO, "Forked", currentScript.path, currentScript.cwd, pid);
         close(pfd[1]);
         fd = pfd[0];
         this->pid = pid;
@@ -125,8 +125,8 @@ bool Run::step() {
         return true;
     }
 }
-void Run::addScript(std::string script) {
-    scripts.push(script);
+void Run::addScript(std::string scriptPath, std::string scriptWorkingDir) {
+    scripts.push({scriptPath, scriptWorkingDir});
 }
 void Run::addEnv(std::string path) {
     env.push_back(path);
