@@ -434,14 +434,6 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         return nullptr;
     }
 
-    // attempt to create a workspace for this job if it doesn't exist
-    if(!fs::exists(fs::path(homeDir)/"run"/name/"workspace")) {
-        if(!fs::create_directories(fs::path(homeDir)/"run"/name/"workspace")) {
-            LLOG(ERROR, "Could not create job workspace", name);
-            return nullptr;
-        }
-    }
-
     std::shared_ptr<Run> run = std::make_shared<Run>();
     run->name = name;
     run->queuedAt = time(0);
@@ -555,15 +547,29 @@ void Laminar::assignNewJobs() {
             Node& node = sn.second;
             std::shared_ptr<Run> run = *it;
             if(nodeCanQueue(node, *run)) {
+                fs::path cfgDir = fs::path(homeDir)/"cfg";
+
+                // create a workspace for this job if it doesn't exist
+                fs::path ws = fs::path(homeDir)/"run"/run->name/"workspace";
+                if(!fs::exists(ws)) {
+                    if(!fs::create_directories(ws)) {
+                        LLOG(ERROR, "Could not create job workspace", run->name);
+                        break;
+                    }
+                    // prepend the workspace init script
+                    if(fs::exists(cfgDir/"jobs"/run->name+".init"))
+                        run->addScript((cfgDir/"jobs"/run->name+".init").string(), ws.string());
+                }
 
                 int buildNum = buildNums[run->name] + 1;
-                // create the run directory (different to a workspace!)
+                // create the run directory
                 fs::path rd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
                 if(!fs::create_directory(rd)) {
                     LLOG(ERROR, "Could not create working directory", rd.string());
                     break;
                 }
                 run->runDir = rd.string();
+
                 // create an archive directory
                 fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
                 if(fs::is_directory(archive)) {
@@ -574,7 +580,6 @@ void Laminar::assignNewJobs() {
                 }
 
                 // add scripts
-                fs::path cfgDir = fs::path(homeDir)/"cfg";
                 // global before-run script
                 if(fs::exists(cfgDir/"before"))
                     run->addScript((cfgDir/"before").string());
