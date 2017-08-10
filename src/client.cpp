@@ -151,13 +151,6 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Missing lJobName and lBuildNum or param is not in the format key=value\n");
             return EINVAL;
         }
-    } else if(strcmp(argv[1], "wait") == 0) {
-        auto req = laminar.pendRequest();
-        req.setJobName(argv[2]);
-        req.setBuildNum(atoi(argv[3]));
-        auto response = req.send().wait(waitScope);
-        if(response.getResult() != LaminarCi::JobResult::SUCCESS)
-            return EFAILED;
     } else if(strcmp(argv[1], "lock") == 0) {
         auto req = laminar.lockRequest();
         req.setLockName(argv[2]);

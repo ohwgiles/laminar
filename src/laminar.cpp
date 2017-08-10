@@ -108,6 +108,14 @@ void Laminar::deregisterClient(LaminarClient* client) {
     clients.erase(client);
 }
 
+void Laminar::registerWaiter(LaminarWaiter *waiter) {
+    waiters.insert(waiter);
+}
+
+void Laminar::deregisterWaiter(LaminarWaiter *waiter) {
+    waiters.erase(waiter);
+}
+
 bool Laminar::setParam(std::string job, int buildNum, std::string param, std::string value) {
     if(Run* run = activeRun(job, buildNum)) {
         run->params[param] = value;
@@ -471,17 +479,6 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
     return run;
 }
 
-kj::Promise<RunState> Laminar::waitForRun(std::string name, int buildNum) {
-    if(const Run* run = activeRun(name, buildNum))
-        return waitForRun(run);
-    return RunState::UNKNOWN;
-}
-
-kj::Promise<RunState> Laminar::waitForRun(const Run* run) {
-    waiters[run].emplace_back(Waiter{});
-    return waiters[run].back().takePromise();
-}
-
 bool Laminar::stepRun(std::shared_ptr<Run> run) {
     bool complete = run->step();
     if(!complete) {
@@ -723,10 +720,10 @@ void Laminar::runFinished(Run * r) {
             c->sendMessage(msg);
     }
 
-    // wake the waiters
-    for(Waiter& waiter : waiters[r])
-        waiter.release(r->result);
-    waiters.erase(r);
+    // notify the waiters
+    for(LaminarWaiter* w : waiters) {
+        w->complete(r);
+    }
 
     // remove the rundir
     fs::remove_all(r->runDir);

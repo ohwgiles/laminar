@@ -48,10 +48,11 @@ public:
 
     // Implementations of LaminarInterface
     std::shared_ptr<Run> queueJob(std::string name, ParamMap params = ParamMap()) override;
-    kj::Promise<RunState> waitForRun(std::string name, int buildNum) override;
-    kj::Promise<RunState> waitForRun(const Run* run) override;
     void registerClient(LaminarClient* client) override;
     void deregisterClient(LaminarClient* client) override;
+    void registerWaiter(LaminarWaiter* waiter) override;
+    void deregisterWaiter(LaminarWaiter* waiter) override;
+
     void sendStatus(LaminarClient* client) override;
     bool setParam(std::string job, int buildNum, std::string param, std::string value) override;
     bool getArtefact(std::string path, std::string& result) override;
@@ -73,19 +74,6 @@ private:
 
     std::list<std::shared_ptr<Run>> queuedJobs;
 
-    // Implements the waitForRun API.
-    // TODO: refactor
-    struct Waiter {
-        Waiter() : paf(kj::newPromiseAndFulfiller<RunState>()) {}
-        void release(RunState state) {
-            paf.fulfiller->fulfill(RunState(state));
-        }
-        kj::Promise<RunState> takePromise() { return std::move(paf.promise); }
-    private:
-        kj::PromiseFulfillerPair<RunState> paf;
-    };
-    std::unordered_map<const Run*,std::list<Waiter>> waiters;
-
     std::unordered_map<std::string, uint> buildNums;
 
     std::unordered_map<std::string, std::set<std::string>> jobTags;
@@ -96,6 +84,7 @@ private:
     NodeMap nodes;
     std::string homeDir;
     std::set<LaminarClient*> clients;
+    std::set<LaminarWaiter*> waiters;
     bool eraseWorkdir;
     std::string archiveUrl;
 };

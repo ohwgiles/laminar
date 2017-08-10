@@ -21,8 +21,6 @@
 
 #include "run.h"
 
-#include <kj/async.h>
-
 #include <string>
 #include <memory>
 #include <unordered_map>
@@ -73,6 +71,13 @@ struct LaminarClient {
     MonitorScope scope;
 };
 
+// Represents a (rpc) client that wants to be notified about run completion.
+// Pass instances of this to LaminarInterface registerWaiter and
+// deregisterWaiter
+struct LaminarWaiter {
+    virtual void complete(const Run*) = 0;
+};
+
 // The interface connecting the network layer to the application business
 // logic. These methods fulfil the requirements of both the HTTP/Websocket
 // and RPC interfaces.
@@ -80,15 +85,6 @@ struct LaminarInterface {
     // Queues a job, returns immediately. Return value will be nullptr if
     // the supplied name is not a known job.
     virtual std::shared_ptr<Run> queueJob(std::string name, ParamMap params = ParamMap()) = 0;
-
-    // Returns a promise that will wait for a run matching the given name
-    // and build number to complete. The promise will resolve to the result
-    // of the run. If no such run exists, the status will be RunState::UNKNOWN
-    virtual kj::Promise<RunState> waitForRun(std::string name, int buildNum) = 0;
-
-    // Specialization of above for an existing Run object (for example returned
-    // from queueJob). Returned promise will never resolve to RunState::UNKNOWN
-    virtual kj::Promise<RunState> waitForRun(const Run*) = 0;
 
     // Register a client (but don't give up ownership). The client will be
     // notified with a JSON message of any events matching its scope
@@ -98,6 +94,14 @@ struct LaminarInterface {
     // Call this before destroying a client so that Laminar doesn't try
     // to call LaminarClient::sendMessage on invalid data
     virtual void deregisterClient(LaminarClient* client) = 0;
+
+    // Register a waiter (but don't give up ownership). The waiter will be
+    // notified with a callback of any run completion (see LaminarWaiter above)
+    virtual void registerWaiter(LaminarWaiter* waiter) = 0;
+
+    // Call this before destroying a waiter so that Laminar doesn't try
+    // to call LaminarWaiter::complete on invalid data
+    virtual void deregisterWaiter(LaminarWaiter* waiter) = 0;
 
     // Synchronously send a snapshot of the current status to the given
     // client (as governed by the client's MonitorScope). This is called on

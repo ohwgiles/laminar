@@ -74,24 +74,17 @@ LaminarCi::JobResult fromRunState(RunState state) {
 // This is the implementation of the Laminar Cap'n Proto RPC interface.
 // As such, it implements the pure virtual interface generated from
 // laminar.capnp with calls to the LaminarInterface
-class RpcImpl : public LaminarCi::Server {
-private:
-    struct Lock {
-        Lock() : paf(kj::newPromiseAndFulfiller<void>()) {}
-        void release() {
-            paf.fulfiller->fulfill();
-        }
-        kj::Promise<void> takePromise() { return std::move(paf.promise); }
-    private:
-        kj::PromiseFulfillerPair<void> paf;
-    };
-
-
+class RpcImpl : public LaminarCi::Server, public LaminarWaiter {
 public:
     RpcImpl(LaminarInterface& l) :
         LaminarCi::Server(),
         laminar(l)
     {
+        laminar.registerWaiter(this);
+    }
+
+    ~RpcImpl() {
+        laminar.deregisterWaiter(this);
     }
 
     // Start a job, without waiting for it to finish
@@ -118,27 +111,15 @@ public:
             params[p.getName().cStr()] = p.getValue().cStr();
         }
         std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
-        if(run.get()) {
-            return laminar.waitForRun(run.get()).then([context](RunState state) mutable {
+        if(const Run* r = run.get()) {
+            runWaiters[r].emplace_back(kj::newPromiseAndFulfiller<RunState>());
+            return runWaiters[r].back().promise.then([context](RunState state) mutable {
                 context.getResults().setResult(fromRunState(state));
             });
         } else {
             context.getResults().setResult(LaminarCi::JobResult::UNKNOWN);
             return kj::READY_NOW;
         }
-    }
-
-    // Wait for an already-running job to complete, returning the result
-    kj::Promise<void> pend(PendContext context) override {
-        std::string jobName = context.getParams().getJobName();
-        int buildNum = context.getParams().getBuildNum();
-        LLOG(INFO, "RPC pend", jobName, buildNum);
-
-        kj::Promise<RunState> promise = laminar.waitForRun(jobName, buildNum);
-
-        return promise.then([context](RunState state) mutable {
-            context.getResults().setResult(fromRunState(state));
-        });
     }
 
     // Set a parameter on a running build
@@ -160,10 +141,10 @@ public:
         std::string lockName = context.getParams().getLockName();
         LLOG(INFO, "RPC lock", lockName);
         auto& lockList = locks[lockName];
-        lockList.emplace_back(Lock{});
+        lockList.emplace_back(kj::newPromiseAndFulfiller<void>());
         if(lockList.size() == 1)
-            lockList.front().release();
-        return lockList.back().takePromise();
+            lockList.front().fulfiller->fulfill();
+        return std::move(lockList.back().promise);
     }
 
     // Release a named lock
@@ -177,14 +158,21 @@ public:
         }
         lockList.erase(lockList.begin());
         if(lockList.size() > 0)
-            lockList.front().release();
+            lockList.front().fulfiller->fulfill();
         return kj::READY_NOW;
     }
-
+private:
+    // Implements LaminarWaiter::complete
+    void complete(const Run* r) override {
+        for(kj::PromiseFulfillerPair<RunState>& w : runWaiters[r])
+            w.fulfiller->fulfill(RunState(r->result));
+        runWaiters.erase(r);
+    }
 private:
     LaminarInterface& laminar;
     kj::LowLevelAsyncIoProvider* asyncio;
-    std::unordered_map<std::string, std::list<Lock>> locks;
+    std::unordered_map<std::string, std::list<kj::PromiseFulfillerPair<void>>> locks;
+    std::unordered_map<const Run*, std::list<kj::PromiseFulfillerPair<RunState>>> runWaiters;
 };
 
 
