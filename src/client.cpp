@@ -158,6 +158,14 @@ int main(int argc, char** argv) {
         auto response = req.send().wait(waitScope);
         if(response.getResult() != LaminarCi::JobResult::SUCCESS)
             return EFAILED;
+    } else if(strcmp(argv[1], "lock") == 0) {
+        auto req = laminar.lockRequest();
+        req.setLockName(argv[2]);
+        req.send().wait(waitScope);
+    } else if(strcmp(argv[1], "release") == 0) {
+        auto req = laminar.releaseRequest();
+        req.setLockName(argv[2]);
+        req.send().wait(waitScope);
     } else {
         fprintf(stderr, "Unknown comand %s\n", argv[1]);
         return EINVAL;

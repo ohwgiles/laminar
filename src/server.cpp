@@ -75,6 +75,18 @@ LaminarCi::JobResult fromRunState(RunState state) {
 // As such, it implements the pure virtual interface generated from
 // laminar.capnp with calls to the LaminarInterface
 class RpcImpl : public LaminarCi::Server {
+private:
+    struct Lock {
+        Lock() : paf(kj::newPromiseAndFulfiller<void>()) {}
+        void release() {
+            paf.fulfiller->fulfill();
+        }
+        kj::Promise<void> takePromise() { return std::move(paf.promise); }
+    private:
+        kj::PromiseFulfillerPair<void> paf;
+    };
+
+
 public:
     RpcImpl(LaminarInterface& l) :
         LaminarCi::Server(),
@@ -143,9 +155,36 @@ public:
         return kj::READY_NOW;
     }
 
+    // Take a named lock
+    kj::Promise<void> lock(LockContext context) override {
+        std::string lockName = context.getParams().getLockName();
+        LLOG(INFO, "RPC lock", lockName);
+        auto& lockList = locks[lockName];
+        lockList.emplace_back(Lock{});
+        if(lockList.size() == 1)
+            lockList.front().release();
+        return lockList.back().takePromise();
+    }
+
+    // Release a named lock
+    kj::Promise<void> release(ReleaseContext context) override {
+        std::string lockName = context.getParams().getLockName();
+        LLOG(INFO, "RPC release", lockName);
+        auto& lockList = locks[lockName];
+        if(lockList.size() == 0) {
+            LLOG(INFO, "Attempt to release unheld lock", lockName);
+            return kj::READY_NOW;
+        }
+        lockList.erase(lockList.begin());
+        if(lockList.size() > 0)
+            lockList.front().release();
+        return kj::READY_NOW;
+    }
+
 private:
     LaminarInterface& laminar;
     kj::LowLevelAsyncIoProvider* asyncio;
+    std::unordered_map<std::string, std::list<Lock>> locks;
 };
 
 

@@ -6,6 +6,8 @@ interface LaminarCi {
     start @1 (jobName :Text, params :List(JobParam)) -> (result :JobResult);
     pend @2 (jobName :Text, buildNum :UInt32) -> (result :JobResult);
     set @3 (jobName :Text, buildNum :UInt32, param :JobParam) -> (result :MethodResult);
+    lock @4 (lockName :Text) -> ();
+    release @5 (lockName :Text) -> ();
 
     struct JobParam {
         name @0 :Text;
