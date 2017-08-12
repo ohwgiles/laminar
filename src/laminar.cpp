@@ -151,7 +151,7 @@ void Laminar::sendStatus(LaminarClient* client) {
               .bind(client->scope.job, client->scope.num)
               .fetch<str,int>([=](str maybeZipped, unsigned long sz) {
                 std::string log(sz+1,'\0');
-                if(sz < COMPRESS_LOG_MIN_SIZE) {
+                if(sz >= COMPRESS_LOG_MIN_SIZE) {
                     int res = ::uncompress((unsigned char*)&log[0], &sz,
                          (unsigned char*)maybeZipped.data(), maybeZipped.size());
                     if(res == Z_OK)
