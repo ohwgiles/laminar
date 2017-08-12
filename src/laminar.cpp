@@ -392,9 +392,9 @@ bool Laminar::loadConfiguration() {
             if(!tags.empty()) {
                 std::istringstream iss(tags);
                 std::set<std::string> tagList;
-                std::copy(std::istream_iterator<std::string>(iss),
-                          std::istream_iterator<std::string>(),
-                          std::inserter(tagList, tagList.begin()));
+                std::string tag;
+                while(std::getline(iss, tag, ','))
+                    tagList.insert(tag);
                 node.tags = tagList;
             }
 
@@ -424,9 +424,9 @@ bool Laminar::loadConfiguration() {
             if(!tags.empty()) {
                 std::istringstream iss(tags);
                 std::set<std::string> tagList;
-                std::copy(std::istream_iterator<std::string>(iss),
-                          std::istream_iterator<std::string>(),
-                          std::inserter(tagList, tagList.begin()));
+                std::string tag;
+                while(std::getline(iss, tag, ','))
+                    tagList.insert(tag);
                 jobTags[it->path().stem().string()] = tagList;
             }
 
