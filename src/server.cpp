@@ -380,13 +380,13 @@ Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
     tasks(*this)
 {
     // RPC task
-    tasks.add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress, 0)
+    tasks.add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress)
               .then([this](kj::Own<kj::NetworkAddress>&& addr) {
         acceptRpcClient(addr->listen());
     }));
 
     // HTTP task
-    tasks.add(ioContext.provider->getNetwork().parseAddress(httpBindAddress, 0)
+    tasks.add(ioContext.provider->getNetwork().parseAddress(httpBindAddress)
               .then([this](kj::Own<kj::NetworkAddress>&& addr) {
         acceptHttpClient(addr->listen());
     }));
