@@ -71,15 +71,13 @@ static int setParams(int argc, char** argv, T& request) {
 }
 
 int main(int argc, char** argv) {
-    // TODO: pass this through an enviroment variable set by laminard
-    const char* address = "unix:\0laminar";
-
     if(argc < 2) {
         fprintf(stderr, "Usage: %s <command> [parameters...]\n", argv[0]);
         return EINVAL;
     }
 
     int ret = 0;
+    const char* address = getenv("LAMINAR_HOST") ?: "unix-abstract:laminar";
 
     capnp::EzRpcClient client(address);
     LaminarCi::Client laminar = client.getMain<LaminarCi>();

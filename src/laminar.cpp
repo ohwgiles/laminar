@@ -55,7 +55,7 @@ template<> Json& Json::set(const char* key, time_t value) { String(key); Int64(v
 
 namespace {
 // Default values when none were supplied in $LAMINAR_CONF_FILE (/etc/laminar.conf)
-constexpr const char* INTADDR_RPC_DEFAULT = "unix:\0laminar";
+constexpr const char* INTADDR_RPC_DEFAULT = "unix-abstract:laminar";
 constexpr const char* INTADDR_HTTP_DEFAULT = "*:8080";
 constexpr const char* ARCHIVE_URL_DEFAULT = "/archive";
 }
