@@ -384,6 +384,7 @@ const Run = function() {
     },
     methods: {
       status: function(data) {
+        state.jobsRunning = [];
         state.log = '';
         state.job = data;
         state.latestNum = data.latestNum;
@@ -413,7 +414,6 @@ const Run = function() {
     },
     beforeRouteUpdate(to, from, next) {
       var vm = this;
-      state.jobsRunning = [];
       vm.logws.close();
       vm.logws = new WebSocket("ws://" + location.host + to.path + '/log');
       vm.logws.onmessage = function(msg) {
