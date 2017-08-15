@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     }
 
     int ret = 0;
-    const char* address = getenv("LAMINAR_HOST") ?: "unix-abstract:laminar";
+    const char* address = getenv("LAMINAR_HOST") ?: getenv("LAMINAR_BIND_RPC") ?: "unix-abstract:laminar";
 
     capnp::EzRpcClient client(address);
     LaminarCi::Client laminar = client.getMain<LaminarCi>();
