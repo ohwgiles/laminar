@@ -89,11 +89,16 @@ bool Run::step() {
 
             chdir(currentScript.cwd.c_str());
 
+            // conf file env vars
             for(std::string file : env) {
                 StringMap vars = parseConfFile(file.c_str());
                 for(auto& it : vars) {
                     setenv(it.first.c_str(), it.second.c_str(), true);
                 }
+            }
+            // parameterized vars
+            for(auto& pair : params) {
+                setenv(pair.first.c_str(), pair.second.c_str(), false);
             }
 
             setenv("PATH", PATH.c_str(), true);
@@ -105,9 +110,7 @@ bool Run::step() {
             setenv("LAST_RESULT", to_string(lastResult).c_str(), true);
             setenv("WORKSPACE", (fs::path(laminarHome)/"run"/name/"workspace").string().c_str(), true);
             setenv("ARCHIVE", (fs::path(laminarHome)/"archive"/name/buildNum.c_str()).string().c_str(), true);
-            for(auto& pair : params) {
-                setenv(pair.first.c_str(), pair.second.c_str(), false);
-            }
+
             fprintf(stderr, "[laminar] Executing %s\n", currentScript.path.c_str());
             execl(currentScript.path.c_str(), currentScript.path.c_str(), NULL);
             // cannot use LLOG because stdout/stderr are captured
