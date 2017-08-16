@@ -38,8 +38,8 @@ static int setParams(int argc, char** argv, T& request) {
 
     int argsConsumed = n;
 
-    char* job = getenv("lJobName");
-    char* num = getenv("lBuildNum");
+    char* job = getenv("JOB");
+    char* num = getenv("RUN");
     char* reason = getenv("LAMINAR_REASON");
 
     if(job && num) n+=2;
@@ -134,8 +134,8 @@ int main(int argc, char** argv) {
         }
         auto req = laminar.setRequest();
         char* eq = strchr(argv[2], '=');
-        char* job = getenv("lJobName");
-        char* num = getenv("lBuildNum");
+        char* job = getenv("JOB");
+        char* num = getenv("RUN");
         if(job && num && eq) {
             char* name = argv[2];
             *eq++ = '\0';
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
             req.getParam().setValue(val);
             req.send().wait(waitScope);
         } else {
-            fprintf(stderr, "Missing lJobName and lBuildNum or param is not in the format key=value\n");
+            fprintf(stderr, "Missing $JOB or $RUN or param is not in the format key=value\n");
             return EINVAL;
         }
     } else if(strcmp(argv[1], "lock") == 0) {

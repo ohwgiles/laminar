@@ -97,14 +97,14 @@ bool Run::step() {
             }
 
             setenv("PATH", PATH.c_str(), true);
-            setenv("lBuildNum", buildNum.c_str(), true);
-            setenv("lJobName", name.c_str(), true);
+            setenv("RUN", buildNum.c_str(), true);
+            setenv("JOB", name.c_str(), true);
             if(!node->name.empty())
-                setenv("lNode", node->name.c_str(), true);
-            setenv("lResult", to_string(result).c_str(), true);
-            setenv("lLastResult", to_string(lastResult).c_str(), true);
-            setenv("lWorkspace", (fs::path(laminarHome)/"run"/name/"workspace").string().c_str(), true);
-            setenv("lArchive", (fs::path(laminarHome)/"archive"/name/buildNum.c_str()).string().c_str(), true);
+                setenv("NODE", node->name.c_str(), true);
+            setenv("RESULT", to_string(result).c_str(), true);
+            setenv("LAST_RESULT", to_string(lastResult).c_str(), true);
+            setenv("WORKSPACE", (fs::path(laminarHome)/"run"/name/"workspace").string().c_str(), true);
+            setenv("ARCHIVE", (fs::path(laminarHome)/"archive"/name/buildNum.c_str()).string().c_str(), true);
             for(auto& pair : params) {
                 setenv(pair.first.c_str(), pair.second.c_str(), false);
             }
