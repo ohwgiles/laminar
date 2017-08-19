@@ -1,10 +1,10 @@
 #!/bin/bash
 
-VERSION=0.3
-
 OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
+
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)
 
 docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output debian:stable bash -xe <<EOS
 
