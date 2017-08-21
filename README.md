@@ -1,6 +1,6 @@
 # Laminar CI
 
-[Laminar](https://laminar.ohwg.net) is a lightweight and modular Continuous Integration service for Linux. It is self-hosted and developer-friendly, eschewing a configuration web UI in favor of simple version-controllable configuration files and scripts.
+[Laminar](http://laminar.ohwg.net) is a lightweight and modular Continuous Integration service for Linux. It is self-hosted and developer-friendly, eschewing a configuration web UI in favor of simple version-controllable configuration files and scripts.
 
 Laminar encourages the use of existing GNU/Linux tools such as `bash` and `cron` instead of reinventing them.
 
