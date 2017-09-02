@@ -48,7 +48,7 @@ Use `systemctl start laminar` to start the laminar system service and `systemctl
 
 After starting the service, an empty laminar dashboard should be available at http://localhost:8080
 
-Laminar`s configuration file may be found at `/etc/laminar.conf`. Laminar will start with reasonable defaults if no configuration can be found.
+Laminar's configuration file may be found at `/etc/laminar.conf`. Laminar will start with reasonable defaults if no configuration can be found.
 
 #### Running on a different HTTP port or Unix socket
 
@@ -137,7 +137,7 @@ On a trusted network, you might want `laminard` to listen for commands on a TCP 
 LAMINAR_BIND_RPC=*:9997
 ```
 
-or any interface/port combination you like. This option uses the same syntax as [that for the web UI](#running-on-a-different-http-port-or-unix-socket)
+or any interface/port combination you like. This option uses the same syntax as `LAMINAR_BIND_HTTP`.
 
 Then, point `laminarc` to the new location using an environment variable:
 
@@ -215,14 +215,13 @@ See also [script execution order](#script-execution-order)
 #### Passing variables between run scripts
 
 Any script can set environment variables that will stay exposed for subsequent scripts of the same run using `laminarc set`. In `example.before`:
-
 ```bash
 #!/bin/bash
 laminarc set foo=bar
 ```
 
 Then in `example.run`
-```
+```bash
 #!/bin/bash
 echo $foo            # prints "bar"
 ```
@@ -231,9 +230,9 @@ This works because laminarc reads `$JOB` and `$NUM` and passes them to the lamin
 
 ### Post-build actions
 
-Analagously to [Pre-build actions](#pre-build-actions), if the script `/var/lib/laminar/cfg/jobs/example.after` exists, it will be executed after the primary `/var/lib/laminar/cfg/jobs/example.run` script. The `$RESULT` environment variable will contain the run result.
+Analagously to [Pre-build actions](#pre-build-actions), if the script `example.after` exists, it will be executed after the primary `example.run` script.
 
-See also [Environment variables](#environment-variables).
+The `$RESULT` environment variable will contain the run result. See also [Environment variables](#environment-variables).
 
 #### Archiving artefacts
 
@@ -299,17 +298,17 @@ The directory `/var/lib/laminar/cfg/scripts` is automatically prepended to the `
 ```bash
 #!/bin/bash -e
 if [ "$RESULT" == "success" ]; then
-  laminarc trigger $@
+  laminarc trigger "$@"
 fi
 ```
 
-With this in place, the example shown above in [Conditionally trigger a downstream job](#conditionally-trigger-a-downstream-job) can be simplified to
+With this in place, any `.after` script can conditionally trigger a downstream job more succinctly:
 
 ```bash
 success_trigger example-test
 ```
 
-Another excellent candidate for helper scripts is automatically [sending notifications](#email-and-im-notifications) on job status change. See [Example scripts](#appendix--example-scripts) for more useful starting points.
+Another excellent candidate for helper scripts is automatically sending notifications on job status change. See [Example scripts](#appendix-example-scripts) for more useful starting points.
 
 ### Data sharing and Workspaces
 
@@ -348,7 +347,7 @@ Laminar will automatically create the workspace for a job if it doesn't exist wh
 
 In Laminar, a *node* is an abstract concept allowing more fine-grained control over job execution scheduling. Each node can be defined to support an integer number of *executors*, which defines how many runs can be executed simultaneously.
 
-A typical example would be to allow only a few concurrent CPU-intensive jobs (such as compilation), while simultaneously allowing many more less-intensive jobs (such as monitoring or remote jobs). To create a node named `build` with 3 executors, create the file `/var/lib/laminar/cfg/nodes/build.config` with the following content:
+A typical example would be to allow only a few concurrent CPU-intensive jobs (such as compilation), while simultaneously allowing many more less-intensive jobs (such as monitoring or remote jobs). To create a node named `build` with 3 executors, create the file `/var/lib/laminar/cfg/nodes/build.conf` with the following content:
 
 ```
 EXECUTORS=3
@@ -383,7 +382,7 @@ If `/var/lib/laminar/cfg/nodes/NODENAME.env` exists and can be parsed as a list 
 
 ### Remote jobs
 
-Laminar provides no specific support, `bash`, `ssh` and possibly NFS are all you need. For example, consider two identical target devices on which test jobs can be run in parallel. You might create a [node](#nodes and tags) for each, `/var/lib/laminar/cfg/nodes/target{1,2}.conf` with a common tag:
+Laminar provides no specific support, `bash`, `ssh` and possibly NFS are all you need. For example, consider two identical target devices on which test jobs can be run in parallel. You might create a [node](#nodes-and-tags) for each, `/var/lib/laminar/cfg/nodes/target{1,2}.conf` with a common tag:
 
 ```
 EXECUTORS=1
@@ -411,19 +410,10 @@ ssh root@$TARGET_IP /bin/bash -xe <<"EOF"
   uname -a
   ...
 EOF
-scp root@$TARGET_IP:result.xml $ARCHIVE/
+scp root@$TARGET_IP:result.xml "$ARCHIVE/"
 ```
 
 Don't forget to add the `laminar` user's public ssh key to the remote's `authorized_keys`.
-
-The call to ssh can itself be hidden with a [helper script](#helper-scripts) `/var/lib/laminar/cfg/scripts/remotebuild`:
-
-```bash
-#!/bin/bash -e
-ssh -E root@$TARGET_IP /bin/bash -xe < $1
-```
-
-Then simply use `#!/usr/bin/env remotebuild` instead of the `#!/bin/bash` hashbang.
 
 ### Docker container jobs
 
@@ -432,7 +422,7 @@ Laminar provides no specific support, but just like [remote jobs](#remote-jobs) 
 ```bash
 #!/bin/bash
 
-docker run --rm -ti -v $PWD:/root -v $WORKSPACE:/ws ubuntu /bin/bash -xe <<EOF
+docker run --rm -ti -v $PWD:/root ubuntu /bin/bash -xe <<EOF
   git clone http://...
   ...
 EOF
@@ -464,7 +454,7 @@ laminarc lock $JOB-workspace
 git fetch
 git checkout $rev
 cd -
-# Fast (hard-link) copy the specific checkout to the build dir
+# Fast copy (hard-link) the specific checkout to the build dir
 cp -al $WORKSPACE/src src
 # Release the lock to allow other jobs to do the same
 laminarc release $JOB-workspace
@@ -506,12 +496,12 @@ When `$JOB` is triggered on `$NODE`, the following scripts (relative to `$LAMINA
 
 The following variables are available in run scripts:
 
-- `RUN`
-- `JOB`
-- `RESULT`
-- `LAST_RESULT`
-- `WORKSPACE`
-- `ARCHIVE`
+- `RUN` integer number of this *run*
+- `JOB` string name of this *job*
+- `RESULT` string run status: "success", "failed", etc.
+- `LAST_RESULT` string previous run status
+- `WORKSPACE` path to this job's workspace
+- `ARCHIVE` path to this run's archive
 
 In addition, `$LAMINAR_HOME/cfg/scripts` is prepended to `$PATH`. See [helper scripts](#helper-scripts).
 
