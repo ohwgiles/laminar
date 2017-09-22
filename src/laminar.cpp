@@ -684,7 +684,7 @@ void Laminar::runFinished(Run * r) {
     size_t logsize = r->log.length();
     if(r->log.length() >= COMPRESS_LOG_MIN_SIZE) {
         std::string zipped(r->log.size(), '\0');
-        size_t zippedSize = zipped.size();
+        unsigned long zippedSize = zipped.size();
         if(::compress((unsigned char*)&zipped[0], &zippedSize,
             (unsigned char*)&r->log[0], logsize) == Z_OK) {
             zipped.resize(zippedSize);
