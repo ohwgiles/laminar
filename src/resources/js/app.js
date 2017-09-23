@@ -2,9 +2,13 @@
  * frontend application for Laminar Continuous Integration
  * https://laminar.ohwg.net
  */
+const wsp = function(path) {
+  return new WebSocket((location.protocol === 'https:'?'wss://':'ws://')
+                          + location.host + path);
+}
 const WebsocketHandler = function() {
   function setupWebsocket(path, next) {
-    var ws = new WebSocket("ws://" + window.location.host + path);
+    var ws = wsp(path);
     ws.onmessage = function(msg) {
       msg = JSON.parse(msg.data);
       // "status" is the first message the websocket always delivers.
@@ -406,7 +410,7 @@ const Run = function() {
     },
     beforeRouteEnter(to, from, next) {
       next(vm => {
-        vm.logws = new WebSocket("ws://" + location.host + to.path + '/log');
+        vm.logws = wsp(to.path + '/log');
         vm.logws.onmessage = function(msg) {
           logHandler(vm, msg.data);
         }
@@ -415,7 +419,7 @@ const Run = function() {
     beforeRouteUpdate(to, from, next) {
       var vm = this;
       vm.logws.close();
-      vm.logws = new WebSocket("ws://" + location.host + to.path + '/log');
+      vm.logws = wsp(to.path + '/log');
       vm.logws.onmessage = function(msg) {
         logHandler(vm, msg.data);
       }
