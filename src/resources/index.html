@@ -191,7 +191,7 @@
       <div class="panel-heading">Artifacts</div>
       <div class="panel-body">
        <ul class="list-unstyled" style="margin-bottom: 0">
-        <li v-for="art in job.artifacts"><router-link :to="art.url" target="_self">{{art.filename}}</router-link></li>
+        <li v-for="art in job.artifacts"><a :href="art.url" target="_self">{{art.filename}}</a></li>
        </ul>
       </div>
      </div>
