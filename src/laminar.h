@@ -85,7 +85,7 @@ private:
     std::string homeDir;
     std::set<LaminarClient*> clients;
     std::set<LaminarWaiter*> waiters;
-    bool eraseWorkdir;
+    bool eraseRunDir;
     std::string archiveUrl;
 };
 

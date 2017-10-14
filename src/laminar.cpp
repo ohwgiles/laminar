@@ -73,7 +73,7 @@ Laminar::Laminar() {
     archiveUrl = ARCHIVE_URL_DEFAULT;
     if(char* envArchive = getenv("LAMINAR_ARCHIVE_URL"))
         archiveUrl = envArchive;
-    eraseWorkdir = true;
+    eraseRunDir = true;
     homeDir = getenv("LAMINAR_HOME") ?: "/var/lib/laminar";
 
     db = new Database((fs::path(homeDir)/"laminar.sqlite").string().c_str());
@@ -370,8 +370,8 @@ void Laminar::stop() {
 }
 
 bool Laminar::loadConfiguration() {
-    if(getenv("LAMINAR_KEEP_WORKDIR"))
-        eraseWorkdir = false;
+    if(getenv("LAMINAR_KEEP_RUNDIR"))
+        eraseRunDir = false;
 
     NodeMap nm;
 
@@ -726,7 +726,8 @@ void Laminar::runFinished(Run * r) {
     }
 
     // remove the rundir
-    fs::remove_all(r->runDir);
+    if(eraseRunDir)
+        fs::remove_all(r->runDir);
 
     // will delete the job
     activeJobs.get<2>().erase(r);
