@@ -54,11 +54,19 @@ Laminar's configuration file may be found at `/etc/laminar.conf`. Laminar will s
 
 Edit `/etc/laminar.conf` and change `LAMINAR_BIND_HTTP` to `IPADDR:PORT`, `unix:PATH/TO/SOCKET` or `unix-abstract:SOCKETNAME`. `IPADDR` may be `*` to bind on all interfaces. The default is `*:8080`.
 
-Do not attempt to run laminar on port 80. This requires running as `root`, and Laminar will not drop privileges when executing job scripts! For a more complete integrated solution (including SSL), simply run laminar as a reverse proxy behind a regular webserver. For instructions, see for example [NGINX Reverse Proxy](https://www.nginx.com/resources/admin-guide/reverse-proxy/) or [Apache Reverse Proxy](https://httpd.apache.org/docs/2.4/howto/reverse_proxy.html).
+Do not attempt to run laminar on port 80. This requires running as `root`, and Laminar will not drop privileges when executing job scripts! For a more complete integrated solution (including SSL), simply run laminar as a reverse proxy behind a regular webserver.
+
+#### Running behind a reverse proxy
+
+Laminar relies on WebSockets to provide a responsive, auto-updating display without polling. This may require extra support from your frontend webserver.
+
+For nginx, see [NGINX Reverse Proxy](https://www.nginx.com/resources/admin-guide/reverse-proxy/) and [WebSocket proxying](http://nginx.org/en/docs/http/websocket.html).
+
+For Apache, see [Apache Reverse Proxy](https://httpd.apache.org/docs/2.4/howto/reverse_proxy.html) and [mod_proxy_wstunnel](https://httpd.apache.org/docs/2.4/mod/mod_proxy_wstunnel.html).
 
 #### Set the page title
 
-Change `LAMINAR_TITLE` to your preferred page title.
+Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title.
 
 #### More configuration options
 
