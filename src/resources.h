@@ -1,5 +1,5 @@
 ///
-/// Copyright 2016 Oliver Giles
+/// Copyright 2016-2017 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -30,12 +30,17 @@ public:
     Resources();
 
     // If a resource is known for the given path, set start and end to the
-    // binary data to send to the client. Function returns false if no resource
-    // for the given path is known (404)
-    bool handleRequest(std::string path, const char** start, const char** end);
+    // binary data to send to the client, and content_type to its MIME
+    // type. Function returns false if no resource for the given path exists
+    bool handleRequest(std::string path, const char** start, const char** end, const char** content_type);
 
 private:
-    std::unordered_map<std::string, std::pair<const char*, const char*>> resources;
+    struct Resource {
+        const char* start;
+        const char* end;
+        const char* content_type;
+    };
+    std::unordered_map<std::string, const Resource> resources;
 };
 
 #endif // _LAMINAR_RESOURCES_H_

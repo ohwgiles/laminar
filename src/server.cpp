@@ -199,7 +199,7 @@ public:
         // Handle plain HTTP requests by delivering the binary resource
         wss.set_http_handler([this](websocketpp::connection_hdl hdl){
             websocket::connection_ptr c = wss.get_con_from_hdl(hdl);
-            const char* start, *end;
+            const char* start, *end, *content_type;
             std::string resource = c->get_resource();
             if(resource.compare(0, strlen("/archive/"), "/archive/") == 0) {
                 std::string file(resource.substr(strlen("/archive/")));
@@ -211,8 +211,9 @@ public:
                 } else {
                     c->set_status(websocketpp::http::status_code::not_found);
                 }
-            } else if(resources.handleRequest(resource, &start, &end)) {
+            } else if(resources.handleRequest(resource, &start, &end, &content_type)) {
                 c->set_status(websocketpp::http::status_code::ok);
+                c->append_header("Content-Type", content_type);
                 c->append_header("Content-Encoding", "gzip");
                 c->append_header("Content-Transfer-Encoding", "binary");
                 std::string response(start,end);
