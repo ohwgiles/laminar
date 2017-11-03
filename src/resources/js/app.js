@@ -172,14 +172,14 @@ const Home = function() {
           }(),
           datasets: [{
             label: "Successful Builds",
-            fillColor: "darkseagreen",
+            fillColor: "rgba(143,188,143,0.65)", //darkseagreen at 0.65
             strokeColor: "forestgreen",
             data: msg.buildsPerDay.map(function(e) {
               return e.success || 0;
             })
           }, {
             label: "Failed Bulids",
-            fillColor: "darksalmon",
+            fillColor: "rgba(233,150,122,0.65)", //darksalmon at 0.65
             strokeColor: "crimson",
             data: msg.buildsPerDay.map(function(e) {
               return e.failed || 0;
