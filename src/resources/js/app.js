@@ -67,6 +67,16 @@ const Utils = {
         ][d.getMonth()] + ' ' +
         d.getFullYear();
     },
+    formatDuration: function(start, end) {
+      if(!end)
+        end = Math.floor(Date.now()/1000);
+      if(end - start > 3600)
+        return Math.floor((end-start)/3600) + 'hours, ' + Math.floor(((end-start)%3600)/60) + ' minutes';
+      else if(end - start > 60)
+        return Math.floor((end-start)/60) + 'minutes, ' + ((end-start)%60) + ' seconds';
+      else
+        return (end-start) + ' seconds';
+    }
   }
 };
 

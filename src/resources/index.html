@@ -148,13 +148,13 @@
      <tr v-for="job in jobsRunning" track-by="$index">
       <td><img class="spin small" src="/progress.gif"> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
-      <td class="text-center">--</td>
+      <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
       <td class="text-center hidden-xs">{{job.reason}}</td>
      </tr>
      <tr v-for="job in jobsRecent" track-by="$index">
       <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
-      <td class="text-center">{{job.duration + " seconds"}}</td>
+      <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
       <td class="text-center hidden-xs">{{job.reason}}</td>
      </tr>
     </table>
@@ -180,7 +180,7 @@
       <dt>Queued for</dt><dd>{{job.queued}}s</dd>
       <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
       <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
-      <dt v-show="runComplete(job)">Duration</dt><dd v-show="runComplete(job)">{{job.duration}}s</dd>
+      <dt>Duration</dt><dd>{{formatDuration(job.started, job.completed)}}</dd>
      </dl>
     </div>
     <div class="col-sm-7 col-md-6 col-lg-5">
