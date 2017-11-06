@@ -330,7 +330,7 @@ var Job = function() {
             fillColor: "darkseagreen",
             strokeColor: "forestgreen",
             data: msg.recent.map(function(e) {
-              return e.duration;
+              return e.completed - e.started;
             }).reverse()
           }]
         }, {

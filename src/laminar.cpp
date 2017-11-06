@@ -177,7 +177,6 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("queued", started-queued);
             j.set("started", started);
             j.set("completed", completed);
-            j.set("duration", completed-started);
             j.set("result", to_string(RunState(result)));
             j.set("reason", reason);
         });
@@ -203,7 +202,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         .fetch<int,time_t,time_t,int,str>([&](int build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
             j.set("number", build)
-             .set("duration", completed - started)
+             .set("completed", completed)
              .set("started", started)
              .set("result", to_string(RunState(result)))
              .set("reason", reason)
@@ -268,8 +267,8 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("name", name)
              .set("number", build)
              .set("node", node)
-             .set("duration", completed - started)
              .set("started", started)
+             .set("completed", completed)
              .set("result", to_string(RunState(result)))
              .EndObject();
         });
@@ -706,7 +705,6 @@ void Laminar::runFinished(Run * r) {
             .set("number", r->build)
             .set("queued", r->startedAt - r->queuedAt)
             .set("completed", completedAt)
-            .set("duration", completedAt - r->startedAt)
             .set("started", r->startedAt)
             .set("result", to_string(r->result))
             .set("reason", r->reason());

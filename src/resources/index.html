@@ -54,7 +54,7 @@
       </td>
      </tr>
      <tr v-for="job in jobsRecent">
-      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link><br><small>Took {{job.duration}}s at {{formatDate(job.started)}}</small></td>
+      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link><br><small>Took {{formatDuration(job.started, job.completed)}} at {{formatDate(job.started)}}</small></td>
      </tr>
     </table>
    </div>
