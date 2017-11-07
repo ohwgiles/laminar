@@ -170,7 +170,7 @@
   <div class="container-fluid">
    <div class="row">
     <div class="col-sm-5 col-md-6 col-lg-7">
-     <h3 style="float:left"><img class="spin" src="/progress.gif" v-show="job.result === 'running'"><span v-html="runIcon(job.result)"></span> {{$route.params.name}} #{{$route.params.number}}</h3>
+     <h3 style="float:left"><span v-html="runIcon(job.result)"></span> {{$route.params.name}} #{{$route.params.number}}</h3>
      <nav class="pull-left">
       <ul class="pagination" style="margin:15px 20px">
        <li v-show="$route.params.number > 1"><router-link :to="'/jobs/'+$route.params.name+'/'+($route.params.number-1)">&laquo;</router-link></li>
