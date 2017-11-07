@@ -113,6 +113,7 @@
       <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td>
       <td class="text-center"><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
+      <td class="text-center">{{formatDuration(job.started,job.completed)}}</td>
      </tr>
     </table>
    </div>

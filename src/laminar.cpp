@@ -246,11 +246,14 @@ void Laminar::sendStatus(LaminarClient* client) {
 
     } else if(client->scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
-        db->stmt("SELECT name,number,startedAt,result FROM builds GROUP BY name ORDER BY number DESC")
-        .fetch<str,int,time_t,int>([&](str name,int number, time_t started, int result){
+        db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds GROUP BY name ORDER BY number DESC")
+        .fetch<str,int,time_t,time_t,int>([&](str name,int number, time_t started, time_t completed, int result){
             j.StartObject();
             j.set("name", name);
-            j.set("number", number).set("result", to_string(RunState(result))).set("started", started);
+            j.set("number", number);
+            j.set("result", to_string(RunState(result)));
+            j.set("started", started);
+            j.set("completed", completed);
             j.startArray("tags");
             for(const str& t: jobTags[name]) {
                 j.String(t.c_str());
@@ -258,6 +261,21 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.EndArray();
             j.EndObject();
         });
+        j.EndArray();
+        j.startArray("running");
+        for(const std::shared_ptr<Run> run : activeJobs.get<3>()) {
+            j.StartObject();
+            j.set("name", run->name);
+            j.set("number", run->build);
+            j.set("node", run->node->name);
+            j.set("started", run->startedAt);
+            j.startArray("tags");
+            for(const str& t: jobTags[run->name]) {
+                j.String(t.c_str());
+            }
+            j.EndArray();
+            j.EndObject();
+        }
         j.EndArray();
     } else { // Home page
         j.startArray("recent");

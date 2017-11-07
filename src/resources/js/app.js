@@ -54,7 +54,7 @@ const WebsocketHandler = function() {
 const Utils = {
   methods: {
     runIcon(result) {
-      return result === "success" ? '<span style="color:forestgreen;font-family:\'Zapf Dingbats\';">✔</span>' : result === "failed" || result === "aborted" ? '<span style="color:crimson;">✘</span>' : '';
+      return result === "success" ? '<span style="color:forestgreen;font-family:\'Zapf Dingbats\';">✔</span>' : result === "failed" || result === "aborted" ? '<span style="color:crimson;">✘</span>' : '<img class="spin small" src="/progress.gif">';
     },
     formatDate: function(unix) {
       // TODO: reimplement when toLocaleDateString() accepts formatting options on most browsers
@@ -257,7 +257,7 @@ const Jobs = function() {
   };
   return {
     template: '#jobs',
-    mixins: [WebsocketHandler, Utils],
+    mixins: [WebsocketHandler, Utils, ProgressUpdater],
     data: function() { return state; },
     computed: {
       filteredJobs() {
@@ -280,6 +280,13 @@ const Jobs = function() {
     methods: {
       status: function(msg) {
         state.jobs = msg.jobs;
+        state.jobsRunning = msg.running;
+        // mix running and completed jobs
+        for (var i in msg.running) {
+          var idx = state.jobs.findIndex(job => job.name === msg.running[i].name);
+          if (idx > -1)
+            state.jobs[idx] = msg.running[i];
+        }
         var tags = {};
         for (var i in state.jobs) {
           for (var j in state.jobs[i].tags) {
@@ -288,10 +295,38 @@ const Jobs = function() {
         }
         state.tags = Object.keys(tags);
       },
+      job_started: function(data) {
+        var updAt = null;
+        for (var i in state.jobsRunning) {
+          if (state.jobsRunning[i].name === data.name) {
+            updAt = i;
+            break;
+          }
+        }
+        if (updAt === null) {
+          state.jobsRunning.unshift(data);
+        } else {
+          state.jobsRunning[updAt] = data;
+        }
+        for (var i in state.jobs) {
+          if (state.jobs[i].name === data.name) {
+            state.jobs[i] = data;
+            this.$forceUpdate();
+            break;
+          }
+        }
+      },
       job_completed: function(data) {
         for (var i in state.jobs) {
           if (state.jobs[i].name === data.name) {
             state.jobs[i] = data;
+            // forceUpdate in second loop
+            break;
+          }
+        }
+        for (var i in state.jobsRunning) {
+          if (state.jobsRunning[i].name === data.name) {
+            state.jobsRunning.splice(i, 1);
             this.$forceUpdate();
             break;
           }
