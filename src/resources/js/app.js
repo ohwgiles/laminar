@@ -346,7 +346,7 @@ var Job = function() {
   };
   return Vue.extend({
     template: '#job',
-    mixins: [WebsocketHandler, Utils],
+    mixins: [WebsocketHandler, Utils, ProgressUpdater],
     data: function() {
       return state;
     },
