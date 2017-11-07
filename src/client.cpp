@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
         req.setLockName(argv[2]);
         req.send().wait(waitScope);
     } else {
-        fprintf(stderr, "Unknown comand %s\n", argv[1]);
+        fprintf(stderr, "Unknown command %s\n", argv[1]);
         return EINVAL;
     }
 
