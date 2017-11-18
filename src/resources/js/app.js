@@ -437,8 +437,7 @@ const Run = function() {
         state.log = '';
         state.job = data;
         state.latestNum = data.latestNum;
-        if (!!state.job.etc)
-          state.jobsRunning = [data];
+        state.jobsRunning = [data];
       },
       job_started: function(data) {
         state.latestNum++;
