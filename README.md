@@ -94,7 +94,9 @@ cd hello-2.10
 make
 ```
 
-Don't forget to mark it executable:
+Laminar uses your script's exit code to determine whether to mark the run as successful or failed. If your script is written in bash, the [`-e` option](http://tldp.org/LDP/abs/html/options.html) is helpful for this. See also [Exit and Exit Status](http://tldp.org/LDP/abs/html/exit-status.html).
+
+Don't forget to mark the script executable:
 
 ```bash
 chmod +x /var/lib/laminar/cfg/hello.run
