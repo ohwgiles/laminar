@@ -114,6 +114,10 @@ This causes the `/var/lib/laminar/cfg/hello.run` script to be executed, with a w
 
 The result and log output should be visible in the Web UI at http://localhost:8080/jobs/hello/1
 
+#### Isn't there a "Build Now" button I can click?
+
+This is against the design principles of Laminar and was deliberately excluded. Laminar's web UI is strictly read-only, making it simple to deploy in mixed-permission or public environments without an authentication layer. Furthermore, Laminar tries to encourage ideal continuous integration, where manual triggering is an anti-pattern. Want to make a release? Push a git tag and implement a post-receive hook. Want to re-run a build due to sporadic failure/flaky tests? Fix the tests locally and push a patch. Experience shows that a manual trigger such as a "Build Now" button is often used as a crutch to avoid doing the correct thing, negatively impacting traceability and quality.
+
 #### Triggering a job at a certain time
 
 This is what `cron` is for. To trigger a build of `hello` every day at 0300, add
