@@ -112,7 +112,7 @@ laminarc trigger hello
 
 This causes the `/var/lib/laminar/cfg/hello.run` script to be executed, with a working directory of `/var/lib/laminar/run/hello/1`
 
-The results and log output should be visible in the Web UI at http://localhost:8080
+The result and log output should be visible in the Web UI at http://localhost:8080/jobs/hello/1
 
 #### Triggering a job at a certain time
 
