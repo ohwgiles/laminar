@@ -152,7 +152,7 @@ const Home = function() {
               label: "Busy"
             },
             {
-              value: msg.executorsTotal,
+              value: msg.executorsTotal - msg.executorsBusy,
               color: "darkseagreen",
               label: "Idle"
             }
