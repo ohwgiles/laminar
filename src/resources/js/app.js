@@ -369,6 +369,7 @@ var Job = function() {
         state.jobsRecent = msg.recent;
         state.lastSuccess = msg.lastSuccess;
         state.lastFailed = msg.lastFailed;
+        state.nQueued = msg.nQueued;
 
         var chtBt = new Chart(document.getElementById("chartBt").getContext("2d")).Bar({
           labels: msg.recent.map(function(e) {
