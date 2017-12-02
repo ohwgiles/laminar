@@ -286,6 +286,11 @@ const Jobs = function() {
           var idx = state.jobs.findIndex(job => job.name === msg.running[i].name);
           if (idx > -1)
             state.jobs[idx] = msg.running[i];
+          else {
+            // special case: first run of a job.
+            state.jobs.unshift(msg.running[i]);
+            state.jobs.sort(function(a, b){return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;});
+          }
         }
         var tags = {};
         for (var i in state.jobs) {
@@ -308,13 +313,21 @@ const Jobs = function() {
         } else {
           state.jobsRunning[updAt] = data;
         }
+        updAt = null;
         for (var i in state.jobs) {
           if (state.jobs[i].name === data.name) {
-            state.jobs[i] = data;
-            this.$forceUpdate();
+            updAt = i;
             break;
           }
         }
+        if (updAt === null) {
+          // first execution of new job. TODO insert without resort
+          state.jobs.unshift(data);
+          state.jobs.sort(function(a, b){return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;});
+        } else {
+          state.jobs[updAt] = data;
+        }
+        this.$forceUpdate();
       },
       job_completed: function(data) {
         for (var i in state.jobs) {
