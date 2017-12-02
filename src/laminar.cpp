@@ -568,11 +568,12 @@ void Laminar::assignNewJobs() {
             std::shared_ptr<Run> run = *it;
             if(nodeCanQueue(node, *run)) {
                 fs::path cfgDir = fs::path(homeDir)/"cfg";
+                boost::system::error_code err;
 
                 // create a workspace for this job if it doesn't exist
                 fs::path ws = fs::path(homeDir)/"run"/run->name/"workspace";
                 if(!fs::exists(ws)) {
-                    if(!fs::create_directories(ws)) {
+                    if(!fs::create_directories(ws, err)) {
                         LLOG(ERROR, "Could not create job workspace", run->name);
                         break;
                     }
@@ -584,7 +585,16 @@ void Laminar::assignNewJobs() {
                 int buildNum = buildNums[run->name] + 1;
                 // create the run directory
                 fs::path rd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
-                if(!fs::create_directory(rd)) {
+                bool createWorkdir = true;
+                if(fs::is_directory(rd)) {
+                    LLOG(WARNING, "Working directory already exists, removing", rd.string());
+                    fs::remove_all(rd, err);
+                    if(err) {
+                        LLOG(WARNING, "Failed to remove working directory", err.message());
+                        createWorkdir = false;
+                    }
+                }
+                if(createWorkdir && !fs::create_directory(rd, err)) {
                     LLOG(ERROR, "Could not create working directory", rd.string());
                     break;
                 }
