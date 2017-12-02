@@ -48,7 +48,7 @@
       <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <i>queued</i></td>
      </tr>
      <tr v-for="job in jobsRunning">
-      <td><img class="spin small" src="/progress.gif"> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>
+      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>
        <small class="pull-right">{{formatDuration(job.started, job.completed)}}</small>
        <div class="progress">
          <div class="progress-bar progress-bar-striped" :class="'progress-bar-'+(job.overtime?'warning':'info')" :class="job.etc?'':'active'" :style="'width:'+(!job.etc?'100':job.progress)+'%'"></div>
@@ -149,7 +149,7 @@
       <td colspan="4"><i>{{nQueued}} run(s) queued</i></td>
      </tr>
      <tr v-for="job in jobsRunning" track-by="$index">
-      <td><img class="spin small" src="/progress.gif"> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
       <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
       <td class="text-center hidden-xs">{{job.reason}}</td>

@@ -36,8 +36,10 @@ Resources::Resources()
     INIT_RESOURCE("/", index_html, CONTENT_TYPE_HTML);
     INIT_RESOURCE("/favicon.ico", favicon_ico, CONTENT_TYPE_ICO);
     INIT_RESOURCE("/favicon-152.png", favicon_152_png, CONTENT_TYPE_PNG);
-    INIT_RESOURCE("/progress.gif", progress_gif, CONTENT_TYPE_GIF);
     INIT_RESOURCE("/icon.png", icon_png, CONTENT_TYPE_PNG);
+    INIT_RESOURCE("/tick.gif", tick_gif, CONTENT_TYPE_GIF);
+    INIT_RESOURCE("/cross.gif", cross_gif, CONTENT_TYPE_GIF);
+    INIT_RESOURCE("/spin.gif", spin_gif, CONTENT_TYPE_GIF);
     INIT_RESOURCE("/js/app.js", js_app_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/Chart.HorizontalBar.js", js_Chart_HorizontalBar_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);

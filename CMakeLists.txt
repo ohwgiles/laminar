@@ -58,7 +58,7 @@ add_custom_command(OUTPUT laminar.capnp.c++ laminar.capnp.h
 
 # Zip and compile statically served resources
 generate_compressed_bins(${CMAKE_SOURCE_DIR}/src/resources index.html js/app.js
-    favicon.ico favicon-152.png icon.png progress.gif)
+    favicon.ico favicon-152.png icon.png tick.gif cross.gif spin.gif)
 
 # Download 3rd-party frontend JS libs...
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue/2.3.4/vue.min.js
