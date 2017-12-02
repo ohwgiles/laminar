@@ -373,9 +373,15 @@ void Laminar::run() {
     int sigchld = signalfd(-1, &mask, 0);
     srv->addDescriptor(sigchld, [this](char* buf, size_t sz){
         struct signalfd_siginfo* siginfo = (struct signalfd_siginfo*) buf;
-        KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
-        reapAdvance();
-        assignNewJobs();
+        // TODO: re-enable assertion when the cause for its triggering
+        // is discovered and solved
+        //KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
+        if(siginfo->ssi_signo == SIGCHLD) {
+            reapAdvance();
+            assignNewJobs();
+        } else {
+            LLOG(ERROR, "Unexpected signo", siginfo->ssi_signo);
+        }
     });
 
     srv->start();
