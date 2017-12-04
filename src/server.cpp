@@ -420,7 +420,7 @@ void Server::stop() {
     eventfd_write(efd_quit, 1);
 }
 
-void Server::addDescriptor(int fd, std::function<void(char*,size_t)> cb) {
+void Server::addDescriptor(int fd, std::function<void(const char*,size_t)> cb) {
     auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
     tasks.add(handleFdRead(event, cb).attach(std::move(event)));
 }
@@ -455,13 +455,14 @@ void Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
 // returns a promise which will read a chunk of data from the file descriptor
 // wrapped by stream and invoke the provided callback with the read data.
 // Repeats until ::read returns <= 0
-kj::Promise<void> Server::handleFdRead(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> cb) {
-    static char* buffer = new char[PROC_IO_BUFSIZE];
-    return stream->tryRead(buffer, 1, PROC_IO_BUFSIZE).then([this,stream,cb](size_t sz) {
+kj::Promise<void> Server::handleFdRead(kj::AsyncInputStream* stream, std::function<void(const char*,size_t)> cb) {
+    std::string buffer;
+    buffer.reserve(PROC_IO_BUFSIZE);
+    return stream->tryRead((void*)buffer.data(), 1, PROC_IO_BUFSIZE).then(kj::mvCapture(kj::mv(buffer), [this,stream,cb](std::string&& buffer, size_t sz) {
         if(sz > 0) {
-            cb(buffer, sz);
+            cb(buffer.data(), sz);
             return handleFdRead(stream, cb);
         }
         return kj::Promise<void>(kj::READY_NOW);
-    });
+    })).attach(kj::mv(buffer));
 }

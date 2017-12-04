@@ -371,7 +371,7 @@ void Laminar::run() {
     sigaddset(&mask, SIGCHLD);
     sigprocmask(SIG_BLOCK, &mask, NULL);
     int sigchld = signalfd(-1, &mask, 0);
-    srv->addDescriptor(sigchld, [this](char* buf, size_t sz){
+    srv->addDescriptor(sigchld, [this](const char* buf, size_t sz){
         struct signalfd_siginfo* siginfo = (struct signalfd_siginfo*) buf;
         // TODO: re-enable assertion when the cause for its triggering
         // is discovered and solved
@@ -505,7 +505,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 bool Laminar::stepRun(std::shared_ptr<Run> run) {
     bool complete = run->step();
     if(!complete) {
-        srv->addDescriptor(run->fd, [=](char* b,size_t n){
+        srv->addDescriptor(run->fd, [=](const char* b,size_t n){
             std::string s(b,n);
             run->log += s;
             for(LaminarClient* c : clients) {

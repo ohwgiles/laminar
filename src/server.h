@@ -41,12 +41,12 @@ public:
 
     // add a file descriptor to be monitored for output. The callback will be
     // invoked with the read data
-    void addDescriptor(int fd, std::function<void(char*,size_t)> cb);
+    void addDescriptor(int fd, std::function<void(const char*,size_t)> cb);
 
 private:
     void acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener);
     void acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
-    kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, std::function<void(char*,size_t)> cb);
+    kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, std::function<void(const char*,size_t)> cb);
 
     void taskFailed(kj::Exception&& exception) override {
         kj::throwFatalException(kj::mv(exception));
