@@ -370,7 +370,7 @@ void Laminar::run() {
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
     sigprocmask(SIG_BLOCK, &mask, NULL);
-    int sigchld = signalfd(-1, &mask, 0);
+    int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
     srv->addDescriptor(sigchld, [this](const char* buf, size_t sz){
         struct signalfd_siginfo* siginfo = (struct signalfd_siginfo*) buf;
         // TODO: re-enable assertion when the cause for its triggering

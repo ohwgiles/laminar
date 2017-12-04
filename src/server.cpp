@@ -407,7 +407,7 @@ void Server::start() {
     // this eventfd is just to allow us to quit the server at some point
     // in the future by adding this event to the async loop. I couldn't see
     // a simpler way...
-    efd_quit = eventfd(0,0);
+    efd_quit = eventfd(0, EFD_CLOEXEC|EFD_NONBLOCK);
     kj::Promise<void> quit = kj::evalLater([this](){
         static uint64_t _;
         auto wakeEvent = ioContext.lowLevelProvider->wrapInputFd(efd_quit);
