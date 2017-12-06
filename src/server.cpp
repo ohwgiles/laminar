@@ -456,9 +456,8 @@ void Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
 // wrapped by stream and invoke the provided callback with the read data.
 // Repeats until ::read returns <= 0
 kj::Promise<void> Server::handleFdRead(kj::AsyncInputStream* stream, std::function<void(const char*,size_t)> cb) {
-    std::string buffer;
-    buffer.reserve(PROC_IO_BUFSIZE);
-    return stream->tryRead((void*)buffer.data(), 1, PROC_IO_BUFSIZE).then(kj::mvCapture(kj::mv(buffer), [this,stream,cb](std::string&& buffer, size_t sz) {
+    std::vector<char> buffer(PROC_IO_BUFSIZE);
+    return stream->tryRead((void*)buffer.data(), 1, PROC_IO_BUFSIZE).then(kj::mvCapture(kj::mv(buffer), [this,stream,cb](std::vector<char>&& buffer, size_t sz) {
         if(sz > 0) {
             cb(buffer.data(), sz);
             return handleFdRead(stream, cb);
