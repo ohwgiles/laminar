@@ -462,6 +462,6 @@ kj::Promise<void> Server::handleFdRead(kj::AsyncInputStream* stream, std::vector
             cb(buffer.data(), sz);
             return handleFdRead(stream, kj::mv(buffer), cb);
         }
-        return kj::Promise<void>(kj::READY_NOW).attach(kj::mv(buffer));
+        return kj::Promise<void>(kj::READY_NOW);
     }));
 }
