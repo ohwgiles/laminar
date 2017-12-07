@@ -23,7 +23,6 @@
 #include <capnp/message.h>
 #include <capnp/capability.h>
 #include <functional>
-#include <vector>
 
 struct LaminarInterface;
 
@@ -47,7 +46,7 @@ public:
 private:
     void acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener);
     void acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
-    kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, std::vector<char>&& buffer, std::function<void(const char*,size_t)> cb);
+    kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, char* buffer, std::function<void(const char*,size_t)> cb);
 
     void taskFailed(kj::Exception&& exception) override {
         kj::throwFatalException(kj::mv(exception));
