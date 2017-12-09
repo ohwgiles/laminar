@@ -73,7 +73,7 @@ Laminar::Laminar() {
     archiveUrl = ARCHIVE_URL_DEFAULT;
     if(char* envArchive = getenv("LAMINAR_ARCHIVE_URL"))
         archiveUrl = envArchive;
-    eraseRunDir = true;
+    numKeepRunDirs = 0;
     homeDir = getenv("LAMINAR_HOME") ?: "/var/lib/laminar";
 
     db = new Database((fs::path(homeDir)/"laminar.sqlite").string().c_str());
@@ -393,8 +393,8 @@ void Laminar::stop() {
 }
 
 bool Laminar::loadConfiguration() {
-    if(getenv("LAMINAR_KEEP_RUNDIR"))
-        eraseRunDir = false;
+    if(const char* ndirs = getenv("LAMINAR_KEEP_RUNDIRS"))
+        numKeepRunDirs = atoi(ndirs);
 
     NodeMap nm;
 
@@ -757,12 +757,28 @@ void Laminar::runFinished(Run * r) {
         w->complete(r);
     }
 
-    // remove the rundir
-    if(eraseRunDir)
-        fs::remove_all(r->runDir);
-
-    // will delete the job
+    // erase reference to run from activeJobs
     activeJobs.get<2>().erase(r);
+
+    // remove old run directories
+    // We cannot count back the number of directories to keep from the currently
+    // finishing job because there may well be older, still-running instances of
+    // this job and we don't want to delete their rundirs. So instead, check
+    // whether there are any more active runs of this job, and if so, count back
+    // from the oldest among them. If there are none, count back from the latest
+    // known build number of this job, which may not be that of the run that
+    // finished here.
+    auto it = activeJobs.get<4>().equal_range(r->name);
+    uint oldestActive = (it.first == it.second)? buildNums[r->name] : (*it.first)->build - 1;
+    for(int i = oldestActive - numKeepRunDirs; i > 0; i--) {
+        fs::path d = fs::path(homeDir)/"run"/r->name/std::to_string(i);
+        // Once the directory does not exist, it's probably not worth checking
+        // any further. 99% of the time this loop should only ever have 1 iteration
+        // anyway so hence this (admittedly debatable) optimization.
+        if(!fs::exists(d))
+            break;
+        fs::remove_all(d);
+    }
 }
 
 bool Laminar::getArtefact(std::string path, std::string& result) {

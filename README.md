@@ -490,7 +490,7 @@ make
 - `LAMINAR_BIND_HTTP`: The interface/port or unix socket on which `laminard` should listen for incoming connections to the web frontend. Default `*:8080`
 - `LAMINAR_BIND_RPC`: The interface/port or unix socket on which `laminard` should listen for incoming commands such as build triggers. Default `unix-abstract:laminar`
 - `LAMINAR_TITLE`: The page title to show in the web frontend.
-- `LAMINAR_KEEP_RUNDIR`: If set, do not delete run directories after completion
+- `LAMINAR_KEEP_RUNDIRS`: Set to an integer defining how many rundirs to keep per job. The lowest-numbered ones will be deleted. The default is 0, meaning all run dirs will be immediately deleted.
 - `LAMINAR_ARCHIVE_URL`: If set, the web frontend served by `laminard` will use this URL to form links to artefacts archived jobs. Must be synchronized with web server configuration.
 
 ### Script execution order
