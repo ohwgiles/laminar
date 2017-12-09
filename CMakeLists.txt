@@ -1,5 +1,5 @@
 ###
-### Copyright 2016 Oliver Giles
+### Copyright 2015-2017 Oliver Giles
 ###
 ### This file is part of Laminar
 ###
