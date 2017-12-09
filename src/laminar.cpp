@@ -505,16 +505,19 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 bool Laminar::stepRun(std::shared_ptr<Run> run) {
     bool complete = run->step();
     if(!complete) {
-        srv->addDescriptor(run->fd, [=](const char* b,size_t n){
-            std::string s(b,n);
-            run->log += s;
-            for(LaminarClient* c : clients) {
-                if(c->scope.wantsLog(run->name, run->build))
-                    c->sendMessage(s);
-            }
+        srv->addDescriptor(run->fd, [this, run](const char* b,size_t n){
+            handleRunLog(run, std::string(b,n));
         });
     }
     return complete;
+}
+
+void Laminar::handleRunLog(std::shared_ptr<Run> run, std::string s) {
+    run->log += s;
+    for(LaminarClient* c : clients) {
+        if(c->scope.wantsLog(run->name, run->build))
+            c->sendMessage(s);
+    }
 }
 
 // Reaps a zombie and steps the corresponding Run to its next state.
@@ -522,10 +525,19 @@ bool Laminar::stepRun(std::shared_ptr<Run> run) {
 void Laminar::reapAdvance() {
     int ret = 0;
     pid_t pid;
+    static thread_local char buf[1024];
     while((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
         LLOG(INFO, "Reaping", pid);
         auto it = activeJobs.get<0>().find(pid);
         std::shared_ptr<Run> run = *it;
+        // The main event loop might schedule this SIGCHLD handler before the final
+        // output handler (from addDescriptor). In that case, because it keeps a
+        // shared_ptr to the run it would successfully add to the log output buffer,
+        // but by then reapAdvance would have stored the log and ensured no-one cares.
+        // Preempt this case by forcing a final (non-blocking) read here.
+        for(ssize_t n = read(run->fd, buf, 1024); n > 0; n = read(run->fd, buf, 1024)) {
+            handleRunLog(run, std::string(buf, n));
+        }
         bool completed = true;
         activeJobs.get<0>().modify(it, [&](std::shared_ptr<Run> run){
             run->reaped(ret);
