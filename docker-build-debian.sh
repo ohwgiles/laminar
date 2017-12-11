@@ -54,7 +54,7 @@ Section:
 Priority: optional
 Architecture: amd64
 Maintainer: Oliver Giles <web ohwg net>
-Depends: libboost-filesystem1.62.0, zlib1g
+Depends: libsqlite3-0, libboost-filesystem1.62.0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 cat <<EOF > laminar/DEBIAN/postinst
