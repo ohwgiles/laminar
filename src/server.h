@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_SERVER_H_
-#define _LAMINAR_SERVER_H_
+#ifndef LAMINAR_SERVER_H_
+#define LAMINAR_SERVER_H_
 
 #include <kj/async-io.h>
 #include <capnp/message.h>
@@ -63,4 +63,4 @@ private:
     kj::TaskSet tasks;
 };
 
-#endif // _LAMINAR_SERVER_H_
+#endif // LAMINAR_SERVER_H_

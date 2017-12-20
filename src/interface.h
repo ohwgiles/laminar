@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef INTERFACE_H
-#define INTERFACE_H
+#ifndef LAMINAR_INTERFACE_H_
+#define LAMINAR_INTERFACE_H_
 
 #include "run.h"
 
@@ -118,5 +118,5 @@ struct LaminarInterface {
     virtual bool getArtefact(std::string path, std::string& result) = 0;
 };
 
-#endif // INTERFACE_H
+#endif // LAMINAR_INTERFACE_H_
 

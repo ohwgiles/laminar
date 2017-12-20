@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_RUN_H_
-#define _LAMINAR_RUN_H_
+#ifndef LAMINAR_RUN_H_
+#define LAMINAR_RUN_H_
 
 #include <string>
 #include <queue>
@@ -150,4 +150,4 @@ struct RunSet: public boost::multi_index_container<
     // TODO: getters for each index
 };
 
-#endif // _LAMINAR_RUN_H_
+#endif // LAMINAR_RUN_H_

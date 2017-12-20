@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_DATABASE_H_
-#define _LAMINAR_DATABASE_H_
+#ifndef LAMINAR_DATABASE_H_
+#define LAMINAR_DATABASE_H_
 
 #include <string>
 #include <functional>
@@ -142,4 +142,4 @@ template<> const char* Database::Statement::fetchColumn(int col);
 template<> int Database::Statement::fetchColumn(int col);
 template<> time_t Database::Statement::fetchColumn(int col);
 
-#endif // _LAMINAR_DATABASE_H_
+#endif // LAMINAR_DATABASE_H_

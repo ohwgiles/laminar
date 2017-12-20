@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_LAMINAR_H_
-#define _LAMINAR_LAMINAR_H_
+#ifndef LAMINAR_LAMINAR_H_
+#define LAMINAR_LAMINAR_H_
 
 #include "interface.h"
 #include "run.h"
@@ -90,4 +90,4 @@ private:
     std::string archiveUrl;
 };
 
-#endif // _LAMINAR_LAMINAR_H_
+#endif // LAMINAR_LAMINAR_H_

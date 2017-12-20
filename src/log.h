@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_LOG_H_
-#define _LAMINAR_LOG_H_
+#ifndef LAMINAR_LOG_H_
+#define LAMINAR_LOG_H_
 
 #include <kj/debug.h>
 
@@ -33,5 +33,5 @@
                         #__VA_ARGS__, __VA_ARGS__)
 
 
-#endif // _LAMINAR_LOG_H_
+#endif // LAMINAR_LOG_H_
 
