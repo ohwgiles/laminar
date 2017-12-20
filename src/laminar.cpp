@@ -210,7 +210,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndArray();
         j.startArray("running");
-        auto p = activeJobs.get<4>().equal_range(client->scope.job);
+        auto p = activeJobs.byJobName().equal_range(client->scope.job);
         for(auto it = p.first; it != p.second; ++it) {
             const std::shared_ptr<Run> run = *it;
             j.StartObject();
@@ -263,7 +263,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndArray();
         j.startArray("running");
-        for(const std::shared_ptr<Run> run : activeJobs.get<3>()) {
+        for(const std::shared_ptr<Run> run : activeJobs.byStartedAt()) {
             j.StartObject();
             j.set("name", run->name);
             j.set("number", run->build);
@@ -292,7 +292,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndArray();
         j.startArray("running");
-        for(const std::shared_ptr<Run> run : activeJobs.get<3>()) {
+        for(const std::shared_ptr<Run> run : activeJobs.byStartedAt()) {
             j.StartObject();
             j.set("name", run->name);
             j.set("number", run->build);
@@ -528,7 +528,7 @@ void Laminar::reapAdvance() {
     static thread_local char buf[1024];
     while((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
         LLOG(INFO, "Reaping", pid);
-        auto it = activeJobs.get<0>().find(pid);
+        auto it = activeJobs.byPid().find(pid);
         std::shared_ptr<Run> run = *it;
         // The main event loop might schedule this SIGCHLD handler before the final
         // output handler (from addDescriptor). In that case, because it keeps a
@@ -539,7 +539,7 @@ void Laminar::reapAdvance() {
             handleRunLog(run, std::string(buf, n));
         }
         bool completed = true;
-        activeJobs.get<0>().modify(it, [&](std::shared_ptr<Run> run){
+        activeJobs.byPid().modify(it, [&](std::shared_ptr<Run> run){
             run->reaped(ret);
             completed = stepRun(run);
         });
@@ -770,7 +770,7 @@ void Laminar::runFinished(Run * r) {
     }
 
     // erase reference to run from activeJobs
-    activeJobs.get<2>().erase(r);
+    activeJobs.byRunPtr().erase(r);
 
     // remove old run directories
     // We cannot count back the number of directories to keep from the currently
@@ -780,7 +780,7 @@ void Laminar::runFinished(Run * r) {
     // from the oldest among them. If there are none, count back from the latest
     // known build number of this job, which may not be that of the run that
     // finished here.
-    auto it = activeJobs.get<4>().equal_range(r->name);
+    auto it = activeJobs.byJobName().equal_range(r->name);
     uint oldestActive = (it.first == it.second)? buildNums[r->name] : (*it.first)->build - 1;
     for(int i = oldestActive - numKeepRunDirs; i > 0; i--) {
         fs::path d = fs::path(homeDir)/"run"/r->name/std::to_string(i);

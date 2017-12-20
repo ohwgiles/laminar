@@ -147,7 +147,20 @@ struct RunSet: public boost::multi_index_container<
     std::shared_ptr<Run>,
     _run_index
 > {
-    // TODO: getters for each index
+    typename bmi::nth_index<RunSet, 0>::type& byPid() { return get<0>(); }
+    typename bmi::nth_index<RunSet, 0>::type const& byPid() const { return get<0>(); }
+
+    typename bmi::nth_index<RunSet, 1>::type& byRun() { return get<1>(); }
+    typename bmi::nth_index<RunSet, 1>::type const& byRun() const { return get<1>(); }
+
+    typename bmi::nth_index<RunSet, 2>::type& byRunPtr() { return get<2>(); }
+    typename bmi::nth_index<RunSet, 2>::type const& byRunPtr() const { return get<2>(); }
+
+    typename bmi::nth_index<RunSet, 3>::type& byStartedAt() { return get<3>(); }
+    typename bmi::nth_index<RunSet, 3>::type const& byStartedAt() const { return get<3>(); }
+
+    typename bmi::nth_index<RunSet, 4>::type& byJobName() { return get<4>(); }
+    typename bmi::nth_index<RunSet, 4>::type const& byJobName() const { return get<4>(); }
 };
 
 #endif // LAMINAR_RUN_H_

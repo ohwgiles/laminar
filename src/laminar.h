@@ -69,8 +69,8 @@ private:
     void populateArtifacts(Json& out, std::string job, int num) const;
 
     Run* activeRun(std::string name, int num) {
-        auto it = activeJobs.get<1>().find(boost::make_tuple(name, num));
-        return it == activeJobs.get<1>().end() ? nullptr : it->get();
+        auto it = activeJobs.byRun().find(boost::make_tuple(name, num));
+        return it == activeJobs.byRun().end() ? nullptr : it->get();
     }
 
     std::list<std::shared_ptr<Run>> queuedJobs;
