@@ -430,7 +430,7 @@ const Run = function() {
   };
   var firstLog = false;
   var logHandler = function(vm, d) {
-    state.log += ansi_up.ansi_to_html(d);
+    state.log += ansi_up.ansi_to_html(d.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
     vm.$forceUpdate();
     if (!firstLog) {
       firstLog = true;

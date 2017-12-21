@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_LAMINAR_H_
-#define _LAMINAR_LAMINAR_H_
+#ifndef LAMINAR_LAMINAR_H_
+#define LAMINAR_LAMINAR_H_
 
 #include "interface.h"
 #include "run.h"
@@ -39,7 +39,7 @@ class Json;
 class Laminar final : public LaminarInterface {
 public:
     Laminar();
-    ~Laminar();
+    ~Laminar() override;
 
     // Runs the application forever
     void run();
@@ -54,7 +54,7 @@ public:
     void deregisterWaiter(LaminarWaiter* waiter) override;
 
     void sendStatus(LaminarClient* client) override;
-    bool setParam(std::string job, int buildNum, std::string param, std::string value) override;
+    bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
     bool getArtefact(std::string path, std::string& result) override;
 
 private:
@@ -66,11 +66,11 @@ private:
     void runFinished(Run*);
     bool nodeCanQueue(const Node&, const Run&) const;
     // expects that Json has started an array
-    void populateArtifacts(Json& out, std::string job, int num) const;
+    void populateArtifacts(Json& out, std::string job, uint num) const;
 
-    Run* activeRun(std::string name, int num) {
-        auto it = activeJobs.get<1>().find(boost::make_tuple(name, num));
-        return it == activeJobs.get<1>().end() ? nullptr : it->get();
+    Run* activeRun(std::string name, uint num) {
+        auto it = activeJobs.byRun().find(boost::make_tuple(name, num));
+        return it == activeJobs.byRun().end() ? nullptr : it->get();
     }
 
     std::list<std::shared_ptr<Run>> queuedJobs;
@@ -90,4 +90,4 @@ private:
     std::string archiveUrl;
 };
 
-#endif // _LAMINAR_LAMINAR_H_
+#endif // LAMINAR_LAMINAR_H_

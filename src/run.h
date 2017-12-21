@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_RUN_H_
-#define _LAMINAR_RUN_H_
+#ifndef LAMINAR_RUN_H_
+#define LAMINAR_RUN_H_
 
 #include <string>
 #include <queue>
@@ -81,7 +81,7 @@ public:
     std::string parentName;
     int parentBuild = 0;
     std::string reasonMsg;
-    int build = 0;
+    uint build = 0;
     std::string log;
     pid_t pid;
     int fd;
@@ -132,7 +132,7 @@ struct _run_index : bmi::indexed_by<
             std::shared_ptr<Run>,
         // a combination of their job name and build number
             bmi::member<Run, std::string, &Run::name>,
-            bmi::member<Run, int, &Run::build>
+            bmi::member<Run, uint, &Run::build>
         >>,
         // or a pointer to a Run object.
         bmi::hashed_unique<_run_same>,
@@ -147,7 +147,20 @@ struct RunSet: public boost::multi_index_container<
     std::shared_ptr<Run>,
     _run_index
 > {
-    // TODO: getters for each index
+    typename bmi::nth_index<RunSet, 0>::type& byPid() { return get<0>(); }
+    typename bmi::nth_index<RunSet, 0>::type const& byPid() const { return get<0>(); }
+
+    typename bmi::nth_index<RunSet, 1>::type& byRun() { return get<1>(); }
+    typename bmi::nth_index<RunSet, 1>::type const& byRun() const { return get<1>(); }
+
+    typename bmi::nth_index<RunSet, 2>::type& byRunPtr() { return get<2>(); }
+    typename bmi::nth_index<RunSet, 2>::type const& byRunPtr() const { return get<2>(); }
+
+    typename bmi::nth_index<RunSet, 3>::type& byStartedAt() { return get<3>(); }
+    typename bmi::nth_index<RunSet, 3>::type const& byStartedAt() const { return get<3>(); }
+
+    typename bmi::nth_index<RunSet, 4>::type& byJobName() { return get<4>(); }
+    typename bmi::nth_index<RunSet, 4>::type const& byJobName() const { return get<4>(); }
 };
 
-#endif // _LAMINAR_RUN_H_
+#endif // LAMINAR_RUN_H_

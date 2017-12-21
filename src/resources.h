@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_RESOURCES_H_
-#define _LAMINAR_RESOURCES_H_
+#ifndef LAMINAR_RESOURCES_H_
+#define LAMINAR_RESOURCES_H_
 
 #include <unordered_map>
 #include <utility>
@@ -43,4 +43,4 @@ private:
     std::unordered_map<std::string, const Resource> resources;
 };
 
-#endif // _LAMINAR_RESOURCES_H_
+#endif // LAMINAR_RESOURCES_H_

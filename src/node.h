@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_NODE_H_
-#define _LAMINAR_NODE_H_
+#ifndef LAMINAR_NODE_H_
+#define LAMINAR_NODE_H_
 
 #include <string>
 #include <set>
@@ -40,4 +40,4 @@ public:
 };
 
 
-#endif // _LAMINAR_NODE_H_
+#endif // LAMINAR_NODE_H_

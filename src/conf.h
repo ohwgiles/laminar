@@ -16,8 +16,8 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef _LAMINAR_CONF_H_
-#define _LAMINAR_CONF_H_
+#ifndef LAMINAR_CONF_H_
+#define LAMINAR_CONF_H_
 
 #include <unordered_map>
 
@@ -41,4 +41,4 @@ int StringMap::convert(std::string e);
 StringMap parseConfFile(const char* path);
 
 
-#endif // _LAMINAR_CONF_H_
+#endif // LAMINAR_CONF_H_

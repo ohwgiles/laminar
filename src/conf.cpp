@@ -30,8 +30,8 @@ StringMap parseConfFile(const char* path) {
     while(std::getline(f, line)) {
         if(line[0] == '#')
             continue;
-        int p = line.find('=');
-        if(p > 0) {
+        size_t p = line.find('=');
+        if(p != std::string::npos) {
             result.emplace(line.substr(0, p), line.substr(p+1));
         }
     }
