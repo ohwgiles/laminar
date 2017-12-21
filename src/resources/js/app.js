@@ -430,7 +430,7 @@ const Run = function() {
   };
   var firstLog = false;
   var logHandler = function(vm, d) {
-    state.log += d;
+    state.log += d.replace(/</g,'&lt;').replace(/>/g,'&gt;');
     vm.$forceUpdate();
     if (!firstLog) {
       firstLog = true;
