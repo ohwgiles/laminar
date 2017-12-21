@@ -35,7 +35,6 @@ std::string to_string(const RunState& rs) {
     case RunState::ABORTED: return "aborted";
     case RunState::FAILED: return "failed";
     case RunState::SUCCESS: return "success";
-    case RunState::UNKNOWN:
     default:
          return "unknown";
     }
@@ -74,7 +73,7 @@ bool Run::step() {
             sigset_t mask;
             sigemptyset(&mask);
             sigaddset(&mask, SIGCHLD);
-            sigprocmask(SIG_UNBLOCK, &mask, NULL);
+            sigprocmask(SIG_UNBLOCK, &mask, nullptr);
 
             close(pfd[0]);
             dup2(pfd[1], 1);

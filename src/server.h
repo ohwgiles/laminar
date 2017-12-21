@@ -54,7 +54,7 @@ private:
 
 private:
     struct WebsocketConnection;
-    struct HttpImpl;
+    class HttpImpl;
 
     int efd_quit;
     capnp::Capability::Client rpcInterface;

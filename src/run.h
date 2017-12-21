@@ -81,7 +81,7 @@ public:
     std::string parentName;
     int parentBuild = 0;
     std::string reasonMsg;
-    int build = 0;
+    uint build = 0;
     std::string log;
     pid_t pid;
     int fd;
@@ -132,7 +132,7 @@ struct _run_index : bmi::indexed_by<
             std::shared_ptr<Run>,
         // a combination of their job name and build number
             bmi::member<Run, std::string, &Run::name>,
-            bmi::member<Run, int, &Run::build>
+            bmi::member<Run, uint, &Run::build>
         >>,
         // or a pointer to a Run object.
         bmi::hashed_unique<_run_same>,

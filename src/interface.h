@@ -39,33 +39,34 @@ struct MonitorScope {
         LOG   // a run's log page
     };
 
-    MonitorScope(Type type = HOME, std::string job = std::string(), int num = 0) :
+    MonitorScope(Type type = HOME, std::string job = std::string(), uint num = 0) :
         type(type),
         job(job),
         num(num)
     {}
 
     // whether this scope wants status information about the given job or run
-    bool wantsStatus(std::string ajob, int anum = 0) const {
+    bool wantsStatus(std::string ajob, uint anum = 0) const {
         if(type == HOME || type == ALL) return true;
         if(type == JOB) return ajob == job;
         if(type == RUN) return ajob == job && anum == num;
         return false;
     }
 
-    bool wantsLog(std::string ajob, int anum) const {
+    bool wantsLog(std::string ajob, uint anum) const {
         return type == LOG && ajob == job && anum == num;
     }
 
     Type type;
     std::string job;
-    int num = 0;
+    uint num = 0;
 };
 
 // Represents a (websocket) client that wants to be notified about events
 // matching the supplied scope. Pass instances of this to LaminarInterface
 // registerClient and deregisterClient
 struct LaminarClient {
+    virtual ~LaminarClient() =default;
     virtual void sendMessage(std::string payload) = 0;
     MonitorScope scope;
 };
@@ -74,6 +75,7 @@ struct LaminarClient {
 // Pass instances of this to LaminarInterface registerWaiter and
 // deregisterWaiter
 struct LaminarWaiter {
+    virtual ~LaminarWaiter() =default;
     virtual void complete(const Run*) = 0;
 };
 
@@ -81,6 +83,8 @@ struct LaminarWaiter {
 // logic. These methods fulfil the requirements of both the HTTP/Websocket
 // and RPC interfaces.
 struct LaminarInterface {
+    virtual ~LaminarInterface() =default;
+
     // Queues a job, returns immediately. Return value will be nullptr if
     // the supplied name is not a known job.
     virtual std::shared_ptr<Run> queueJob(std::string name, ParamMap params = ParamMap()) = 0;
@@ -110,7 +114,7 @@ struct LaminarInterface {
     // Implements the laminar client interface allowing the setting of
     // arbitrary parameters on a run (usually itself) to be available in
     // the environment of subsequent scripts.
-    virtual bool setParam(std::string job, int buildNum, std::string param, std::string value) = 0;
+    virtual bool setParam(std::string job, uint buildNum, std::string param, std::string value) = 0;
 
     // Fetches the content of an artifact given its filename relative to
     // $LAMINAR_HOME/archive. This shouldn't be used, because the sysadmin

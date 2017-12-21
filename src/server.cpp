@@ -83,7 +83,7 @@ public:
         laminar.registerWaiter(this);
     }
 
-    ~RpcImpl() {
+    ~RpcImpl() override {
         laminar.deregisterWaiter(this);
     }
 
@@ -125,7 +125,7 @@ public:
     // Set a parameter on a running build
     kj::Promise<void> set(SetContext context) override {
         std::string jobName = context.getParams().getJobName();
-        int buildNum = context.getParams().getBuildNum();
+        uint buildNum = context.getParams().getBuildNum();
         LLOG(INFO, "RPC set", jobName, buildNum);
 
         LaminarCi::MethodResult result = laminar.setParam(jobName, buildNum,
@@ -170,7 +170,6 @@ private:
     }
 private:
     LaminarInterface& laminar;
-    kj::LowLevelAsyncIoProvider* asyncio;
     std::unordered_map<std::string, std::list<kj::PromiseFulfillerPair<void>>> locks;
     std::unordered_map<const Run*, std::list<kj::PromiseFulfillerPair<RunState>>> runWaiters;
 };
@@ -235,17 +234,17 @@ public:
                     c->lc->scope.type = MonitorScope::ALL;
                 } else {
                     res = res.substr(5);
-                    int split = res.find('/',1);
+                    size_t split = res.find('/',1);
                     std::string job = res.substr(1,split-1);
                     if(!job.empty()) {
                         c->lc->scope.job = job;
                         c->lc->scope.type = MonitorScope::JOB;
                     }
                     if(split != std::string::npos) {
-                        int split2 = res.find('/', split+1);
+                        size_t split2 = res.find('/', split+1);
                         std::string run = res.substr(split+1, split2-split);
                         if(!run.empty()) {
-                            c->lc->scope.num = atoi(run.c_str());
+                            c->lc->scope.num = static_cast<uint>(atoi(run.c_str()));
                             c->lc->scope.type = MonitorScope::RUN;
                         }
                         if(split2 != std::string::npos && res.compare(split2, 4, "/log") == 0) {
@@ -311,8 +310,7 @@ struct Server::WebsocketConnection : public LaminarClient {
         cn->start();
     }
 
-    virtual ~WebsocketConnection() noexcept(true) {
-    }
+    virtual ~WebsocketConnection() noexcept(true) override {}
 
     kj::Promise<void> pend() {
         return stream->tryRead(ibuf, 1, sizeof(ibuf)).then([this](size_t sz){
@@ -413,8 +411,8 @@ void Server::acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener) {
             acceptHttpClient(kj::mv(listener));
             auto conn = kj::heap<WebsocketConnection>(kj::mv(connection), *httpInterface);
             auto promises = kj::heapArrayBuilder<kj::Promise<void>>(2);
-            promises.add(std::move(conn->pend()));
-            promises.add(std::move(conn->writeTask()));
+            promises.add(conn->pend());
+            promises.add(conn->writeTask());
             return kj::joinPromises(promises.finish()).attach(std::move(conn));
         }))
     );

@@ -29,8 +29,10 @@ Database::~Database() {
     sqlite3_close(hdl);
 }
 
-Database::Statement::Statement(sqlite3 *db, const char *query) {
-    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+Database::Statement::Statement(sqlite3 *db, const char *query) :
+    stmt(nullptr)
+{
+    sqlite3_prepare_v2(db, query, -1, &stmt, nullptr);
 }
 
 Database::Statement::~Statement() {
@@ -46,31 +48,52 @@ void Database::Statement::bindValue(int i, int e) {
     sqlite3_bind_int(stmt, i, e);
 }
 
+void Database::Statement::bindValue(int i, uint e) {
+    sqlite3_bind_int(stmt, i, static_cast<int32_t>(e));
+}
+
+void Database::Statement::bindValue(int i, int64_t e) {
+    sqlite3_bind_int64(stmt, i, e);
+}
+
+void Database::Statement::bindValue(int i, uint64_t e) {
+    sqlite3_bind_int64(stmt, i, static_cast<int64_t>(e));
+}
+
 void Database::Statement::bindValue(int i, const char* e) {
-    sqlite3_bind_text(stmt, i, e, -1, NULL);
+    sqlite3_bind_text(stmt, i, e, -1, nullptr);
 }
 
 void Database::Statement::bindValue(int i, const std::string& e) {
-    sqlite3_bind_text(stmt, i, e.data(), e.size(), NULL);
+    sqlite3_bind_text(stmt, i, e.data(), static_cast<int>(e.size()), nullptr);
 }
 
 template<> std::string Database::Statement::fetchColumn(int col) {
-    int sz = sqlite3_column_bytes(stmt, col);
+    uint sz = static_cast<uint>(sqlite3_column_bytes(stmt, col)); // according to documentation will never be negative
     std::string res(sz, '\0');
     memcpy(&res[0], sqlite3_column_text(stmt, col), sz);
     return res;
 }
 
 template<> const char* Database::Statement::fetchColumn(int col) {
-    return (char*)sqlite3_column_text(stmt, col);
+    // while sqlite3_column_text maybe more correctly returns an unsigned const char*, signed const char* is more consistent
+    return reinterpret_cast<const char*>(sqlite3_column_text(stmt, col));
 }
 
 template<> int Database::Statement::fetchColumn(int col) {
     return sqlite3_column_int(stmt, col);
 }
 
-template<> time_t Database::Statement::fetchColumn(int col) {
+template<> uint Database::Statement::fetchColumn(int col) {
+    return static_cast<uint>(sqlite3_column_int(stmt, col));
+}
+
+template<> int64_t Database::Statement::fetchColumn(int col) {
     return sqlite3_column_int64(stmt, col);
+}
+
+template<> uint64_t Database::Statement::fetchColumn(int col) {
+    return static_cast<uint64_t>(sqlite3_column_int64(stmt, col));
 }
 
 bool Database::Statement::row() {

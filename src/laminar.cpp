@@ -51,6 +51,7 @@ private:
 template<> Json& Json::set(const char* key, const char* value) { String(key); String(value); return *this; }
 template<> Json& Json::set(const char* key, std::string value) { String(key); String(value.c_str()); return *this; }
 template<> Json& Json::set(const char* key, int value) { String(key); Int(value); return *this; }
+template<> Json& Json::set(const char* key, uint value) { String(key); Int(static_cast<int>(value)); return *this; }
 template<> Json& Json::set(const char* key, time_t value) { String(key); Int64(value); return *this; }
 
 namespace {
@@ -89,7 +90,7 @@ Laminar::Laminar() {
 
     // retrieve the last build numbers
     db->stmt("SELECT name, MAX(number) FROM builds GROUP BY name")
-    .fetch<str,int>([this](str name, int build){
+    .fetch<str,uint>([this](str name, uint build){
         buildNums[name] = build;
     });
 
@@ -116,7 +117,7 @@ void Laminar::deregisterWaiter(LaminarWaiter *waiter) {
     waiters.erase(waiter);
 }
 
-bool Laminar::setParam(std::string job, int buildNum, std::string param, std::string value) {
+bool Laminar::setParam(std::string job, uint buildNum, std::string param, std::string value) {
     if(Run* run = activeRun(job, buildNum)) {
         run->params[param] = value;
         return true;
@@ -125,11 +126,11 @@ bool Laminar::setParam(std::string job, int buildNum, std::string param, std::st
 }
 
 
-void Laminar::populateArtifacts(Json &j, std::string job, int num) const {
+void Laminar::populateArtifacts(Json &j, std::string job, uint num) const {
     fs::path dir(fs::path(homeDir)/"archive"/job/std::to_string(num));
     if(fs::is_directory(dir)) {
-        int prefixLen = (fs::path(homeDir)/"archive").string().length();
-        int scopeLen = dir.string().length();
+        size_t prefixLen = (fs::path(homeDir)/"archive").string().length();
+        size_t scopeLen = dir.string().length();
         for(fs::recursive_directory_iterator it(dir); it != fs::recursive_directory_iterator(); ++it) {
             if(!fs::is_regular_file(*it))
                 continue;
@@ -150,10 +151,10 @@ void Laminar::sendStatus(LaminarClient* client) {
             db->stmt("SELECT output, outputLen FROM builds WHERE name = ? AND number = ?")
               .bind(client->scope.job, client->scope.num)
               .fetch<str,int>([=](str maybeZipped, unsigned long sz) {
-                std::string log(sz+1,'\0');
+                str log(sz+1,'\0');
                 if(sz >= COMPRESS_LOG_MIN_SIZE) {
-                    int res = ::uncompress((unsigned char*)&log[0], &sz,
-                         (unsigned char*)maybeZipped.data(), maybeZipped.size());
+                    int res = ::uncompress((uint8_t*) log.data(), &sz,
+                         (const uint8_t*) maybeZipped.data(), maybeZipped.size());
                     if(res == Z_OK)
                         client->sendMessage(log);
                     else
@@ -187,7 +188,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("result", to_string(RunState::RUNNING));
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<int>([&](int lastRuntime){
+             .fetch<uint>([&](uint lastRuntime){
                 j.set("etc", run->startedAt + lastRuntime);
             });
         }
@@ -199,7 +200,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         j.startArray("recent");
         db->stmt("SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 25")
         .bind(client->scope.job)
-        .fetch<int,time_t,time_t,int,str>([&](int build,time_t started,time_t completed,int result,str reason){
+        .fetch<uint,time_t,time_t,int,str>([&](uint build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
             j.set("number", build)
              .set("completed", completed)
@@ -223,7 +224,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         }
         j.EndArray();
         int nQueued = 0;
-        for(const std::shared_ptr<Run> run : queuedJobs) {
+        for(const auto& run : queuedJobs) {
             if (run->name == client->scope.job) {
                 nQueued++;
             }
@@ -247,7 +248,7 @@ void Laminar::sendStatus(LaminarClient* client) {
     } else if(client->scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
         db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds GROUP BY name ORDER BY number DESC")
-        .fetch<str,int,time_t,time_t,int>([&](str name,int number, time_t started, time_t completed, int result){
+        .fetch<str,uint,time_t,time_t,int>([&](str name,uint number, time_t started, time_t completed, int result){
             j.StartObject();
             j.set("name", name);
             j.set("number", number);
@@ -263,7 +264,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndArray();
         j.startArray("running");
-        for(const std::shared_ptr<Run> run : activeJobs.byStartedAt()) {
+        for(const auto& run : activeJobs.byStartedAt()) {
             j.StartObject();
             j.set("name", run->name);
             j.set("number", run->build);
@@ -280,7 +281,7 @@ void Laminar::sendStatus(LaminarClient* client) {
     } else { // Home page
         j.startArray("recent");
         db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 15")
-        .fetch<str,int,str,time_t,time_t,time_t,int>([&](str name,int build,str node,time_t,time_t started,time_t completed,int result){
+        .fetch<str,uint,str,time_t,time_t,time_t,int>([&](str name,uint build,str node,time_t,time_t started,time_t completed,int result){
             j.StartObject();
             j.set("name", name)
              .set("number", build)
@@ -292,7 +293,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndArray();
         j.startArray("running");
-        for(const std::shared_ptr<Run> run : activeJobs.byStartedAt()) {
+        for(const auto& run : activeJobs.byStartedAt()) {
             j.StartObject();
             j.set("name", run->name);
             j.set("number", run->build);
@@ -300,14 +301,14 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("started", run->startedAt);
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<int>([&](int lastRuntime){
+             .fetch<uint>([&](uint lastRuntime){
                 j.set("etc", run->startedAt + lastRuntime);
             });
             j.EndObject();
         }
         j.EndArray();
         j.startArray("queued");
-        for(const std::shared_ptr<Run> run : queuedJobs) {
+        for(const auto& run : queuedJobs) {
             j.StartObject();
             j.set("name", run->name);
             j.EndObject();
@@ -326,7 +327,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         for(int i = 6; i >= 0; --i) {
             j.StartObject();
             db->stmt("SELECT result, COUNT(*) FROM builds WHERE completedAt > ? AND completedAt < ? GROUP by result")
-                    .bind(86400*(time(0)/86400 - i), 86400*(time(0)/86400 - (i-1)))
+                    .bind(86400*(time(nullptr)/86400 - i), 86400*(time(nullptr)/86400 - (i-1)))
                     .fetch<int,int>([&](int result, int num){
                 j.set(to_string(RunState(result)).c_str(), num);
             });
@@ -335,15 +336,15 @@ void Laminar::sendStatus(LaminarClient* client) {
         j.EndArray();
         j.startObject("buildsPerJob");
         db->stmt("SELECT name, COUNT(*) FROM builds WHERE completedAt > ? GROUP BY name")
-                .bind(time(0) - 86400)
+                .bind(time(nullptr) - 86400)
                 .fetch<str, int>([&](str job, int count){
             j.set(job.c_str(), count);
         });
         j.EndObject();
         j.startObject("timePerJob");
         db->stmt("SELECT name, AVG(completedAt-startedAt) FROM builds WHERE completedAt > ? GROUP BY name")
-                .bind(time(0) - 7 * 86400)
-                .fetch<str, int>([&](str job, int time){
+                .bind(time(nullptr) - 7 * 86400)
+                .fetch<str, uint>([&](str job, uint time){
             j.set(job.c_str(), time);
         });
         j.EndObject();
@@ -369,10 +370,10 @@ void Laminar::run() {
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
-    sigprocmask(SIG_BLOCK, &mask, NULL);
+    sigprocmask(SIG_BLOCK, &mask, nullptr);
     int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
-    srv->addDescriptor(sigchld, [this](const char* buf, size_t sz){
-        struct signalfd_siginfo* siginfo = (struct signalfd_siginfo*) buf;
+    srv->addDescriptor(sigchld, [this](const char* buf, size_t){
+        const struct signalfd_siginfo* siginfo = reinterpret_cast<const struct signalfd_siginfo*>(buf);
         // TODO: re-enable assertion when the cause for its triggering
         // is discovered and solved
         //KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
@@ -394,7 +395,7 @@ void Laminar::stop() {
 
 bool Laminar::loadConfiguration() {
     if(const char* ndirs = getenv("LAMINAR_KEEP_RUNDIRS"))
-        numKeepRunDirs = atoi(ndirs);
+        numKeepRunDirs = static_cast<uint>(atoi(ndirs));
 
     NodeMap nm;
 
@@ -467,7 +468,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 
     std::shared_ptr<Run> run = std::make_shared<Run>();
     run->name = name;
-    run->queuedAt = time(0);
+    run->queuedAt = time(nullptr);
     for(auto it = params.begin(); it != params.end();) {
         if(it->first[0] == '=') {
             if(it->first == "=parentJob") {
@@ -525,7 +526,8 @@ void Laminar::handleRunLog(std::shared_ptr<Run> run, std::string s) {
 void Laminar::reapAdvance() {
     int ret = 0;
     pid_t pid;
-    static thread_local char buf[1024];
+    constexpr int bufsz = 1024;
+    static thread_local char buf[bufsz];
     while((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
         LLOG(INFO, "Reaping", pid);
         auto it = activeJobs.byPid().find(pid);
@@ -535,8 +537,8 @@ void Laminar::reapAdvance() {
         // shared_ptr to the run it would successfully add to the log output buffer,
         // but by then reapAdvance would have stored the log and ensured no-one cares.
         // Preempt this case by forcing a final (non-blocking) read here.
-        for(ssize_t n = read(run->fd, buf, 1024); n > 0; n = read(run->fd, buf, 1024)) {
-            handleRunLog(run, std::string(buf, n));
+        for(ssize_t n = read(run->fd, buf, bufsz); n > 0; n = read(run->fd, buf, bufsz)) {
+            handleRunLog(run, std::string(buf, static_cast<size_t>(n)));
         }
         bool completed = true;
         activeJobs.byPid().modify(it, [&](std::shared_ptr<Run> run){
@@ -594,7 +596,7 @@ void Laminar::assignNewJobs() {
                         run->addScript((cfgDir/"jobs"/run->name+".init").string(), ws.string());
                 }
 
-                int buildNum = buildNums[run->name] + 1;
+                uint buildNum = buildNums[run->name] + 1;
                 // create the run directory
                 fs::path rd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
                 bool createWorkdir = true;
@@ -654,7 +656,7 @@ void Laminar::assignNewJobs() {
                 // start the job
                 node.busyExecutors++;
                 run->node = &node;
-                run->startedAt = time(0);
+                run->startedAt = time(nullptr);
                 run->laminarHome = homeDir;
                 run->build = buildNum;
                 // set the last known result if exists
@@ -680,8 +682,8 @@ void Laminar::assignNewJobs() {
                  .set("reason", run->reason());
                 db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
                  .bind(run->name)
-                 .fetch<int>([&](int etc){
-                    j.set("etc", time(0) + etc);
+                 .fetch<uint>([&](uint etc){
+                    j.set("etc", time(nullptr) + etc);
                 });
                 j.EndObject();
                 const char* msg = j.str();
@@ -722,7 +724,7 @@ void Laminar::runFinished(Run * r) {
 
     node->busyExecutors--;
     LLOG(INFO, "Run completed", r->name, to_string(r->result));
-    time_t completedAt = time(0);
+    time_t completedAt = time(nullptr);
 
     // compress log
     std::string maybeZipped = r->log;
@@ -730,8 +732,8 @@ void Laminar::runFinished(Run * r) {
     if(r->log.length() >= COMPRESS_LOG_MIN_SIZE) {
         std::string zipped(r->log.size(), '\0');
         unsigned long zippedSize = zipped.size();
-        if(::compress((unsigned char*)&zipped[0], &zippedSize,
-            (unsigned char*)&r->log[0], logsize) == Z_OK) {
+        if(::compress((uint8_t*) zipped.data(), &zippedSize,
+            (const uint8_t*) r->log.data(), logsize) == Z_OK) {
             zipped.resize(zippedSize);
             std::swap(maybeZipped, zipped);
         }
@@ -782,7 +784,7 @@ void Laminar::runFinished(Run * r) {
     // finished here.
     auto it = activeJobs.byJobName().equal_range(r->name);
     uint oldestActive = (it.first == it.second)? buildNums[r->name] : (*it.first)->build - 1;
-    for(int i = oldestActive - numKeepRunDirs; i > 0; i--) {
+    for(int i = static_cast<int>(oldestActive - numKeepRunDirs); i > 0; i--) {
         fs::path d = fs::path(homeDir)/"run"/r->name/std::to_string(i);
         // Once the directory does not exist, it's probably not worth checking
         // any further. 99% of the time this loop should only ever have 1 iteration
@@ -806,9 +808,9 @@ bool Laminar::getArtefact(std::string path, std::string& result) {
         return false;
     std::ifstream fstr(file.string());
     fstr.seekg(0, std::ios::end);
-    size_t sz = fstr.tellg();
-    if(fstr.rdstate() == 0) {
-        result.resize(sz);
+    ssize_t sz = fstr.tellg();
+    if(fstr.good()) {
+        result.resize(static_cast<size_t>(sz));
         fstr.seekg(0);
         fstr.read(&result[0], sz);
         return true;

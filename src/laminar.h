@@ -39,7 +39,7 @@ class Json;
 class Laminar final : public LaminarInterface {
 public:
     Laminar();
-    ~Laminar();
+    ~Laminar() override;
 
     // Runs the application forever
     void run();
@@ -54,7 +54,7 @@ public:
     void deregisterWaiter(LaminarWaiter* waiter) override;
 
     void sendStatus(LaminarClient* client) override;
-    bool setParam(std::string job, int buildNum, std::string param, std::string value) override;
+    bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
     bool getArtefact(std::string path, std::string& result) override;
 
 private:
@@ -66,9 +66,9 @@ private:
     void runFinished(Run*);
     bool nodeCanQueue(const Node&, const Run&) const;
     // expects that Json has started an array
-    void populateArtifacts(Json& out, std::string job, int num) const;
+    void populateArtifacts(Json& out, std::string job, uint num) const;
 
-    Run* activeRun(std::string name, int num) {
+    Run* activeRun(std::string name, uint num) {
         auto it = activeJobs.byRun().find(boost::make_tuple(name, num));
         return it == activeJobs.byRun().end() ? nullptr : it->get();
     }
