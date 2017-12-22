@@ -171,6 +171,10 @@ or similar path in `/etc/laminar.conf`.
 
 This can be securely and flexibly combined with remote triggering using `ssh`. There is no need to allow the client full shell access to the server machine, the ssh server can restrict certain users to certain commands (in this case `laminarc`). See [the authorized_keys section of the sshd man page](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT) for further information.
 
+#### Triggering on a push to GitHub
+
+Consider using [webhook](https://github.com/adnanh/webhook) to call `laminarc`
+
 ### Job chains
 
 A typical pipeline may involve several steps, such as build, test and deploy. Depending on the project, these may be broken up into seperate laminar jobs for maximal flexibility.
