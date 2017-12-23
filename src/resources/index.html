@@ -36,6 +36,14 @@
    margin-bottom: 0;
   }
   table#joblist tr:first-child td { border-top: 0; }
+  #popup-connecting {
+    position: fixed;
+    background: white;
+    border: 1px solid #ddd;
+    bottom: 10px;
+    right: 10px;
+    padding: 20px;
+  }
  </style>
 </head>
 <body>
@@ -218,6 +226,7 @@
    </div>
   </nav>
   <router-view></router-view>
+  <div v-show="!connected" id="popup-connecting"><img src="/spin.gif">&nbsp;Connecting...</div>
  </div>
 </body>
 </html>

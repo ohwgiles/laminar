@@ -24,6 +24,7 @@ const WebsocketHandler = function() {
           comp.ws = this;
           // Update html and nav titles
           document.title = comp.$root.title = msg.title;
+          comp.$root.connected = true;
           // Component-specific callback handler
           comp[msg.type](msg.data);
         });
@@ -35,6 +36,21 @@ const WebsocketHandler = function() {
           this.comp[msg.type](msg.data);
       }
     };
+    ws.onclose = function(ev) {
+      // if this.comp isn't set, this connection has never been used
+      // and a re-connection isn't meaningful
+      if(!ev.wasClean && 'comp' in this) {
+        this.comp.$root.connected = false;
+        this.reconnectTimeout = setTimeout(()=>{
+          var newWs = setupWebsocket(path, (fn) => { fn(this.comp); });
+          // pass on the current component for the cases where the
+          // connection fails (onclose is called again) before the
+          // status message can reassign the current component
+          newWs.comp = this.comp;
+        }, 2000);
+      }
+    }
+    return ws;
   };
   return {
     beforeRouteEnter(to, from, next) {
@@ -42,12 +58,14 @@ const WebsocketHandler = function() {
     },
     beforeRouteUpdate(to, from, next) {
       this.ws.close();
+      clearTimeout(this.ws.reconnectTimeout);
       setupWebsocket(to.path, (fn) => { fn(this); next(); });
     },
     beforeRouteLeave(to, from, next) {
       this.ws.close();
+      clearTimeout(this.ws.reconnectTimeout);
       next();
-    },
+    }
   };
 }();
 
@@ -448,7 +466,6 @@ const Run = function() {
     methods: {
       status: function(data) {
         state.jobsRunning = [];
-        state.log = '';
         state.job = data;
         state.latestNum = data.latestNum;
         state.jobsRunning = [data];
@@ -468,6 +485,7 @@ const Run = function() {
     },
     beforeRouteEnter(to, from, next) {
       next(vm => {
+        state.log = '';
         vm.logws = wsp(to.path + '/log');
         vm.logws.onmessage = function(msg) {
           logHandler(vm, msg.data);
@@ -477,6 +495,7 @@ const Run = function() {
     beforeRouteUpdate(to, from, next) {
       var vm = this;
       vm.logws.close();
+      state.log = '';
       vm.logws = wsp(to.path + '/log');
       vm.logws.onmessage = function(msg) {
         logHandler(vm, msg.data);
@@ -493,7 +512,8 @@ const Run = function() {
 new Vue({
   el: '#app',
   data: {
-    title: '' // populated by status ws message
+    title: '', // populated by status ws message
+    connected: false
   },
   router: new VueRouter({
     mode: 'history',
