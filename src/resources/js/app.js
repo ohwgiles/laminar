@@ -75,7 +75,15 @@ const WebsocketHandler = function() {
 const Utils = {
   methods: {
     runIcon(result) {
-      return result === "success" ? '<img src="/tick.gif">' : result === "failed" || result === "aborted" ? '<img src="/cross.gif">' : '<img src="/spin.gif">';
+      var marker = '⚙';
+      var classname = result;
+      if (result === 'success')
+         marker = '✔';
+      else if (result === 'failed' || result === 'aborted')
+         marker = '✘';
+      else
+         classname = 'spin';
+      return '<span title="' + result + '" class="status ' + classname + '">' + marker + '&#xfe0e;</span>';
     },
     formatDate: function(unix) {
       // TODO: reimplement when toLocaleDateString() accepts formatting options on most browsers
