@@ -193,6 +193,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             });
         }
         j.set("latestNum", int(buildNums[client->scope.job]));
+        j.set("skin", getenv("LAMINAR_SKIN") ?: "");
         j.startArray("artifacts");
         populateArtifacts(j, client->scope.job, client->scope.num);
         j.EndArray();
