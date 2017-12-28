@@ -27,7 +27,6 @@
 #define CONTENT_TYPE_HTML "text/html; charset=utf-8"
 #define CONTENT_TYPE_ICO  "image/x-icon"
 #define CONTENT_TYPE_PNG  "image/png"
-#define CONTENT_TYPE_GIF  "image/gif"
 #define CONTENT_TYPE_JS   "application/javascript; charset=utf-8"
 #define CONTENT_TYPE_CSS  "text/css; charset=utf-8"
 
@@ -37,9 +36,6 @@ Resources::Resources()
     INIT_RESOURCE("/favicon.ico", favicon_ico, CONTENT_TYPE_ICO);
     INIT_RESOURCE("/favicon-152.png", favicon_152_png, CONTENT_TYPE_PNG);
     INIT_RESOURCE("/icon.png", icon_png, CONTENT_TYPE_PNG);
-    INIT_RESOURCE("/tick.gif", tick_gif, CONTENT_TYPE_GIF);
-    INIT_RESOURCE("/cross.gif", cross_gif, CONTENT_TYPE_GIF);
-    INIT_RESOURCE("/spin.gif", spin_gif, CONTENT_TYPE_GIF);
     INIT_RESOURCE("/js/app.js", js_app_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/Chart.HorizontalBar.js", js_Chart_HorizontalBar_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);

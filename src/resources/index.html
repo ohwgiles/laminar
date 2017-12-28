@@ -48,6 +48,22 @@
     right: 10px;
     padding: 20px;
   }
+  span.status {
+    display: inline-block;
+    width: 1em;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  span.success { color: forestgreen; }
+  span.failed { color: firebrick; }
+  span.aborted { color: indigo; }
+  span.spin {
+    color: steelblue;
+    animation: 2s linear infinite spin;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
  </style>
 </head>
 <body>
@@ -229,7 +245,7 @@
   </nav>
   <a v-on:click="toggleNotifications(!notify)" v-show="supportsNotifications" class="bell pull-right" :class="{'active':notify}" :title="(notify?'Disable':'Enable')+' notifications'">&#128276;</a>
   <router-view></router-view>
-  <div v-show="!connected" id="popup-connecting"><img src="/spin.gif">&nbsp;Connecting...</div>
+  <div v-show="!connected" id="popup-connecting"><span class="status spin">⚙&#xfe0e;</span>&nbsp;Connecting...</div>
  </div>
 </body>
 </html>
