@@ -210,6 +210,10 @@ public:
                 } else {
                     c->set_status(websocketpp::http::status_code::not_found);
                 }
+            } else if(resource.compare("/custom/style.css") == 0) {
+                c->set_status(websocketpp::http::status_code::ok);
+                c->append_header("Content-Transfer-Encoding", "binary");
+                c->set_body(laminar.getCustomCss());
             } else if(resources.handleRequest(resource, &start, &end, &content_type)) {
                 c->set_status(websocketpp::http::status_code::ok);
                 c->append_header("Content-Type", content_type);

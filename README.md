@@ -66,7 +66,7 @@ For Apache, see [Apache Reverse Proxy](https://httpd.apache.org/docs/2.4/howto/r
 
 #### Set the page title
 
-Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title.
+Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title. For further WebUI customization, consider using a [custom style sheet](#customizing-the-webui).
 
 #### More configuration options
 
@@ -483,6 +483,11 @@ cmake src
 make
 ```
 
+### Customizing the WebUI
+
+If it exists, the file `/var/lib/laminar/custom/style.css` will be served by laminar and may be used to change the appearance of Laminar's WebUI.
+
+This directory is also a good place to add any extra assets needed for this customization, but note that in this case you will need to serve this directory directly from your [HTTP reverse proxy](#service-configuration) (highly recommended).
 
 ## Reference
 

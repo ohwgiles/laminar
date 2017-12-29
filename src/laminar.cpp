@@ -795,25 +795,38 @@ void Laminar::runFinished(Run * r) {
     }
 }
 
+// Small helper function to return the full contents of a file given its path.
+// It reads in the whole file into the given string reference.
+// This is a terrible way to serve files (especially large ones). Hopefully
+// no-one uses this function and configures their webservers appropriately.
+static bool slurp(fs::path path, std::string& output) {
+    if(!fs::is_regular_file(path))
+        return false;
+    std::ifstream fstr(path.string());
+    fstr.seekg(0, std::ios::end);
+    ssize_t sz = fstr.tellg();
+    if(fstr.good()) {
+        output.resize(static_cast<size_t>(sz));
+        fstr.seekg(0);
+        fstr.read(&output[0], sz);
+        return true;
+    }
+    return false;
+}
+
 bool Laminar::getArtefact(std::string path, std::string& result) {
     if(archiveUrl != ARCHIVE_URL_DEFAULT) {
         // we shouldn't have got here. Probably an invalid link.
         return false;
     }
-    // Reads in the whole file into the given string reference.
-    // This is a terrible way to serve files (especially large ones).
     fs::path file(fs::path(homeDir)/"archive"/path);
-    // no support for browsing archived directories
-    if(fs::is_directory(file))
-        return false;
-    std::ifstream fstr(file.string());
-    fstr.seekg(0, std::ios::end);
-    ssize_t sz = fstr.tellg();
-    if(fstr.good()) {
-        result.resize(static_cast<size_t>(sz));
-        fstr.seekg(0);
-        fstr.read(&result[0], sz);
-        return true;
-    }
-    return false;
+    return slurp(file, result);
+}
+
+std::string Laminar::getCustomCss()
+{
+    fs::path file(fs::path(homeDir)/"custom"/"style.css");
+    std::string result;
+    slurp(file, result);
+    return result;
 }

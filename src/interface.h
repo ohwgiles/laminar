@@ -120,6 +120,11 @@ struct LaminarInterface {
     // $LAMINAR_HOME/archive. This shouldn't be used, because the sysadmin
     // should have configured a real webserver to serve these things.
     virtual bool getArtefact(std::string path, std::string& result) = 0;
+
+    // Fetches the content of $LAMINAR_HOME/custom/style.css or an empty
+    // string. This shouldn't be used, because the sysadmin should have
+    // configured a real webserver to serve these things.
+    virtual std::string getCustomCss() = 0;
 };
 
 #endif // LAMINAR_INTERFACE_H_
