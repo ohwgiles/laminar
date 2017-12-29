@@ -89,5 +89,5 @@ add_executable(laminarc src/client.cpp laminar.capnp.c++)
 target_link_libraries(laminarc capnp-rpc capnp kj-async kj pthread)
 
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
-install(FILES laminar.service DESTINATION usr/lib/systemd/system)
+install(FILES laminar.service DESTINATION lib/systemd/system)
 install(FILES laminar.conf DESTINATION etc)
