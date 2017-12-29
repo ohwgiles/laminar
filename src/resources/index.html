@@ -25,6 +25,9 @@
   a.navbar-btn.active { color: #fff; }
   a.navbar-btn:hover { color: #fff; text-decoration: none; }
   a.navbar-btn:focus { color: #fff; }
+  .bell { margin: 8px 15px; color: #9d9d9d; }
+  .bell:hover { text-decoration: none; color: #9d9d9d; cursor: pointer; }
+  .bell.active { color: #333; }
   dt,dd { line-height: 2; }
   canvas {
    width: 100% !important;
@@ -219,13 +222,12 @@
 
  <div id="app">
   <nav class="navbar navbar-inverse">
-   <div class="container-fluid">
-    <div>
-     <router-link to="/" class="navbar-brand"><img src="/icon.png">{{title}}</router-link>
-     <router-link to="/jobs" class="btn navbar-btn pull-right">Jobs</router-link>
-    </div>
+   <div>
+    <router-link to="/" class="navbar-brand"><img src="/icon.png">{{title}}</router-link>
+    <router-link to="/jobs" class="btn navbar-btn pull-right">Jobs</router-link>
    </div>
   </nav>
+  <a v-on:click="toggleNotifications(!notify)" v-show="supportsNotifications" class="bell pull-right" :class="{'active':notify}" :title="(notify?'Disable':'Enable')+' notifications'">&#128276;</a>
   <router-view></router-view>
   <div v-show="!connected" id="popup-connecting"><img src="/spin.gif">&nbsp;Connecting...</div>
  </div>

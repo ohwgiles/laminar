@@ -32,8 +32,11 @@ const WebsocketHandler = function() {
         // at this point, the component must be defined
         if (!this.comp)
           return console.error("Page component was undefined");
-        else if (typeof this.comp[msg.type] === 'function')
-          this.comp[msg.type](msg.data);
+        else {
+          this.comp.$root.showNotify(msg.type, msg.data);
+          if(typeof this.comp[msg.type] === 'function')
+            this.comp[msg.type](msg.data);
+        }
       }
     };
     ws.onclose = function(ev) {
@@ -513,7 +516,28 @@ new Vue({
   el: '#app',
   data: {
     title: '', // populated by status ws message
-    connected: false
+    connected: false,
+    notify: 'localStorage' in window && localStorage.getItem('showNotifications') == 1
+  },
+  computed: {
+    supportsNotifications() {
+      return 'Notification' in window && Notification.permission !== 'denied';
+    }
+  },
+  methods: {
+    toggleNotifications(en) {
+      if(Notification.permission !== 'granted')
+        Notification.requestPermission(p => this.notify = (p === 'granted'))
+      else
+        this.notify = en;
+    },
+    showNotify(msg, data) {
+      if(this.notify && msg === 'job_completed')
+        new Notification(data.name + ' ' + '#' + data.number +' completed');
+    }
+  },
+  watch: {
+    notify(e) { localStorage.setItem('showNotifications', e ? 1 : 0); }
   },
   router: new VueRouter({
     mode: 'history',
