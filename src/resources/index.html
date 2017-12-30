@@ -48,6 +48,10 @@
     right: 10px;
     padding: 20px;
   }
+  pre.black {
+   background-color: black;
+   color: white;
+  }
  </style>
 </head>
 <body>
@@ -106,9 +110,9 @@
      </div>
     </div>
    </div></div>
-  </div></div> 
+  </div></div>
  </div></template>
- 
+
  <template id="jobs"><div>
   <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li class="active">Jobs</li></ol>
   <div class="container-fluid"><div class="row">
@@ -131,7 +135,7 @@
    </div>
   </div></div>
  </div></template>
- 
+
  <template id="job"><div>
   <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li><router-link to="/jobs">Jobs</router-link></li><li class="active">{{$route.params.name}}</li></ol></ol>
   <div class="container-fluid">
@@ -176,7 +180,7 @@
    </div></div>
   </div>
  </div></template>
- 
+
  <template id="run"><div>
   <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li><router-link to="/jobs">Jobs</router-link></li><li><router-link :to="'/jobs/'+$route.params.name">{{$route.params.name}}</router-link></li><li class="active">#{{$route.params.number}}</li></ol></ol>
   <div class="container-fluid">
@@ -215,7 +219,7 @@
    <div class="row"><div class="col-xs-12">
     <button type="button" class="btn btn-default btn-xs pull-right" :class="{'active':autoscroll}" v-on:click="autoscroll = !autoscroll" style="margin-top:10px">Autoscroll</button>
     <h4>Console output</h4>
-    <pre v-html="log"></pre>
+    <pre :class="job.skin" v-html="log"></pre>
    </div></div>
   </div>
  </div></template>
