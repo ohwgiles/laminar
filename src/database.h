@@ -120,8 +120,8 @@ private:
         // Bind value specializations
         void bindValue(int i, int e);
         void bindValue(int i, uint e);
-        void bindValue(int i, int64_t e);
-        void bindValue(int i, uint64_t e);
+        void bindValue(int i, long e);
+        void bindValue(int i, unsigned long e);
         void bindValue(int i, const char* e);
         void bindValue(int i, const std::string& e);
 
@@ -149,7 +149,7 @@ template<> std::string Database::Statement::fetchColumn(int col);
 template<> const char* Database::Statement::fetchColumn(int col);
 template<> int Database::Statement::fetchColumn(int col);
 template<> uint Database::Statement::fetchColumn(int col);
-template<> int64_t Database::Statement::fetchColumn(int col);
-template<> uint64_t Database::Statement::fetchColumn(int col);
+template<> long Database::Statement::fetchColumn(int col);
+template<> ulong Database::Statement::fetchColumn(int col);
 
 #endif // LAMINAR_DATABASE_H_

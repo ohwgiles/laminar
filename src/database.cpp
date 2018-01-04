@@ -52,11 +52,11 @@ void Database::Statement::bindValue(int i, uint e) {
     sqlite3_bind_int(stmt, i, static_cast<int32_t>(e));
 }
 
-void Database::Statement::bindValue(int i, int64_t e) {
+void Database::Statement::bindValue(int i, long e) {
     sqlite3_bind_int64(stmt, i, e);
 }
 
-void Database::Statement::bindValue(int i, uint64_t e) {
+void Database::Statement::bindValue(int i, ulong e) {
     sqlite3_bind_int64(stmt, i, static_cast<int64_t>(e));
 }
 
@@ -88,12 +88,12 @@ template<> uint Database::Statement::fetchColumn(int col) {
     return static_cast<uint>(sqlite3_column_int(stmt, col));
 }
 
-template<> int64_t Database::Statement::fetchColumn(int col) {
-    return sqlite3_column_int64(stmt, col);
+template<> long Database::Statement::fetchColumn(int col) {
+    return static_cast<long>(sqlite3_column_int64(stmt, col));
 }
 
-template<> uint64_t Database::Statement::fetchColumn(int col) {
-    return static_cast<uint64_t>(sqlite3_column_int64(stmt, col));
+template<> ulong Database::Statement::fetchColumn(int col) {
+    return static_cast<ulong>(sqlite3_column_int64(stmt, col));
 }
 
 bool Database::Statement::row() {

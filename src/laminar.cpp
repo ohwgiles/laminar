@@ -41,7 +41,7 @@ class Json : public rapidjson::Writer<rapidjson::StringBuffer> {
 public:
     Json() : rapidjson::Writer<rapidjson::StringBuffer>(buf) { StartObject(); }
     template<typename T>
-    Json& set(const char* key, T value);
+    Json& set(const char* key, T value) { String(key); Int64(value); return *this; }
     Json& startObject(const char* key) { String(key); StartObject(); return *this; }
     Json& startArray(const char* key) { String(key); StartArray(); return *this; }
     const char* str() { EndObject(); return buf.GetString(); }
@@ -50,9 +50,6 @@ private:
 };
 template<> Json& Json::set(const char* key, const char* value) { String(key); String(value); return *this; }
 template<> Json& Json::set(const char* key, std::string value) { String(key); String(value.c_str()); return *this; }
-template<> Json& Json::set(const char* key, int value) { String(key); Int(value); return *this; }
-template<> Json& Json::set(const char* key, uint value) { String(key); Int(static_cast<int>(value)); return *this; }
-template<> Json& Json::set(const char* key, time_t value) { String(key); Int64(value); return *this; }
 
 namespace {
 // Default values when none were supplied in $LAMINAR_CONF_FILE (/etc/laminar.conf)
