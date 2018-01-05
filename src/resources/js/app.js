@@ -533,7 +533,9 @@ new Vue({
     },
     showNotify(msg, data) {
       if(this.notify && msg === 'job_completed')
-        new Notification(data.name + ' ' + '#' + data.number +' completed');
+        new Notification('Job ' + data.result, {
+          body: data.name + ' ' + '#' + data.number + ': ' + data.result
+        });
     }
   },
   watch: {
