@@ -85,7 +85,7 @@ public:
     std::string log;
     pid_t pid;
     int fd;
-    int procStatus;
+    int procStatus = 0;
     std::unordered_map<std::string, std::string> params;
 
     time_t queuedAt;

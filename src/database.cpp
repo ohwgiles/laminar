@@ -41,7 +41,7 @@ Database::Statement::~Statement() {
 
 
 bool Database::Statement::exec() {
-    return sqlite3_step(stmt) == SQLITE_OK;
+    return sqlite3_step(stmt) == SQLITE_DONE;
 }
 
 void Database::Statement::bindValue(int i, int e) {

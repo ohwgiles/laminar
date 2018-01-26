@@ -88,6 +88,15 @@ target_link_libraries(laminard capnp-rpc capnp kj-async kj pthread boost_filesys
 add_executable(laminarc src/client.cpp laminar.capnp.c++)
 target_link_libraries(laminarc capnp-rpc capnp kj-async kj pthread)
 
+## Tests
+set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
+if(BUILD_TESTS)
+    find_package(GTest REQUIRED)
+    include_directories(${GTEST_INCLUDE_DIRS} src)
+    add_executable(laminar-tests src/conf.cpp src/database.cpp src/run.cpp test/test-conf.cpp test/test-database.cpp test/test-run.cpp)
+    target_link_libraries(laminar-tests ${GTEST_BOTH_LIBRARIES} kj sqlite3 boost_filesystem boost_system)
+endif()
+
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
 install(FILES laminar.service DESTINATION lib/systemd/system)
 install(FILES laminar.conf DESTINATION etc)
