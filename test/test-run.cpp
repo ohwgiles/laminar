@@ -78,7 +78,7 @@ TEST_F(RunTest, Environment) {
     run.name = "foo";
     run.build = 1234;
     run.laminarHome = "/tmp";
-    run.addScript("/bin/env");
+    run.addScript("/usr/bin/env");
     runAll();
     StringMap map = parseFromString(readAllOutput());
     EXPECT_EQ("1234", map["RUN"]);
@@ -91,7 +91,7 @@ TEST_F(RunTest, Environment) {
 
 TEST_F(RunTest, ParamsToEnv) {
     run.params["foo"] = "bar";
-    run.addScript("/bin/env");
+    run.addScript("/usr/bin/env");
     runAll();
     StringMap map = parseFromString(readAllOutput());
     EXPECT_EQ("bar", map["foo"]);
