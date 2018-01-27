@@ -48,9 +48,7 @@ private:
     void acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
     kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, char* buffer, std::function<void(const char*,size_t)> cb);
 
-    void taskFailed(kj::Exception&& exception) override {
-        kj::throwFatalException(kj::mv(exception));
-    }
+    void taskFailed(kj::Exception&& exception) override;
 
 private:
     struct WebsocketConnection;
@@ -58,9 +56,14 @@ private:
 
     int efd_quit;
     capnp::Capability::Client rpcInterface;
-    HttpImpl* httpInterface;
+    LaminarInterface& laminarInterface;
+    kj::Own<HttpImpl> httpInterface;
     kj::AsyncIoContext ioContext;
     kj::TaskSet tasks;
+
+    // TODO: restructure so this isn't necessary
+    friend class ServerTest;
+    kj::PromiseFulfillerPair<void> httpReady;
 };
 
 #endif // LAMINAR_SERVER_H_

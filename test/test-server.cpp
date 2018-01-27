@@ -43,8 +43,18 @@ public:
 
 class MockLaminar : public LaminarInterface {
 public:
-    MOCK_METHOD1(registerClient, void(LaminarClient*));
-    MOCK_METHOD1(deregisterClient, void(LaminarClient*));
+    LaminarClient* client = nullptr;
+    virtual void registerClient(LaminarClient* c) override {
+        ASSERT_EQ(nullptr, client);
+        client = c;
+        EXPECT_CALL(*this, sendStatus(client)).Times(testing::Exactly(1));
+    }
+
+    virtual void deregisterClient(LaminarClient* c) override {
+        ASSERT_EQ(client, c);
+        client = nullptr;
+    }
+
     MOCK_METHOD2(queueJob, std::shared_ptr<Run>(std::string name, ParamMap params));
     MOCK_METHOD1(registerWaiter, void(LaminarWaiter* waiter));
     MOCK_METHOD1(deregisterWaiter, void(LaminarWaiter* waiter));
@@ -75,6 +85,11 @@ protected:
     kj::WaitScope& ws() const {
         return server->ioContext.waitScope;
     }
+    void waitForHttpReady() {
+        server->httpReady.promise.wait(server->ioContext.waitScope);
+    }
+
+    kj::Network& network() { return server->ioContext.provider->getNetwork(); }
     TempDir tempDir;
     MockLaminar mockLaminar;
     Server* server;
@@ -85,4 +100,42 @@ TEST_F(ServerTest, RpcTrigger) {
     req.setJobName("foo");
     EXPECT_CALL(mockLaminar, queueJob("foo", ParamMap())).Times(testing::Exactly(1));
     req.send().wait(ws());
+}
+
+// Tests that agressively closed websockets are properly removed
+// and will not be attempted to be contacted again
+TEST_F(ServerTest, HttpWebsocketRST) {
+    waitForHttpReady();
+
+    // TODO: generalize
+    constexpr const char* WS =
+        "GET / HTTP/1.1\r\n"
+        "Host: localhost:8080\r\n"
+        "Connection: Upgrade\r\n"
+        "Upgrade: websocket\r\n"
+        "Sec-WebSocket-Key: GTFmrUCM9N6B32LdDE3Rzw==\r\n"
+        "Sec-WebSocket-Version: 13\r\n\r\n";
+
+    static char buffer[256];
+    network().parseAddress("localhost:8080").then([this](kj::Own<kj::NetworkAddress>&& addr){
+        return addr->connect().attach(kj::mv(addr)).then([this](kj::Own<kj::AsyncIoStream>&& stream){
+            return stream->write(WS, strlen(WS)).then(kj::mvCapture(kj::mv(stream), [this](kj::Own<kj::AsyncIoStream>&& stream){
+                // Read the websocket header response, ensure the client has been registered
+                return stream->tryRead(buffer, 64, 256).then(kj::mvCapture(kj::mv(stream), [this](kj::Own<kj::AsyncIoStream>&& stream, size_t sz){
+                    EXPECT_LE(64, sz);
+                    EXPECT_NE(nullptr, mockLaminar.client);
+                    // agressively abort the connection
+                    struct linger so_linger;
+                    so_linger.l_onoff = 1;
+                    so_linger.l_linger = 0;
+                    stream->setsockopt(SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
+                    return kj::Promise<void>(kj::READY_NOW);
+                }));
+            }));
+        });
+    }).wait(ws());
+    ws().poll();
+    // Expect that the client has been cleared. If it has not, Laminar could
+    // try to write to the closed file descriptor, causing an exception
+    EXPECT_EQ(nullptr, mockLaminar.client);
 }
