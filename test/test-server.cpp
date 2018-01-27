@@ -119,19 +119,20 @@ TEST_F(ServerTest, HttpWebsocketRST) {
     static char buffer[256];
     network().parseAddress("localhost:8080").then([this](kj::Own<kj::NetworkAddress>&& addr){
         return addr->connect().attach(kj::mv(addr)).then([this](kj::Own<kj::AsyncIoStream>&& stream){
-            return stream->write(WS, strlen(WS)).then(kj::mvCapture(kj::mv(stream), [this](kj::Own<kj::AsyncIoStream>&& stream){
+            kj::AsyncIoStream* s = stream.get();
+            return s->write(WS, strlen(WS)).then([this,s](){
                 // Read the websocket header response, ensure the client has been registered
-                return stream->tryRead(buffer, 64, 256).then(kj::mvCapture(kj::mv(stream), [this](kj::Own<kj::AsyncIoStream>&& stream, size_t sz){
+                return s->tryRead(buffer, 64, 256).then([this,s](size_t sz){
                     EXPECT_LE(64, sz);
                     EXPECT_NE(nullptr, mockLaminar.client);
                     // agressively abort the connection
                     struct linger so_linger;
                     so_linger.l_onoff = 1;
                     so_linger.l_linger = 0;
-                    stream->setsockopt(SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
+                    s->setsockopt(SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
                     return kj::Promise<void>(kj::READY_NOW);
-                }));
-            }));
+                });
+            }).attach(kj::mv(stream));
         });
     }).wait(ws());
     ws().poll();
