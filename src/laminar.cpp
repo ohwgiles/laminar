@@ -169,6 +169,7 @@ void Laminar::sendStatus(LaminarClient* client) {
     Json j;
     j.set("type", "status");
     j.set("title", getenv("LAMINAR_TITLE") ?: "Laminar");
+    j.set("time", time(nullptr));
     j.startObject("data");
     if(client->scope.type == MonitorScope::RUN) {
         db->stmt("SELECT queuedAt,startedAt,completedAt, result, reason FROM builds WHERE name = ? AND number = ?")

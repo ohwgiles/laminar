@@ -32,3 +32,12 @@ protected:
     Laminar laminar;
 };
 
+TEST_F(LaminarTest, StatusMessageContainsTime) {
+    TestLaminarClient testClient;
+    laminar.sendStatus(&testClient);
+    rapidjson::Document d;
+    d.Parse(testClient.payload.c_str());
+    ASSERT_TRUE(d.IsObject());
+    ASSERT_TRUE(d.HasMember("time"));
+    EXPECT_GE(1, d["time"].GetInt() - time(nullptr));
+}

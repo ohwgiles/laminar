@@ -24,6 +24,8 @@ const WebsocketHandler = function() {
           comp.ws = this;
           // Update html and nav titles
           document.title = comp.$root.title = msg.title;
+          // Calculate clock offset (used by ProgressUpdater)
+          comp.$root.clockSkew = msg.time - Math.floor((new Date()).getTime()/1000);
           comp.$root.connected = true;
           // Component-specific callback handler
           comp[msg.type](msg.data);
@@ -98,7 +100,7 @@ const Utils = {
     },
     formatDuration: function(start, end) {
       if(!end)
-        end = Math.floor(Date.now()/1000);
+        end = Math.floor(Date.now()/1000) + this.$root.clockSkew;
       if(end - start > 3600)
         return Math.floor((end-start)/3600) + ' hours, ' + Math.floor(((end-start)%3600)/60) + ' minutes';
       else if(end - start > 60)
@@ -114,7 +116,7 @@ const ProgressUpdater = {
   methods: {
     updateProgress(o) {
       if (o.etc) {
-        var p = ((new Date()).getTime() / 1000 - o.started) / (o.etc - o.started);
+        var p = (Math.floor(Date.now()/1000) + this.$root.clockSkew - o.started) / (o.etc - o.started);
         if (p > 1.2) {
           o.overtime = true;
         } else if (p >= 1) {
@@ -524,6 +526,7 @@ new Vue({
   el: '#app',
   data: {
     title: '', // populated by status ws message
+    clockSkew: 0,
     connected: false,
     notify: 'localStorage' in window && localStorage.getItem('showNotifications') == 1
   },
