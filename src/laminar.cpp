@@ -91,6 +91,8 @@ Laminar::Laminar() {
         buildNums[name] = build;
     });
 
+    srv = nullptr;
+
     // This is only a separate function because I imagined that it would
     // be nice to reload some configuration during runtime without restarting
     // the server completely. Currently not called from anywhere else
