@@ -27,12 +27,14 @@ protected:
     void SetUp() override {
         run.node = &node;
     }
+    void wait() {
+        int state = -1;
+        waitpid(run.pid, &state, 0);
+        run.reaped(state);
+    }
     void runAll() {
-        while(!run.step()) {
-            int state = -1;
-            waitpid(run.pid, &state, 0);
-            run.reaped(state);
-        }
+        while(!run.step())
+            wait();
     }
     std::string readAllOutput() {
         std::string res;
@@ -95,4 +97,24 @@ TEST_F(RunTest, ParamsToEnv) {
     runAll();
     StringMap map = parseFromString(readAllOutput());
     EXPECT_EQ("bar", map["foo"]);
+}
+
+TEST_F(RunTest, Abort) {
+    run.addScript("/usr/bin/yes");
+    run.step();
+    usleep(200); // TODO fix
+    run.abort();
+    wait();
+    EXPECT_EQ(RunState::ABORTED, run.result);
+}
+
+TEST_F(RunTest, AbortAfterFailed) {
+    run.addScript("/bin/false");
+    runAll();
+    run.addScript("/usr/bin/yes");
+    run.step();
+    usleep(200); // TODO fix
+    run.abort();
+    wait();
+    EXPECT_EQ(RunState::FAILED, run.result);
 }

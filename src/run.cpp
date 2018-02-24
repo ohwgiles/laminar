@@ -58,9 +58,6 @@ std::string Run::reason() const {
 }
 
 bool Run::step() {
-    if(!currentScript.path.empty() && procStatus != 0)
-        result = RunState::FAILED;
-
     if(scripts.size()) {
         currentScript = scripts.front();
         scripts.pop();
@@ -74,6 +71,9 @@ bool Run::step() {
             sigemptyset(&mask);
             sigaddset(&mask, SIGCHLD);
             sigprocmask(SIG_UNBLOCK, &mask, nullptr);
+
+            // set pgid == pid for easy killing on abort
+            setpgid(0, 0);
 
             close(pfd[0]);
             dup2(pfd[1], 1);
@@ -127,14 +127,31 @@ bool Run::step() {
         return true;
     }
 }
+
 void Run::addScript(std::string scriptPath, std::string scriptWorkingDir) {
     scripts.push({scriptPath, scriptWorkingDir});
 }
+
 void Run::addEnv(std::string path) {
     env.push_back(path);
 }
+
+void Run::abort() {
+    // clear all pending scripts
+    std::queue<Script>().swap(scripts);
+    kill(-pid, SIGTERM);
+}
+
 void Run::reaped(int status) {
-    procStatus = status;
+    // once state is non-success it cannot change again
+    if(result != RunState::SUCCESS)
+        return;
+
+    if(WIFSIGNALED(status) && (WTERMSIG(status) == SIGTERM || WTERMSIG(status) == SIGKILL))
+        result = RunState::ABORTED;
+    else if(status != 0)
+        result = RunState::FAILED;
+    // otherwise preserve earlier status
 }
 
 void Run::complete() {

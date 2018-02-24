@@ -125,6 +125,12 @@ struct LaminarInterface {
     // string. This shouldn't be used, because the sysadmin should have
     // configured a real webserver to serve these things.
     virtual std::string getCustomCss() = 0;
+
+    // Abort all running jobs
+    virtual void abortAll() = 0;
+
+    // Callback for laminar to reap child processes.
+    virtual void reapChildren() = 0;
 };
 
 #endif // LAMINAR_INTERFACE_H_

@@ -44,8 +44,8 @@ public:
     void addDescriptor(int fd, std::function<void(const char*,size_t)> cb);
 
 private:
-    void acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener);
-    void acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
+    kj::Promise<void> acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener);
+    kj::Promise<void> acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
     kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, char* buffer, std::function<void(const char*,size_t)> cb);
 
     void taskFailed(kj::Exception&& exception) override;
@@ -59,7 +59,10 @@ private:
     LaminarInterface& laminarInterface;
     kj::Own<HttpImpl> httpInterface;
     kj::AsyncIoContext ioContext;
-    kj::TaskSet tasks;
+    kj::Own<kj::TaskSet> listeners;
+    kj::TaskSet childTasks;
+    kj::TaskSet httpConnections;
+    kj::Maybe<kj::Promise<void>> reapWatch;
 
     // TODO: restructure so this isn't necessary
     friend class ServerTest;

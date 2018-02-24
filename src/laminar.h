@@ -57,10 +57,11 @@ public:
     bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
     bool getArtefact(std::string path, std::string& result) override;
     std::string getCustomCss() override;
+    void reapChildren() override;
+    void abortAll() override;
 
 private:
     bool loadConfiguration();
-    void reapAdvance();
     void assignNewJobs();
     bool stepRun(std::shared_ptr<Run> run);
     void handleRunLog(std::shared_ptr<Run> run, std::string log);

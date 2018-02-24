@@ -22,7 +22,6 @@
 #include "log.h"
 
 #include <sys/wait.h>
-#include <sys/signalfd.h>
 #include <fstream>
 #include <zlib.h>
 
@@ -365,31 +364,10 @@ void Laminar::run() {
     const char* listen_http = getenv("LAMINAR_BIND_HTTP") ?: INTADDR_HTTP_DEFAULT;
 
     srv = new Server(*this, listen_rpc, listen_http);
-
-    // handle SIGCHLD
-    sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGCHLD);
-    sigprocmask(SIG_BLOCK, &mask, nullptr);
-    int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
-    srv->addDescriptor(sigchld, [this](const char* buf, size_t){
-        const struct signalfd_siginfo* siginfo = reinterpret_cast<const struct signalfd_siginfo*>(buf);
-        // TODO: re-enable assertion when the cause for its triggering
-        // is discovered and solved
-        //KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
-        if(siginfo->ssi_signo == SIGCHLD) {
-            reapAdvance();
-            assignNewJobs();
-        } else {
-            LLOG(ERROR, "Unexpected signo", siginfo->ssi_signo);
-        }
-    });
-
     srv->start();
 }
 
 void Laminar::stop() {
-    clients.clear();
     srv->stop();
 }
 
@@ -523,7 +501,7 @@ void Laminar::handleRunLog(std::shared_ptr<Run> run, std::string s) {
 
 // Reaps a zombie and steps the corresponding Run to its next state.
 // Should be called on SIGCHLD
-void Laminar::reapAdvance() {
+void Laminar::reapChildren() {
     int ret = 0;
     pid_t pid;
     constexpr int bufsz = 1024;
@@ -547,6 +525,14 @@ void Laminar::reapAdvance() {
         });
         if(completed)
             run->complete();
+    }
+
+    assignNewJobs();
+}
+
+void Laminar::abortAll() {
+    for(std::shared_ptr<Run> run : activeJobs) {
+        run->abort();
     }
 }
 

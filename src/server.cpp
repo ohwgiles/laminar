@@ -32,6 +32,8 @@
 #include <websocketpp/server.hpp>
 
 #include <sys/eventfd.h>
+#include <sys/signal.h>
+#include <sys/signalfd.h>
 
 // Size of buffer used to read from file descriptors. Should be
 // a multiple of sizeof(struct signalfd_siginfo) == 128
@@ -373,75 +375,103 @@ Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
     laminarInterface(li),
     httpInterface(kj::heap<HttpImpl>(li)),
     ioContext(kj::setupAsyncIo()),
-    tasks(*this),
+    listeners(kj::heap<kj::TaskSet>(*this)),
+    childTasks(*this),
+    httpConnections(*this),
     httpReady(kj::newPromiseAndFulfiller<void>())
 {
     // RPC task
     if(rpcBindAddress.startsWith("unix:"))
         unlink(rpcBindAddress.slice(strlen("unix:")).cStr());
-    tasks.add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress)
+    listeners->add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress)
               .then([this](kj::Own<kj::NetworkAddress>&& addr) {
-        acceptRpcClient(addr->listen());
+        return acceptRpcClient(addr->listen());
     }));
 
     // HTTP task
     if(httpBindAddress.startsWith("unix:"))
         unlink(httpBindAddress.slice(strlen("unix:")).cStr());
-    tasks.add(ioContext.provider->getNetwork().parseAddress(httpBindAddress)
+    listeners->add(ioContext.provider->getNetwork().parseAddress(httpBindAddress)
               .then([this](kj::Own<kj::NetworkAddress>&& addr) {
-        acceptHttpClient(addr->listen());
         // TODO: a better way? Currently used only for testing
         httpReady.fulfiller->fulfill();
+        return acceptHttpClient(addr->listen());
     }));
+
+    // handle SIGCHLD
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &mask, nullptr);
+    int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
+    auto event = ioContext.lowLevelProvider->wrapInputFd(sigchld, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
+    auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
+    reapWatch = handleFdRead(event, buffer.asPtr().begin(), [this](const char* buf, size_t){
+        const struct signalfd_siginfo* siginfo = reinterpret_cast<const struct signalfd_siginfo*>(buf);
+        KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
+        laminarInterface.reapChildren();
+    }).attach(std::move(event)).attach(std::move(buffer));
 }
 
 Server::~Server() {
 }
 
 void Server::start() {
-    // this eventfd is just to allow us to quit the server at some point
-    // in the future by adding this event to the async loop. I couldn't see
-    // a simpler way...
+    // The eventfd is used to quit the server later since we need to trigger
+    // a reaction from the event loop
     efd_quit = eventfd(0, EFD_CLOEXEC|EFD_NONBLOCK);
-    kj::Promise<void> quit = kj::evalLater([this](){
+    kj::evalLater([this](){
         static uint64_t _;
         auto wakeEvent = ioContext.lowLevelProvider->wrapInputFd(efd_quit);
         return wakeEvent->read(&_, sizeof(uint64_t)).attach(std::move(wakeEvent));
-    });
-    quit.wait(ioContext.waitScope);
+    }).wait(ioContext.waitScope);
+    // Execution arrives here when the eventfd is triggered (in stop())
+
+    // Shutdown sequence:
+    // 1. stop accepting new connections
+    listeners = nullptr;
+    // 2. abort current jobs. Most of the time this isn't necessary since
+    // systemd stop or other kill mechanism will send SIGTERM to the whole
+    // process group.
+    laminarInterface.abortAll();
+    // 3. wait for all children to close
+    childTasks.onEmpty().wait(ioContext.waitScope);
+    // 4. run the loop once more to send any pending output to websocket clients
+    ioContext.waitScope.poll();
+    // 5. return: websockets will be destructed
 }
 
 void Server::stop() {
+    // This method is expected to be called in signal context, so an eventfd
+    // is used to get the main loop to react. See run()
     eventfd_write(efd_quit, 1);
 }
 
 void Server::addDescriptor(int fd, std::function<void(const char*,size_t)> cb) {
     auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
     auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
-    tasks.add(handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer)));
+    childTasks.add(handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer)));
 }
 
-void Server::acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener) {
-    auto ptr = listener.get();
-    tasks.add(ptr->accept().then(kj::mvCapture(kj::mv(listener),
+kj::Promise<void> Server::acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener) {
+    kj::ConnectionReceiver& cr = *listener.get();
+    return cr.accept().then(kj::mvCapture(kj::mv(listener),
         [this](kj::Own<kj::ConnectionReceiver>&& listener, kj::Own<kj::AsyncIoStream>&& connection) {
-            acceptHttpClient(kj::mv(listener));
             auto conn = kj::heap<WebsocketConnection>(kj::mv(connection), *httpInterface);
             // delete the connection when either the read or write task completes
-            return conn->pend().exclusiveJoin(conn->writeTask()).attach(kj::mv(conn));
-        }))
-    );
+            httpConnections.add(conn->pend().exclusiveJoin(conn->writeTask()).attach(kj::mv(conn)));
+            return acceptHttpClient(kj::mv(listener));
+        }));
 }
 
-void Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
-    auto ptr = listener.get();
-    tasks.add(ptr->accept().then(kj::mvCapture(kj::mv(listener),
+kj::Promise<void> Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
+    kj::ConnectionReceiver& cr = *listener.get();
+    return cr.accept().then(kj::mvCapture(kj::mv(listener),
         [this](kj::Own<kj::ConnectionReceiver>&& listener, kj::Own<kj::AsyncIoStream>&& connection) {
-            acceptRpcClient(kj::mv(listener));
             auto server = kj::heap<RpcConnection>(kj::mv(connection), rpcInterface, capnp::ReaderOptions());
-            tasks.add(server->network.onDisconnect().attach(kj::mv(server)));
-        }))
-    );
+            childTasks.add(server->network.onDisconnect().attach(kj::mv(server)));
+            return acceptRpcClient(kj::mv(listener));
+        }));
 }
 
 // returns a promise which will read a chunk of data from the file descriptor

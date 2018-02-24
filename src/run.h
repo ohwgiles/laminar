@@ -65,6 +65,9 @@ public:
     // adds an environment file that will be sourced before this run
     void addEnv(std::string path);
 
+    // aborts this run
+    void abort();
+
     // called when a process owned by this run has been reaped. The status
     // may be used to set the run's job status
     void reaped(int status);
@@ -85,7 +88,6 @@ public:
     std::string log;
     pid_t pid;
     int fd;
-    int procStatus = 0;
     std::unordered_map<std::string, std::string> params;
 
     time_t queuedAt;
