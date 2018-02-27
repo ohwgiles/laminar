@@ -14,11 +14,11 @@ yum -y install rpm-build cmake3 make gcc gcc-c++ wget sqlite-devel boost-devel z
 mkdir /build
 cd /build
 
-wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/7a7c4007e3e1b249f078a246749a584c96bf7503.tar.gz
+wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/3079784bfaf3ba05edacfc63d6d494b76a85a3a5.tar.gz
 wget -O websocketpp.tar.gz https://github.com/zaphoyd/websocketpp/archive/0.7.0.tar.gz
 wget -O rapidjson.tar.gz https://github.com/miloyip/rapidjson/archive/v1.1.0.tar.gz
 md5sum -c <<EOF
-58d238ffbb19152f04d2bff520847788  capnproto.tar.gz
+c5c04c1892a381e30bd032a6bceef111  capnproto.tar.gz
 5027c20cde76fdaef83a74acfcf98e23  websocketpp.tar.gz
 badd12c511e081fec6c89c43a7027bce  rapidjson.tar.gz
 EOF
@@ -27,7 +27,7 @@ tar xzf capnproto.tar.gz
 tar xzf websocketpp.tar.gz
 tar xzf rapidjson.tar.gz
 
-cd /build/capnproto-7a7c4007e3e1b249f078a246749a584c96bf7503/c++/
+cd /build/capnproto-3079784bfaf3ba05edacfc63d6d494b76a85a3a5/c++/
 cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off .
 make -j4
 make install
