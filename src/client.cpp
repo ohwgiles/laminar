@@ -111,22 +111,25 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Usage %s start <jobName>\n", argv[0]);
             return EINVAL;
         }
-        kj::Vector<capnp::RemotePromise<LaminarCi::StartResults>> promises;
+        struct: public kj::TaskSet::ErrorHandler {
+            void taskFailed(kj::Exception&&) override {}
+        } ignoreFailed;
+        kj::TaskSet ts(ignoreFailed);
         int jobNameIndex = 2;
         // make a request for each job specified on the commandline
         do {
             auto req = laminar.startRequest();
             req.setJobName(argv[jobNameIndex]);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
-            promises.add(req.send());
+            ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::StartResults> resp){
+                printf("%s:%d\n", argv[jobNameIndex], resp.getBuildNum());
+                if(resp.getResult() != LaminarCi::JobResult::SUCCESS) {
+                    ret = EFAILED;
+                }
+            }));
             jobNameIndex += n + 1;
         } while(jobNameIndex < argc);
-        // pend on the promises
-        for(auto& p : promises) {
-            if(p.wait(waitScope).getResult() != LaminarCi::JobResult::SUCCESS) {
-                ret = EFAILED;
-            }
-        }
+        ts.onEmpty().wait(waitScope);
     } else if(strcmp(argv[1], "set") == 0) {
         if(argc < 3) {
             fprintf(stderr, "Usage %s set param=value\n", argv[0]);

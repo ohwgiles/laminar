@@ -114,9 +114,11 @@ public:
         }
         std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
         if(const Run* r = run.get()) {
+            uint num = r->build;
             runWaiters[r].emplace_back(kj::newPromiseAndFulfiller<RunState>());
-            return runWaiters[r].back().promise.then([context](RunState state) mutable {
+            return runWaiters[r].back().promise.then([context,num](RunState state) mutable {
                 context.getResults().setResult(fromRunState(state));
+                context.getResults().setBuildNum(num);
             });
         } else {
             context.getResults().setResult(LaminarCi::JobResult::UNKNOWN);
