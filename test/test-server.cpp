@@ -64,6 +64,7 @@ public:
     MOCK_METHOD0(getCustomCss, std::string());
     MOCK_METHOD0(abortAll, void());
     MOCK_METHOD0(reapChildren, void());
+    MOCK_METHOD0(notifyConfigChanged, void());
 };
 
 class ServerTest : public ::testing::Test {

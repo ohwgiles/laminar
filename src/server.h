@@ -43,6 +43,9 @@ public:
     // invoked with the read data
     void addDescriptor(int fd, std::function<void(const char*,size_t)> cb);
 
+    // add a path to be watched for changes
+    void addWatchPath(const char* dpath);
+
 private:
     kj::Promise<void> acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener);
     kj::Promise<void> acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
@@ -63,6 +66,8 @@ private:
     kj::TaskSet childTasks;
     kj::TaskSet httpConnections;
     kj::Maybe<kj::Promise<void>> reapWatch;
+    int inotify_fd;
+    kj::Maybe<kj::Promise<void>> pathWatch;
 
     // TODO: restructure so this isn't necessary
     friend class ServerTest;

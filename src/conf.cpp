@@ -25,7 +25,7 @@ int StringMap::convert(std::string e) { return atoi(e.c_str()); }
 
 StringMap parseConfFile(const char* path) {
     StringMap result;
-    std::fstream f(path);
+    std::ifstream f(path);
     std::string line;
     while(std::getline(f, line)) {
         if(line[0] == '#')

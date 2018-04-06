@@ -364,6 +364,8 @@ void Laminar::run() {
     const char* listen_http = getenv("LAMINAR_BIND_HTTP") ?: INTADDR_HTTP_DEFAULT;
 
     srv = new Server(*this, listen_rpc, listen_http);
+    srv->addWatchPath(fs::path(fs::path(homeDir)/"cfg"/"nodes").string().c_str());
+    srv->addWatchPath(fs::path(fs::path(homeDir)/"cfg"/"jobs").string().c_str());
     srv->start();
 }
 
@@ -527,6 +529,13 @@ void Laminar::reapChildren() {
             run->complete();
     }
 
+    assignNewJobs();
+}
+
+void Laminar::notifyConfigChanged()
+{
+    loadConfiguration();
+    // config change may allow stuck jobs to dequeue
     assignNewJobs();
 }
 

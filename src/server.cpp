@@ -32,6 +32,7 @@
 #include <websocketpp/server.hpp>
 
 #include <sys/eventfd.h>
+#include <sys/inotify.h>
 #include <sys/signal.h>
 #include <sys/signalfd.h>
 
@@ -401,18 +402,30 @@ Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
     }));
 
     // handle SIGCHLD
-    sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGCHLD);
-    sigprocmask(SIG_BLOCK, &mask, nullptr);
-    int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
-    auto event = ioContext.lowLevelProvider->wrapInputFd(sigchld, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
-    auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
-    reapWatch = handleFdRead(event, buffer.asPtr().begin(), [this](const char* buf, size_t){
-        const struct signalfd_siginfo* siginfo = reinterpret_cast<const struct signalfd_siginfo*>(buf);
-        KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
-        laminarInterface.reapChildren();
-    }).attach(std::move(event)).attach(std::move(buffer));
+    {
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigaddset(&mask, SIGCHLD);
+        sigprocmask(SIG_BLOCK, &mask, nullptr);
+        int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
+        auto event = ioContext.lowLevelProvider->wrapInputFd(sigchld, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
+        auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
+        reapWatch = handleFdRead(event, buffer.asPtr().begin(), [this](const char* buf, size_t){
+            const struct signalfd_siginfo* siginfo = reinterpret_cast<const struct signalfd_siginfo*>(buf);
+            KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
+            laminarInterface.reapChildren();
+        }).attach(std::move(event)).attach(std::move(buffer));
+    }
+
+    // handle watched paths
+    {
+        inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+        auto event = ioContext.lowLevelProvider->wrapInputFd(inotify_fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
+        auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
+        pathWatch = handleFdRead(event, buffer.asPtr().begin(), [this](const char*, size_t){
+            laminarInterface.notifyConfigChanged();
+        }).attach(std::move(event)).attach(std::move(buffer));
+    }
 }
 
 Server::~Server() {
@@ -453,6 +466,10 @@ void Server::addDescriptor(int fd, std::function<void(const char*,size_t)> cb) {
     auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
     auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
     childTasks.add(handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer)));
+}
+
+void Server::addWatchPath(const char* dpath) {
+    inotify_add_watch(inotify_fd, dpath, IN_ONLYDIR | IN_CLOSE_WRITE | IN_CREATE | IN_DELETE);
 }
 
 kj::Promise<void> Server::acceptHttpClient(kj::Own<kj::ConnectionReceiver>&& listener) {

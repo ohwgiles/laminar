@@ -131,6 +131,9 @@ struct LaminarInterface {
 
     // Callback for laminar to reap child processes.
     virtual void reapChildren() = 0;
+
+    // Callback to handle a configuration modification notification
+    virtual void notifyConfigChanged() = 0;
 };
 
 #endif // LAMINAR_INTERFACE_H_

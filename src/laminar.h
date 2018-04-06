@@ -57,8 +57,9 @@ public:
     bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
     bool getArtefact(std::string path, std::string& result) override;
     std::string getCustomCss() override;
-    void reapChildren() override;
     void abortAll() override;
+    void reapChildren() override;
+    void notifyConfigChanged() override;
 
 private:
     bool loadConfiguration();
