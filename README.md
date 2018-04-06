@@ -181,29 +181,29 @@ A typical pipeline may involve several steps, such as build, test and deploy. De
 
 The preferred way to accomplish this in Laminar is to use the same method as [regular run triggering](#triggering-a-run), that is, calling `laminarc` directly in your `example.run` scripts.
 
-In addition to `laminarc trigger`, `laminar start` triggers a job run, but waits for its completion and returns a non-zero exit code if the run failed. Furthermore, both `trigger` and `start` will accept multiple jobs in a single invocation:
+In addition to `laminarc trigger`, `laminar run` triggers a job run, but waits for its completion and returns a non-zero exit code if the run failed. Furthermore, both `trigger` and `run` will accept multiple jobs in a single invocation:
 
 ```bash
 #!/bin/bash -xe
 
 # simultaneously starts example-test-qemu and example-test-target
 # and returns a non-zero error code if either of them fail
-laminarc start example-test-qemu example-test-target
+laminarc run example-test-qemu example-test-target
 ```
 
 An advantage to using this `laminarc` approach from bash or other scripting language is that it enables highly dynamic pipelines, since you can execute commands like
 
 ```bash
 if [ ... ]; then
-  laminarc start example-downstream-special
+  laminarc run example-downstream-special
 else
-  laminarc start example-downstream-regular
+  laminarc run example-downstream-regular
 fi
 
-laminarc start example-test-$TARGET_PLATFORM
+laminarc run example-test-$TARGET_PLATFORM
 ```
 
-`laminarc` reads the `$JOB` and `$RUN` variables set by `laminard` and passes them as part of the trigger/start request so the dependency chain can always be traced back.
+`laminarc` reads the `$JOB` and `$RUN` variables set by `laminard` and passes them as part of the trigger/run request so the dependency chain can always be traced back.
 
 ### Parameterized runs
 
@@ -534,14 +534,14 @@ Laminar will also export variables in the form `KEY=VALUE` found in these files:
 - `nodes/$NODE.env`
 - `jobs/$JOB.env`
 
-Finally, variables supplied on the command-line call to `laminarc start` or `laminarc trigger` will be available. See [parameterized builds](#parameterized-builds)
+Finally, variables supplied on the command-line call to `laminarc run` or `laminarc trigger` will be available. See [parameterized builds](#parameterized-builds)
 
 ### `laminarc`
 
 `laminarc` commands are:
 
 - `trigger [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters, returning immediately.
-- `start [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters and waits for the completion of all jobs. Returns a non-zero error code if any job failed.
+- `run [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters and waits for the completion of all jobs. Returns a non-zero error code if any job failed.
 - `set [VARIABLE=VALUE]...` sets one or more variables to be exported in subsequent scripts for the run identified by the `$JOB` and `$RUN` environment variables
 - `lock [NAME]` acquires the [lock](#locks) named `NAME`
 - `release [NAME]` releases the lock named `NAME`

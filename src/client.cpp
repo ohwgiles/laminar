@@ -106,10 +106,13 @@ int main(int argc, char** argv) {
                 return ENOENT;
             }
         }
-    } else if(strcmp(argv[1], "start") == 0) {
+    } else if(strcmp(argv[1], "run") == 0 || strcmp(argv[1], "start") == 0) {
         if(argc < 3) {
-            fprintf(stderr, "Usage %s start <jobName>\n", argv[0]);
+            fprintf(stderr, "Usage %s run <jobName>\n", argv[0]);
             return EINVAL;
+        }
+        if(strcmp(argv[1], "start") == 0) {
+            fprintf(stderr, "Warning: \"start\" is deprecated, please use \"run\" instead\n");
         }
         struct: public kj::TaskSet::ErrorHandler {
             void taskFailed(kj::Exception&&) override {}
@@ -118,10 +121,10 @@ int main(int argc, char** argv) {
         int jobNameIndex = 2;
         // make a request for each job specified on the commandline
         do {
-            auto req = laminar.startRequest();
+            auto req = laminar.runRequest();
             req.setJobName(argv[jobNameIndex]);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
-            ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::StartResults> resp){
+            ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::RunResults> resp){
                 printf("%s:%d\n", argv[jobNameIndex], resp.getBuildNum());
                 if(resp.getResult() != LaminarCi::JobResult::SUCCESS) {
                     ret = EFAILED;

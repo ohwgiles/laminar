@@ -105,9 +105,9 @@ public:
     }
 
     // Start a job and wait for the result
-    kj::Promise<void> start(StartContext context) override {
+    kj::Promise<void> run(RunContext context) override {
         std::string jobName = context.getParams().getJobName();
-        LLOG(INFO, "RPC start", jobName);
+        LLOG(INFO, "RPC run", jobName);
         ParamMap params;
         for(auto p : context.getParams().getParams()) {
             params[p.getName().cStr()] = p.getValue().cStr();
