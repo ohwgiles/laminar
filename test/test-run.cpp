@@ -25,7 +25,7 @@
 class RunTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        run.node = &node;
+        run.node = node;
     }
     void wait() {
         int state = -1;
@@ -55,7 +55,7 @@ protected:
     }
 
     class Run run;
-    Node node;
+    std::shared_ptr<Node> node = std::shared_ptr<Node>(new Node);
 };
 
 TEST_F(RunTest, WorkingDirectory) {

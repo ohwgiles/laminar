@@ -27,7 +27,7 @@
 #include <unordered_map>
 
 // Node name to node object map
-typedef std::unordered_map<std::string,Node> NodeMap;
+typedef std::unordered_map<std::string, std::shared_ptr<Node>> NodeMap;
 
 struct Server;
 class Json;

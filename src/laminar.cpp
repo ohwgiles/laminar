@@ -314,9 +314,9 @@ void Laminar::sendStatus(LaminarClient* client) {
         int execTotal = 0;
         int execBusy = 0;
         for(const auto& it : nodes) {
-            const Node& node = it.second;
-            execTotal += node.numExecutors;
-            execBusy += node.busyExecutors;
+            const std::shared_ptr<Node>& node = it.second;
+            execTotal += node->numExecutors;
+            execBusy += node->busyExecutors;
         }
         j.set("executorsTotal", execTotal);
         j.set("executorsBusy", execBusy);
@@ -375,7 +375,7 @@ bool Laminar::loadConfiguration() {
     if(const char* ndirs = getenv("LAMINAR_KEEP_RUNDIRS"))
         numKeepRunDirs = static_cast<uint>(atoi(ndirs));
 
-    NodeMap nm;
+    std::set<std::string> knownNodes;
 
     fs::path nodeCfg = fs::path(homeDir)/"cfg"/"nodes";
 
@@ -386,9 +386,11 @@ bool Laminar::loadConfiguration() {
 
             StringMap conf = parseConfFile(it->path().string().c_str());
 
-            Node node;
-            node.name = it->path().stem().string();
-            node.numExecutors = conf.get<int>("EXECUTORS", 6);
+            std::string nodeName = it->path().stem().string();
+            auto existingNode = nodes.find(nodeName);
+            std::shared_ptr<Node> node = existingNode == nodes.end() ? nodes.emplace(nodeName, new Node).first->second : existingNode->second;
+            node->name = nodeName;
+            node->numExecutors = conf.get<int>("EXECUTORS", 6);
 
             std::string tags = conf.get<std::string>("TAGS");
             if(!tags.empty()) {
@@ -397,22 +399,29 @@ bool Laminar::loadConfiguration() {
                 std::string tag;
                 while(std::getline(iss, tag, ','))
                     tagList.insert(tag);
-                node.tags = tagList;
+                node->tags = tagList;
             }
 
-            nm.emplace(node.name, std::move(node));
+            knownNodes.insert(nodeName);
         }
     }
 
-    if(nm.empty()) {
-        // add a default node
-        Node node;
-        node.name = "";
-        node.numExecutors = 6;
-        nm.emplace("", std::move(node));
+    // remove any nodes whose config files disappeared.
+    // if there are no known nodes, take care not to remove and re-add the default node
+    for(auto it = nodes.begin(); it != nodes.end();) {
+        if((it->first == "" && knownNodes.size() == 0) || knownNodes.find(it->first) != knownNodes.end())
+            it++;
+        else
+            it = nodes.erase(it);
     }
 
-    nodes = nm;
+    // add a default node
+    if(nodes.empty()) {
+        std::shared_ptr<Node> node(new Node);
+        node->name = "";
+        node->numExecutors = 6;
+        nodes.emplace("", node);
+    }
 
     fs::path jobsDir = fs::path(homeDir)/"cfg"/"jobs";
     if(fs::is_directory(jobsDir)) {
@@ -571,9 +580,9 @@ void Laminar::assignNewJobs() {
     while(it != queuedJobs.end()) {
         bool assigned = false;
         for(auto& sn : nodes) {
-            Node& node = sn.second;
+            std::shared_ptr<Node> node = sn.second;
             std::shared_ptr<Run> run = *it;
-            if(nodeCanQueue(node, *run)) {
+            if(nodeCanQueue(*node.get(), *run)) {
                 fs::path cfgDir = fs::path(homeDir)/"cfg";
                 boost::system::error_code err;
 
@@ -621,8 +630,8 @@ void Laminar::assignNewJobs() {
                 if(fs::exists(cfgDir/"before"))
                     run->addScript((cfgDir/"before").string());
                 // per-node before-run script
-                if(fs::exists(cfgDir/"nodes"/node.name+".before"))
-                    run->addScript((cfgDir/"nodes"/node.name+".before").string());
+                if(fs::exists(cfgDir/"nodes"/node->name+".before"))
+                    run->addScript((cfgDir/"nodes"/node->name+".before").string());
                 // job before-run script
                 if(fs::exists(cfgDir/"jobs"/run->name+".before"))
                     run->addScript((cfgDir/"jobs"/run->name+".before").string());
@@ -632,8 +641,8 @@ void Laminar::assignNewJobs() {
                 if(fs::exists(cfgDir/"jobs"/run->name+".after"))
                     run->addScript((cfgDir/"jobs"/run->name+".after").string());
                 // per-node after-run script
-                if(fs::exists(cfgDir/"nodes"/node.name+".after"))
-                    run->addScript((cfgDir/"nodes"/node.name+".after").string());
+                if(fs::exists(cfgDir/"nodes"/node->name+".after"))
+                    run->addScript((cfgDir/"nodes"/node->name+".after").string());
                 // global after-run script
                 if(fs::exists(cfgDir/"after"))
                     run->addScript((cfgDir/"after").string());
@@ -641,14 +650,14 @@ void Laminar::assignNewJobs() {
                 // add environment files
                 if(fs::exists(cfgDir/"env"))
                     run->addEnv((cfgDir/"env").string());
-                if(fs::exists(cfgDir/"nodes"/node.name+".env"))
-                    run->addEnv((cfgDir/"nodes"/node.name+".env").string());
+                if(fs::exists(cfgDir/"nodes"/node->name+".env"))
+                    run->addEnv((cfgDir/"nodes"/node->name+".env").string());
                 if(fs::exists(cfgDir/"jobs"/run->name+".env"))
                     run->addEnv((cfgDir/"jobs"/run->name+".env").string());
 
                 // start the job
-                node.busyExecutors++;
-                run->node = &node;
+                node->busyExecutors++;
+                run->node = node;
                 run->startedAt = time(nullptr);
                 run->laminarHome = homeDir;
                 run->build = buildNum;
@@ -661,7 +670,7 @@ void Laminar::assignNewJobs() {
                 // update next build number
                 buildNums[run->name] = buildNum;
 
-                LLOG(INFO, "Queued job to node", run->name, run->build, node.name);
+                LLOG(INFO, "Queued job to node", run->name, run->build, node->name);
 
                 // notify clients
                 Json j;
@@ -713,7 +722,7 @@ void Laminar::assignNewJobs() {
 }
 
 void Laminar::runFinished(Run * r) {
-    Node* node = r->node;
+    std::shared_ptr<Node> node = r->node;
 
     node->busyExecutors--;
     LLOG(INFO, "Run completed", r->name, to_string(r->result));

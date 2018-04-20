@@ -25,6 +25,7 @@
 #include <functional>
 #include <ostream>
 #include <unordered_map>
+#include <memory>
 
 enum class RunState {
     UNKNOWN,
@@ -75,7 +76,7 @@ public:
     std::string reason() const;
 
     std::function<void(Run*)> notifyCompletion;
-    Node* node;
+    std::shared_ptr<Node> node;
     RunState result;
     RunState lastResult;
     std::string laminarHome;
