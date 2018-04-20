@@ -92,10 +92,8 @@ Laminar::Laminar() {
 
     srv = nullptr;
 
-    // This is only a separate function because I imagined that it would
-    // be nice to reload some configuration during runtime without restarting
-    // the server completely. Currently not called from anywhere else
-    // TODO: implement that
+    // Load configuration, may be called again in response to an inotify event
+    // that the configuration files have been modified
     loadConfiguration();
 }
 
