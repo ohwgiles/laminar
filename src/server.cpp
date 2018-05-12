@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -467,6 +467,12 @@ void Server::addDescriptor(int fd, std::function<void(const char*,size_t)> cb) {
     auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
     auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
     childTasks.add(handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer)));
+}
+
+kj::Promise<void> Server::addTimeout(int seconds, std::function<void ()> cb) {
+    return ioContext.lowLevelProvider->getTimer().afterDelay(seconds * kj::SECONDS).then([cb](){
+        cb();
+    }).eagerlyEvaluate(nullptr);
 }
 
 void Server::addWatchPath(const char* dpath) {

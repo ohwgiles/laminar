@@ -24,6 +24,8 @@
 
 class RunTest : public ::testing::Test {
 protected:
+    virtual ~RunTest() noexcept override {}
+
     void SetUp() override {
         run.node = node;
     }

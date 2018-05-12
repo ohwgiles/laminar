@@ -26,6 +26,7 @@
 #include <ostream>
 #include <unordered_map>
 #include <memory>
+#include <kj/async.h>
 
 enum class RunState {
     UNKNOWN,
@@ -90,6 +91,7 @@ public:
     pid_t pid;
     int fd;
     std::unordered_map<std::string, std::string> params;
+    kj::Promise<void> timeout = kj::NEVER_DONE;
 
     time_t queuedAt;
     time_t startedAt;

@@ -43,6 +43,9 @@ public:
     // invoked with the read data
     void addDescriptor(int fd, std::function<void(const char*,size_t)> cb);
 
+    // add a one-shot timer callback
+    kj::Promise<void> addTimeout(int seconds, std::function<void()> cb);
+
     // add a path to be watched for changes
     void addWatchPath(const char* dpath);
 

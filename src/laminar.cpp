@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -654,6 +654,20 @@ void Laminar::assignNewJobs() {
                     run->addEnv((cfgDir/"nodes"/node->name+".env").string());
                 if(fs::exists(cfgDir/"jobs"/run->name+".env"))
                     run->addEnv((cfgDir/"jobs"/run->name+".env").string());
+
+                // add job timeout if specified
+                if(fs::exists(cfgDir/"jobs"/run->name+".conf")) {
+                    int timeout = parseConfFile(fs::path(cfgDir/"jobs"/run->name+".conf").string().c_str()).get<int>("TIMEOUT", 0);
+                    if(timeout > 0) {
+                        // A raw pointer to run is used here so as not to have a circular reference.
+                        // The captured raw pointer is safe because if the Run is destroyed the Promise
+                        // will be cancelled and the callback never called.
+                        Run* r = run.get();
+                        r->timeout = srv->addTimeout(timeout, [r](){
+                            r->abort();
+                        });
+                    }
+                }
 
                 // start the job
                 node->busyExecutors++;
