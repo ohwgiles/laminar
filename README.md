@@ -4,9 +4,9 @@ Laminar (http://laminar.ohwg.net) is a lightweight and modular Continuous Integr
 
 Laminar encourages the use of existing GNU/Linux tools such as `bash` and `cron` instead of reinventing them.
 
-Although the status and progress front-end is very user-friendly, administering a Laminar instance requires writing shell scripts and manually editing configuration files. That being said, there is nothing esoteric here and the [guide](http://laminar.ohwg.net/docs) should be straightforward for anyone with even very basic Linux server administration experience.
+Although the status and progress front-end is very user-friendly, administering a Laminar instance requires writing shell scripts and manually editing configuration files. That being said, there is nothing esoteric here and the [guide](http://laminar.ohwg.net/docs.html) should be straightforward for anyone with even very basic Linux server administration experience.
 
-See [the website](http://laminar.ohwg.net) and the [documentation](http://laminar.ohwg.net/docs) for more information.
+See [the website](http://laminar.ohwg.net) and the [documentation](http://laminar.ohwg.net/docs.html) for more information.
 
 ## Building from source
 
