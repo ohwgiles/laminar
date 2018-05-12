@@ -84,16 +84,16 @@ int main(int argc, char** argv) {
 
     auto& waitScope = client.getWaitScope();
 
-    if(strcmp(argv[1], "trigger") == 0) {
+    if(strcmp(argv[1], "queue") == 0) {
         if(argc < 3) {
-            fprintf(stderr, "Usage %s trigger <jobName>\n", argv[0]);
+            fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
             return EINVAL;
         }
-        kj::Vector<capnp::RemotePromise<LaminarCi::TriggerResults>> promises;
+        kj::Vector<capnp::RemotePromise<LaminarCi::QueueResults>> promises;
         int jobNameIndex = 2;
         // make a request for each job specified on the commandline
         do {
-            auto req = laminar.triggerRequest();
+            auto req = laminar.queueRequest();
             req.setJobName(argv[jobNameIndex]);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
             promises.add(req.send());
@@ -106,13 +106,38 @@ int main(int argc, char** argv) {
                 return ENOENT;
             }
         }
-    } else if(strcmp(argv[1], "run") == 0 || strcmp(argv[1], "start") == 0) {
+    } else if(strcmp(argv[1], "start") == 0 || strcmp(argv[1], "trigger") == 0) {
+        if(strcmp(argv[1], "trigger") == 0)
+            fprintf(stderr, "Warning: 'trigger' is deprecated, use 'queue' for the old behavior\n");
+        if(argc < 3) {
+            fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
+            return EINVAL;
+        }
+        kj::Vector<capnp::RemotePromise<LaminarCi::StartResults>> promises;
+        struct: public kj::TaskSet::ErrorHandler {
+            void taskFailed(kj::Exception&&) override {}
+        } ignoreFailed;
+        kj::TaskSet ts(ignoreFailed);
+        int jobNameIndex = 2;
+        // make a request for each job specified on the commandline
+        do {
+            auto req = laminar.startRequest();
+            req.setJobName(argv[jobNameIndex]);
+            int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
+            ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::StartResults> resp){
+                if(resp.getResult() != LaminarCi::MethodResult::SUCCESS) {
+                    fprintf(stderr, "Failed to start job '%s'\n", argv[2]);
+                    ret = ENOENT;
+                }
+                printf("%s:%d\n", argv[jobNameIndex], resp.getBuildNum());
+            }));
+            jobNameIndex += n + 1;
+        } while(jobNameIndex < argc);
+        ts.onEmpty().wait(waitScope);
+    } else if(strcmp(argv[1], "run") == 0) {
         if(argc < 3) {
             fprintf(stderr, "Usage %s run <jobName>\n", argv[0]);
             return EINVAL;
-        }
-        if(strcmp(argv[1], "start") == 0) {
-            fprintf(stderr, "Warning: \"start\" is deprecated, please use \"run\" instead\n");
         }
         struct: public kj::TaskSet::ErrorHandler {
             void taskFailed(kj::Exception&&) override {}

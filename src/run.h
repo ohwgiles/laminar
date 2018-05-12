@@ -92,6 +92,7 @@ public:
     int fd;
     std::unordered_map<std::string, std::string> params;
     kj::Promise<void> timeout = kj::NEVER_DONE;
+    kj::PromiseFulfillerPair<void> started = kj::newPromiseAndFulfiller<void>();
 
     time_t queuedAt;
     time_t startedAt;

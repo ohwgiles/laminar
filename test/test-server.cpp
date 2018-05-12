@@ -98,8 +98,8 @@ protected:
     Server* server;
 };
 
-TEST_F(ServerTest, RpcTrigger) {
-    auto req = client().triggerRequest();
+TEST_F(ServerTest, RpcQueue) {
+    auto req = client().queueRequest();
     req.setJobName("foo");
     EXPECT_CALL(mockLaminar, queueJob("foo", ParamMap())).Times(testing::Exactly(1));
     req.send().wait(ws());

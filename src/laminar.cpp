@@ -712,6 +712,9 @@ void Laminar::assignNewJobs() {
                         c->sendMessage(msg);
                 }
 
+                // notify the rpc client if the start command was used
+                run->started.fulfiller->fulfill();
+
                 // setup run completion handler
                 run->notifyCompletion = [this](Run* r) { runFinished(r); };
 

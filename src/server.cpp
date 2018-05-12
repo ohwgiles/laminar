@@ -90,10 +90,10 @@ public:
         laminar.deregisterWaiter(this);
     }
 
-    // Start a job, without waiting for it to finish
-    kj::Promise<void> trigger(TriggerContext context) override {
+    // Queue a job, without waiting for it to start
+    kj::Promise<void> queue(QueueContext context) override {
         std::string jobName = context.getParams().getJobName();
-        LLOG(INFO, "RPC trigger", jobName);
+        LLOG(INFO, "RPC queue", jobName);
         ParamMap params;
         for(auto p : context.getParams().getParams()) {
             params[p.getName().cStr()] = p.getValue().cStr();
@@ -103,6 +103,26 @@ public:
                 : LaminarCi::MethodResult::FAILED;
         context.getResults().setResult(result);
         return kj::READY_NOW;
+    }
+
+    // Start a job, without waiting for it to finish
+    kj::Promise<void> start(StartContext context) override {
+        std::string jobName = context.getParams().getJobName();
+        LLOG(INFO, "RPC start", jobName);
+        ParamMap params;
+        for(auto p : context.getParams().getParams()) {
+            params[p.getName().cStr()] = p.getValue().cStr();
+        }
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
+        if(Run* r = run.get()) {
+            return r->started.promise.then([context,r]() mutable {
+                context.getResults().setResult(LaminarCi::MethodResult::SUCCESS);
+                context.getResults().setBuildNum(r->build);
+            });
+        } else {
+            context.getResults().setResult(LaminarCi::MethodResult::FAILED);
+            return kj::READY_NOW;
+        }
     }
 
     // Start a job and wait for the result
@@ -115,11 +135,10 @@ public:
         }
         std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
         if(const Run* r = run.get()) {
-            uint num = r->build;
             runWaiters[r].emplace_back(kj::newPromiseAndFulfiller<RunState>());
-            return runWaiters[r].back().promise.then([context,num](RunState state) mutable {
+            return runWaiters[r].back().promise.then([context,run](RunState state) mutable {
                 context.getResults().setResult(fromRunState(state));
-                context.getResults().setBuildNum(num);
+                context.getResults().setBuildNum(run->build);
             });
         } else {
             context.getResults().setResult(LaminarCi::JobResult::UNKNOWN);

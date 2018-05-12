@@ -104,15 +104,34 @@ chmod +x /var/lib/laminar/cfg/hello.run
 
 # Triggering a run
 
-To trigger a run of the `hello` job, execute
+When triggering a run, the job is first added to a queue of upcoming tasks. If the server is busy, the job may wait in this queue for a while. It will only be assigned a job number when it leaves this queue and starts executing. The job number may be useful to the client that triggers the run, so there are a few ways to trigger a run.
+
+To add the `hello` job to the queue ("fire-and-forget"), execute
 
 ```bash
-laminarc trigger hello
+laminarc queue hello
 ```
 
-This causes the `/var/lib/laminar/cfg/hello.run` script to be executed, with a working directory of `/var/lib/laminar/run/hello/1`
+In this case, laminarc returns immediately, with its error code indicating whether adding the job to the queue was sucessful.
+
+To queue the job and wait until it leaves the queue and starts executing, use
+
+```bash
+laminarc start hello
+```
+
+In this case, laminarc blocks until the job starts executing, or returns immediately if queueing failed. The run number will be printed to standard output.
+
+To launch and run the `hello` job to completion, execute
+
+```bash
+laminarc run hello
+```
+
+In all cases, a started run means the `/var/lib/laminar/cfg/hello.run` script will be executed, with a working directory of `/var/lib/laminar/run/hello/1` (or current run number)
 
 The result and log output should be visible in the Web UI at http://localhost:8080/jobs/hello/1
+
 
 ## Isn't there a "Build Now" button I can click?
 
