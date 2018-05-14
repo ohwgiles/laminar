@@ -6,7 +6,7 @@ SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
 VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)
 
-docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output debian:stable bash -xe <<EOS
+docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output debian:9-slim bash -xe <<EOS
 
 apt-get update
 apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.62-dev zlib1g-dev

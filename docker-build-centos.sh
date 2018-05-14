@@ -6,7 +6,7 @@ SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
 VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)
 
-docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output centos bash -xe <<EOS
+docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output centos:7 bash -xe <<EOS
 
 yum -y install epel-release
 yum -y install rpm-build cmake3 make gcc gcc-c++ wget sqlite-devel boost-devel zlib-devel
