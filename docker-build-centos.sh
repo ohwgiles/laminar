@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 OUTPUT_DIR=$PWD
 
@@ -6,10 +6,13 @@ SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
 VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)
 
-docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output centos:7 bash -xe <<EOS
+DOCKER_TAG=$(docker build -q - <<EOS
+FROM centos:7
+RUN yum -y install epel-release && yum -y install rpm-build cmake3 make gcc gcc-c++ wget sqlite-devel boost-devel zlib-devel
+EOS
+)
 
-yum -y install epel-release
-yum -y install rpm-build cmake3 make gcc gcc-c++ wget sqlite-devel boost-devel zlib-devel
+docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output $DOCKER_TAG bash -xe <<EOS
 
 mkdir /build
 cd /build
