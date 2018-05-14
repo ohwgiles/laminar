@@ -97,6 +97,7 @@ if(BUILD_TESTS)
     target_link_libraries(laminar-tests ${GTEST_BOTH_LIBRARIES} gmock capnp-rpc capnp kj-async kj pthread boost_filesystem boost_system sqlite3 z)
 endif()
 
+set(SYSTEMD_UNITDIR /lib/systemd/system CACHE PATH "Path to systemd unit files")
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
-install(FILES laminar.service DESTINATION lib/systemd/system)
+install(FILES laminar.service DESTINATION ${SYSTEMD_UNITDIR})
 install(FILES laminar.conf DESTINATION etc)
