@@ -132,6 +132,11 @@ In all cases, a started run means the `/var/lib/laminar/cfg/hello.run` script wi
 
 The result and log output should be visible in the Web UI at http://localhost:8080/jobs/hello/1
 
+Also note that all the above commands can simultaneously trigger multiple different jobs:
+
+```bash
+laminarc queue test-host test-target
+```
 
 ## Isn't there a "Build Now" button I can click?
 
@@ -142,7 +147,7 @@ This is against the design principles of Laminar and was deliberately excluded. 
 This is what `cron` is for. To trigger a build of `hello` every day at 0300, add
 
 ```
-0 3 * * * LAMINAR_REASON="Nightly build" laminarc trigger hello
+0 3 * * * LAMINAR_REASON="Nightly build" laminarc queue hello
 ```
 
 to `laminar`'s crontab. For more information about `cron`, see `man crontab`.
@@ -155,7 +160,7 @@ This is what [git hooks](https://git-scm.com/book/gr/v2/Customizing-Git-Git-Hook
 
 ```bash
 #!/bin/bash
-LAMINAR_REASON="Push to git repository" laminarc trigger example-build
+LAMINAR_REASON="Push to git repository" laminarc queue example-build
 ```
 
 What if your git server is not the same machine as the laminar instance?
@@ -175,7 +180,7 @@ or any interface/port combination you like. This option uses the same syntax as 
 Then, point `laminarc` to the new location using an environment variable:
 
 ```bash
-LAMINAR_HOST=192.168.1.1:9997 laminarc trigger example
+LAMINAR_HOST=192.168.1.1:9997 laminarc queue example
 ```
 
 If you need more flexibility, consider running the communication channel as a regular unix socket and applying user and group permissions to the file. To achieve this, set
@@ -200,8 +205,6 @@ A typical pipeline may involve several steps, such as build, test and deploy. De
 
 The preferred way to accomplish this in Laminar is to use the same method as [regular run triggering](#Triggering-a-run), that is, calling `laminarc` directly in your `example.run` scripts.
 
-In addition to `laminarc trigger`, `laminar run` triggers a job run, but waits for its completion and returns a non-zero exit code if the run failed. Furthermore, both `trigger` and `run` will accept multiple jobs in a single invocation:
-
 ```bash
 #!/bin/bash -xe
 
@@ -222,7 +225,7 @@ fi
 laminarc run example-test-$TARGET_PLATFORM
 ```
 
-`laminarc` reads the `$JOB` and `$RUN` variables set by `laminard` and passes them as part of the trigger/run request so the dependency chain can always be traced back.
+`laminarc` reads the `$JOB` and `$RUN` variables set by `laminard` and passes them as part of the queue/start/run request so the dependency chain can always be traced back.
 
 ---
 
@@ -231,7 +234,7 @@ laminarc run example-test-$TARGET_PLATFORM
 Any argument passed to `laminarc` of the form `var=value` will be exposed as an environment variable in the corresponding build scripts. For example:
 
 ```bash
-laminarc trigger example foo=bar
+laminarc queue example foo=bar
 ```
 
 In `/var/lib/laminar/cfg/jobs/example.run`:
@@ -263,7 +266,7 @@ Often, you may wish to only trigger the `example-test` job if the `example-build
 ```bash
 #!/bin/bash -xe
 if [ "$RESULT" == "success" ]; then
-  laminarc trigger example-test
+  laminarc queue example-test
 fi
 ```
 
@@ -344,7 +347,7 @@ The directory `/var/lib/laminar/cfg/scripts` is automatically prepended to the `
 ```bash
 #!/bin/bash -e
 if [ "$RESULT" == "success" ]; then
-  laminarc trigger "$@"
+  laminarc queue "$@"
 fi
 ```
 
@@ -554,7 +557,7 @@ This directory is also a good place to add any extra assets needed for this cust
 
 ## Script execution order
 
-When `$JOB` is triggered on `$NODE`, the following scripts (relative to `$LAMINAR_HOME/cfg`) may be triggered:
+When `$JOB` is triggered on `$NODE`, the following scripts (relative to `$LAMINAR_HOME/cfg`) may be executed:
 
 - `jobs/$JOB.init` if the [workspace](#Data-sharing-and-Workspaces) did not exist
 - `before`
@@ -584,13 +587,14 @@ Laminar will also export variables in the form `KEY=VALUE` found in these files:
 - `nodes/$NODE.env`
 - `jobs/$JOB.env`
 
-Finally, variables supplied on the command-line call to `laminarc run` or `laminarc trigger` will be available. See [parameterized runs](#Parameterized-runs)
+Finally, variables supplied on the command-line call to `laminarc queue`, `laminarc start` or `laminarc run` will be available. See [parameterized runs](#Parameterized-runs)
 
 ## laminarc
 
 `laminarc` commands are:
 
-- `trigger [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters, returning immediately.
+- `queue [JOB [PARAMS...]]...` adds one or more jobs to the queue with optional parameters, returning immediately.
+- `start [JOB [PARAMS...]]...` starts one or more jobs with optional parameters, returning when the jobs begin execution.
 - `run [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters and waits for the completion of all jobs. Returns a non-zero error code if any job failed.
 - `set [VARIABLE=VALUE]...` sets one or more variables to be exported in subsequent scripts for the run identified by the `$JOB` and `$RUN` environment variables
 - `lock [NAME]` acquires the [lock](#Locks) named `NAME`
