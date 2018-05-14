@@ -388,7 +388,7 @@ bool Laminar::loadConfiguration() {
 
             std::string nodeName = it->path().stem().string();
             auto existingNode = nodes.find(nodeName);
-            std::shared_ptr<Node> node = existingNode == nodes.end() ? nodes.emplace(nodeName, new Node).first->second : existingNode->second;
+            std::shared_ptr<Node> node = existingNode == nodes.end() ? nodes.emplace(nodeName, std::shared_ptr<Node>(new Node)).first->second : existingNode->second;
             node->name = nodeName;
             node->numExecutors = conf.get<int>("EXECUTORS", 6);
 
