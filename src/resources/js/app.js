@@ -3,7 +3,6 @@
  * https://laminar.ohwg.net
  */
 
-;;;
 // usage: {{ file.size | prettyBytes }}
 // source: https://gist.github.com/james2doyle/4aba55c22f084800c199
 Vue.filter('prettyBytes', function (num) {
