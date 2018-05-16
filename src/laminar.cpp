@@ -133,6 +133,7 @@ void Laminar::populateArtifacts(Json &j, std::string job, uint num) const {
             j.StartObject();
             j.set("url", archiveUrl + it->path().string().substr(prefixLen));
             j.set("filename", it->path().string().substr(scopeLen+1));
+            j.set("size", fs::file_size(it->path()));
             j.EndObject();
         }
     }
