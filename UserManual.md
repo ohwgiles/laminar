@@ -26,15 +26,15 @@ Alternatively to the source-based approach shown above, precompiled packages are
 Under Debian:
 
 ```bash
-wget https://github.com/ohwgiles/laminar/releases/download/0.5/laminar-0.5-1-amd64.deb
-sudo apt install laminar-0.5-1-amd64.deb
+wget https://github.com/ohwgiles/laminar/releases/download/0.6/laminar-0.6-1-amd64.deb
+sudo apt install laminar-0.6-1-amd64.deb
 ```
 
 Under CentOS:
 
 ```bash
-wget https://github.com/ohwgiles/laminar/releases/download/0.5/laminar-0.5-1.x86_64.rpm
-sudo yum install laminar-0.5-1.x86_64.rpm
+wget https://github.com/ohwgiles/laminar/releases/download/0.5/laminar-0.6-1.x86_64.rpm
+sudo yum install laminar-0.6-1.x86_64.rpm
 ```
 
 Both install packages will create a new `laminar` user and install (but not activate) a systemd service for launching the laminar daemon.
