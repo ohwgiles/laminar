@@ -2,6 +2,13 @@
  * frontend application for Laminar Continuous Integration
  * https://laminar.ohwg.net
  */
+
+Vue.filter('iecFileSize', function(bytes) {
+  var exp = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, exp)).toFixed(1) + ' ' +
+    ['B', 'KiB', 'MiB', 'GiB', 'TiB'][exp];
+});
+
 const wsp = function(path) {
   return new WebSocket((location.protocol === 'https:'?'wss://':'ws://')
                           + location.host + path);
