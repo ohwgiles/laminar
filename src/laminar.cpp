@@ -333,14 +333,14 @@ void Laminar::sendStatus(LaminarClient* client) {
         }
         j.EndArray();
         j.startObject("buildsPerJob");
-        db->stmt("SELECT name, COUNT(*) FROM builds WHERE completedAt > ? GROUP BY name")
+        db->stmt("SELECT name, COUNT(*) c FROM builds WHERE completedAt > ? GROUP BY name ORDER BY c DESC LIMIT 5")
                 .bind(time(nullptr) - 86400)
                 .fetch<str, int>([&](str job, int count){
             j.set(job.c_str(), count);
         });
         j.EndObject();
         j.startObject("timePerJob");
-        db->stmt("SELECT name, AVG(completedAt-startedAt) FROM builds WHERE completedAt > ? GROUP BY name")
+        db->stmt("SELECT name, AVG(completedAt-startedAt) av FROM builds WHERE completedAt > ? GROUP BY name ORDER BY av DESC LIMIT 5")
                 .bind(time(nullptr) - 7 * 86400)
                 .fetch<str, uint>([&](str job, uint time){
             j.set(job.c_str(), time);
