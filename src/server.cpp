@@ -36,6 +36,8 @@
 #include <sys/signal.h>
 #include <sys/signalfd.h>
 
+#include <rapidjson/document.h>
+
 // Size of buffer used to read from file descriptors. Should be
 // a multiple of sizeof(struct signalfd_siginfo) == 128
 #define PROC_IO_BUFSIZE 4096
@@ -213,11 +215,18 @@ public:
         // wss.set_access_channels(websocketpp::log::alevel::all);
         // wss.set_error_channels(websocketpp::log::elevel::all);
 
-        // TODO: This could be used in the future to trigger actions on the
-        // server in response to a web client request. Currently not supported.
-        // wss.set_message_handler([](std::weak_ptr<void> s, websocket::message_ptr msg){
-        //     msg->get_payload();
-        // });
+        // Handle incoming websocket message
+        wss.set_message_handler([this](websocketpp::connection_hdl hdl, websocket::message_ptr msg){
+            websocket::connection_ptr c = wss.get_con_from_hdl(hdl);
+            std::string payload = msg->get_payload();
+            rapidjson::Document d;
+            d.ParseInsitu(const_cast<char*>(payload.data()));
+            if(d.HasMember("page") && d["page"].IsInt()) {
+                int page = d["page"].GetInt();
+                c->lc->scope.page = page;
+                laminar.sendStatus(c->lc);
+            }
+        });
 
         // Handle plain HTTP requests by delivering the binary resource
         wss.set_http_handler([this](websocketpp::connection_hdl hdl){

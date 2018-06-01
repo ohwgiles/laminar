@@ -189,6 +189,11 @@
       <td class="text-center hidden-xs">{{job.reason}}</td>
      </tr>
     </table>
+    <ul class="pagination pull-right">
+      <li><button class="btn btn-default" v-on:click="page_prev" :disabled="page==0">&laquo;</button></li>
+      <li>Page {{page+1}} of {{pages}}</li>
+      <li><button class="btn btn-default" v-on:click="page_next" :disabled="page==pages-1">&raquo;</button></li>
+    </ul>
    </div></div>
   </div>
  </div></template>

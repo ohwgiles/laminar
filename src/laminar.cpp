@@ -195,9 +195,10 @@ void Laminar::sendStatus(LaminarClient* client) {
         populateArtifacts(j, client->scope.job, client->scope.num);
         j.EndArray();
     } else if(client->scope.type == MonitorScope::JOB) {
+        const uint runsPerPage = 10;
         j.startArray("recent");
-        db->stmt("SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 25")
-        .bind(client->scope.job)
+        db->stmt("SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT ?,?")
+        .bind(client->scope.job, client->scope.page * runsPerPage, runsPerPage)
         .fetch<uint,time_t,time_t,int,str>([&](uint build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
             j.set("number", build)
@@ -208,6 +209,11 @@ void Laminar::sendStatus(LaminarClient* client) {
              .EndObject();
         });
         j.EndArray();
+        db->stmt("SELECT COUNT(*) FROM builds WHERE name = ?")
+        .bind(client->scope.job)
+        .fetch<uint>([&](uint nRuns){
+            j.set("pages", (nRuns-1) / runsPerPage + 1);
+        });
         j.startArray("running");
         auto p = activeJobs.byJobName().equal_range(client->scope.job);
         for(auto it = p.first; it != p.second; ++it) {

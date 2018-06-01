@@ -60,6 +60,7 @@ struct MonitorScope {
     Type type;
     std::string job;
     uint num = 0;
+    uint page = 0;
 };
 
 // Represents a (websocket) client that wants to be notified about events

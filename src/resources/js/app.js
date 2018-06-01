@@ -21,8 +21,10 @@ const WebsocketHandler = function() {
       // "status" is the first message the websocket always delivers.
       // Use this to confirm the navigation. The component is not
       // created until next() is called, so creating a reference
-      // for other message types must be deferred
-      if (msg.type === 'status') {
+      // for other message types must be deferred. Also check that
+      // the reference is not already created, this allows a subsequent
+      // status message to be handled as an update.
+      if (msg.type === 'status' && !this.comp) {
         next(comp => {
           // Set up bidirectional reference
           // 1. needed to reference the component for other msg types
@@ -394,6 +396,8 @@ var Job = function() {
     lastSuccess: null,
     lastFailed: null,
     nQueued: 0,
+    pages: 0,
+    page: 0
   };
   return Vue.extend({
     template: '#job',
@@ -408,6 +412,7 @@ var Job = function() {
         state.lastSuccess = msg.lastSuccess;
         state.lastFailed = msg.lastFailed;
         state.nQueued = msg.nQueued;
+        state.pages = msg.pages;
 
         var chtBt = new Chart(document.getElementById("chartBt").getContext("2d")).Bar({
           labels: msg.recent.map(function(e) {
@@ -454,6 +459,12 @@ var Job = function() {
             break;
           }
         }
+      },
+      page_next: function() {
+        this.ws.send(JSON.stringify({page:++state.page}));
+      },
+      page_prev: function() {
+        this.ws.send(JSON.stringify({page:--state.page}));
       }
     }
   });
