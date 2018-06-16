@@ -212,7 +212,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         db->stmt("SELECT COUNT(*) FROM builds WHERE name = ?")
         .bind(client->scope.job)
         .fetch<uint>([&](uint nRuns){
-            j.set("pages", (nRuns-1) / runsPerPage + 1);
+            j.set("pages", (nRuns-1) / runsPerPage + 1).set("page", client->scope.page);
         });
         j.startArray("running");
         auto p = activeJobs.byJobName().equal_range(client->scope.job);

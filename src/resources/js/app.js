@@ -413,6 +413,7 @@ var Job = function() {
         state.lastFailed = msg.lastFailed;
         state.nQueued = msg.nQueued;
         state.pages = msg.pages;
+        state.page = msg.page;
 
         var chtBt = new Chart(document.getElementById("chartBt").getContext("2d")).Bar({
           labels: msg.recent.map(function(e) {
