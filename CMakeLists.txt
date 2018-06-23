@@ -43,7 +43,11 @@ macro(generate_compressed_bins BASEDIR)
             DEPENDS ${BASEDIR}/${FILE}
         )
         add_custom_command(OUTPUT ${OUTPUT_FILE}
-            COMMAND ld -r -b binary -o ${OUTPUT_FILE} ${COMPRESSED_FILE}
+            COMMAND ${CMAKE_LINKER} -r -b binary -o ${OUTPUT_FILE} ${COMPRESSED_FILE}
+            COMMAND ${CMAKE_OBJCOPY}
+              --rename-section .data=.rodata.alloc,load,readonly,data,contents
+              --add-section .note.GNU-stack=/dev/null
+              --set-section-flags .note.GNU-stack=contents,readonly ${OUTPUT_FILE}
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${COMPRESSED_FILE}
         )
         list(APPEND COMPRESSED_BINS ${OUTPUT_FILE})
