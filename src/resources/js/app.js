@@ -44,6 +44,7 @@ const WebsocketHandler = function() {
         if (!this.comp)
           return console.error("Page component was undefined");
         else {
+          this.comp.$root.connected = true;
           this.comp.$root.showNotify(msg.type, msg.data);
           if(typeof this.comp[msg.type] === 'function')
             this.comp[msg.type](msg.data);
