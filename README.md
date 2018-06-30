@@ -10,7 +10,7 @@ See [the website](http://laminar.ohwg.net) and the [documentation](http://lamina
 
 ## Building from source
 
-First install development packages for `capnproto (git)`, `rapidjson`, `websocketpp`, `sqlite` and `boost-filesystem` from your distribution's repository or other source. Then:
+First install development packages for `capnproto (git)`, `rapidjson`, `sqlite` and `boost-filesystem` from your distribution's repository or other source. Then:
 
 ```bash
 git clone https://github.com/ohwgiles/laminar.git

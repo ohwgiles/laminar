@@ -86,7 +86,7 @@ generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
 add_executable(laminard src/database.cpp src/main.cpp src/server.cpp src/laminar.cpp
     src/conf.cpp src/resources.cpp src/run.cpp laminar.capnp.c++ ${COMPRESSED_BINS})
 # TODO: some alternative to boost::filesystem?
-target_link_libraries(laminard capnp-rpc capnp kj-async kj pthread boost_filesystem boost_system sqlite3 z)
+target_link_libraries(laminard capnp-rpc capnp kj-http kj-async kj pthread boost_filesystem boost_system sqlite3 z)
 
 ## Client
 add_executable(laminarc src/client.cpp laminar.capnp.c++)
@@ -98,7 +98,7 @@ if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     include_directories(${GTEST_INCLUDE_DIRS} src)
     add_executable(laminar-tests src/conf.cpp src/database.cpp src/laminar.cpp src/run.cpp src/server.cpp laminar.capnp.c++ src/resources.cpp ${COMPRESSED_BINS} test/test-conf.cpp test/test-database.cpp test/test-laminar.cpp test/test-run.cpp test/test-server.cpp)
-    target_link_libraries(laminar-tests ${GTEST_BOTH_LIBRARIES} gmock capnp-rpc capnp kj-async kj pthread boost_filesystem boost_system sqlite3 z)
+    target_link_libraries(laminar-tests ${GTEST_BOTH_LIBRARIES} gmock capnp-rpc capnp kj-http kj-async kj pthread boost_filesystem boost_system sqlite3 z)
 endif()
 
 set(SYSTEMD_UNITDIR /lib/systemd/system CACHE PATH "Path to systemd unit files")

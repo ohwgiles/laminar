@@ -67,7 +67,7 @@ struct MonitorScope {
 // matching the supplied scope. Pass instances of this to LaminarInterface
 // registerClient and deregisterClient
 struct LaminarClient {
-    virtual ~LaminarClient() =default;
+    virtual ~LaminarClient() noexcept(false) {}
     virtual void sendMessage(std::string payload) = 0;
     MonitorScope scope;
 };
