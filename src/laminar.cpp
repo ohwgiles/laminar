@@ -825,25 +825,6 @@ void Laminar::runFinished(Run * r) {
     }
 }
 
-// Small helper function to return the full contents of a file given its path.
-// It reads in the whole file into the given string reference.
-// This is a terrible way to serve files (especially large ones). Hopefully
-// no-one uses this function and configures their webservers appropriately.
-static bool slurp(fs::path path, std::string& output) {
-    if(!fs::is_regular_file(path))
-        return false;
-    std::ifstream fstr(path.string());
-    fstr.seekg(0, std::ios::end);
-    ssize_t sz = fstr.tellg();
-    if(fstr.good()) {
-        output.resize(static_cast<size_t>(sz));
-        fstr.seekg(0);
-        fstr.read(&output[0], sz);
-        return true;
-    }
-    return false;
-}
-
 class MappedFileImpl : public MappedFile {
 public:
     MappedFileImpl(const char* path) :
@@ -877,10 +858,10 @@ kj::Own<MappedFile> Laminar::getArtefact(std::string path) {
     return kj::heap<MappedFileImpl>(fs::path(fs::path(homeDir)/"archive"/path).c_str());
 }
 
-std::string Laminar::getCustomCss()
-{
-    fs::path file(fs::path(homeDir)/"custom"/"style.css");
-    std::string result;
-    slurp(file, result);
-    return result;
+std::string Laminar::getCustomCss() {
+    MappedFileImpl cssFile(fs::path(fs::path(homeDir)/"custom"/"style.css").c_str());
+    if(cssFile.address()) {
+        return std::string(static_cast<const char*>(cssFile.address()), cssFile.size());
+    }
+    return std::string();
 }

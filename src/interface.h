@@ -130,8 +130,8 @@ struct LaminarInterface {
     virtual kj::Own<MappedFile> getArtefact(std::string path) = 0;
 
     // Fetches the content of $LAMINAR_HOME/custom/style.css or an empty
-    // string. This shouldn't be used, because the sysadmin should have
-    // configured a real webserver to serve these things.
+    // string. Ideally, this would instead be served by a proper web server
+    // which handles this url.
     virtual std::string getCustomCss() = 0;
 
     // Abort all running jobs
