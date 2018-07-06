@@ -22,6 +22,10 @@
 #include "log.h"
 
 #include <sys/wait.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <fstream>
 #include <zlib.h>
 
@@ -840,13 +844,37 @@ static bool slurp(fs::path path, std::string& output) {
     return false;
 }
 
-bool Laminar::getArtefact(std::string path, std::string& result) {
-    if(archiveUrl != ARCHIVE_URL_DEFAULT) {
-        // we shouldn't have got here. Probably an invalid link.
-        return false;
+class MappedFileImpl : public MappedFile {
+public:
+    MappedFileImpl(const char* path) :
+        fd(open(path, O_RDONLY)),
+        sz(0),
+        ptr(nullptr)
+    {
+        if(fd == -1) return;
+        struct stat st;
+        if(fstat(fd, &st) != 0) return;
+        sz = st.st_size;
+        ptr = mmap(nullptr, sz, PROT_READ, MAP_SHARED, fd, 0);
+        if(ptr == MAP_FAILED)
+            ptr = nullptr;
     }
-    fs::path file(fs::path(homeDir)/"archive"/path);
-    return slurp(file, result);
+    ~MappedFileImpl() override {
+        if(ptr)
+            munmap(ptr, sz);
+        if(fd != -1)
+            close(fd);
+    }
+    virtual const void* address() override { return ptr; }
+    virtual size_t size() override { return sz; }
+private:
+    int fd;
+    size_t sz;
+    void* ptr;
+};
+
+kj::Own<MappedFile> Laminar::getArtefact(std::string path) {
+    return kj::heap<MappedFileImpl>(fs::path(fs::path(homeDir)/"archive"/path).c_str());
 }
 
 std::string Laminar::getCustomCss()

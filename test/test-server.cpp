@@ -44,6 +44,7 @@ public:
 class MockLaminar : public LaminarInterface {
 public:
     LaminarClient* client = nullptr;
+    ~MockLaminar() {}
     virtual void registerClient(LaminarClient* c) override {
         ASSERT_EQ(nullptr, client);
         client = c;
@@ -55,12 +56,14 @@ public:
         client = nullptr;
     }
 
+    // MOCK_METHOD does not seem to work with return values whose destructors have noexcept(false)
+    kj::Own<MappedFile> getArtefact(std::string path) override { return kj::Own<MappedFile>(nullptr, kj::NullDisposer()); }
+
     MOCK_METHOD2(queueJob, std::shared_ptr<Run>(std::string name, ParamMap params));
     MOCK_METHOD1(registerWaiter, void(LaminarWaiter* waiter));
     MOCK_METHOD1(deregisterWaiter, void(LaminarWaiter* waiter));
     MOCK_METHOD1(sendStatus, void(LaminarClient* client));
     MOCK_METHOD4(setParam, bool(std::string job, uint buildNum, std::string param, std::string value));
-    MOCK_METHOD2(getArtefact, bool(std::string path, std::string& result));
     MOCK_METHOD0(getCustomCss, std::string());
     MOCK_METHOD0(abortAll, void());
     MOCK_METHOD0(reapChildren, void());

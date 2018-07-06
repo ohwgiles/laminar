@@ -80,11 +80,18 @@ struct LaminarWaiter {
     virtual void complete(const Run*) = 0;
 };
 
+// Represents a file mapped in memory. Used to serve artefacts
+struct MappedFile {
+    virtual ~MappedFile() =default;
+    virtual const void* address() = 0;
+    virtual size_t size() = 0;
+};
+
 // The interface connecting the network layer to the application business
 // logic. These methods fulfil the requirements of both the HTTP/Websocket
 // and RPC interfaces.
 struct LaminarInterface {
-    virtual ~LaminarInterface() =default;
+    virtual ~LaminarInterface() {}
 
     // Queues a job, returns immediately. Return value will be nullptr if
     // the supplied name is not a known job.
@@ -118,9 +125,9 @@ struct LaminarInterface {
     virtual bool setParam(std::string job, uint buildNum, std::string param, std::string value) = 0;
 
     // Fetches the content of an artifact given its filename relative to
-    // $LAMINAR_HOME/archive. This shouldn't be used, because the sysadmin
-    // should have configured a real webserver to serve these things.
-    virtual bool getArtefact(std::string path, std::string& result) = 0;
+    // $LAMINAR_HOME/archive. Ideally, this would instead be served by a
+    // proper web server which handles this url.
+    virtual kj::Own<MappedFile> getArtefact(std::string path) = 0;
 
     // Fetches the content of $LAMINAR_HOME/custom/style.css or an empty
     // string. This shouldn't be used, because the sysadmin should have

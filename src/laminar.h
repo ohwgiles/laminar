@@ -55,7 +55,7 @@ public:
 
     void sendStatus(LaminarClient* client) override;
     bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
-    bool getArtefact(std::string path, std::string& result) override;
+    kj::Own<MappedFile> getArtefact(std::string path) override;
     std::string getCustomCss() override;
     void abortAll() override;
     void reapChildren() override;

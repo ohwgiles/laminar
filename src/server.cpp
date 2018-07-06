@@ -311,19 +311,18 @@ private:
             const char* start, *end, *content_type;
             responseHeaders.clear();
             if(resource.compare(0, strlen("/archive/"), "/archive/") == 0) {
-                std::string file(resource.substr(strlen("/archive/")));
-                std::string content;
-                if(laminar.getArtefact(file, content)) {
+                kj::Own<MappedFile> file = laminar.getArtefact(resource.substr(strlen("/archive/")));
+                if(file->address() != nullptr) {
                     responseHeaders.add("Content-Transfer-Encoding", "binary");
-                    auto stream = response.send(200, "OK", responseHeaders, content.size());
-                    return stream->write(content.data(), content.size()).attach(kj::mv(stream));
+                    auto stream = response.send(200, "OK", responseHeaders, file->size());
+                    return stream->write(file->address(), file->size()).attach(kj::mv(file)).attach(kj::mv(stream));
                 }
             } else if(resource.compare("/custom/style.css") == 0) {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/css; charset=utf-8");
                 responseHeaders.add("Content-Transfer-Encoding", "binary");
                 std::string css = laminar.getCustomCss();
                 auto stream = response.send(200, "OK", responseHeaders, css.size());
-                return stream->write(css.data(), css.size()).attach(kj::mv(stream));
+                return stream->write(css.data(), css.size()).attach(kj::mv(css)).attach(kj::mv(stream));
             } else if(resources.handleRequest(resource, &start, &end, &content_type)) {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, content_type);
                 responseHeaders.add("Content-Encoding", "gzip");
