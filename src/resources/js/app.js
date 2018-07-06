@@ -177,8 +177,8 @@ const Home = function() {
   var chtUtilization, chtBuildsPerDay, chtBuildsPerJob, chtTimePerJob;
 
   var updateUtilization = function(busy) {
-    chtUtilization.segments[0].value += busy ? 1 : -1;
-    chtUtilization.segments[1].value -= busy ? 1 : -1;
+    chtUtilization.data.datasets[0].data[0] += busy ? 1 : -1;
+    chtUtilization.data.datasets[0].data[1] -= busy ? 1 : -1;
     chtUtilization.update();
   }
 
@@ -196,69 +196,63 @@ const Home = function() {
         this.$forceUpdate();
 
         // setup charts
-        chtUtilization = new Chart(document.getElementById("chartUtil").getContext("2d")).Pie(
-          [{
-              value: msg.executorsBusy,
-              color: "tan",
-              label: "Busy"
-            },
-            {
-              value: msg.executorsTotal - msg.executorsBusy,
-              color: "darkseagreen",
-              label: "Idle"
-            }
-          ], {
-            animationEasing: 'easeInOutQuad'
+        chtUtilization = new Chart(document.getElementById("chartUtil"), {
+          type: 'pie',
+          data: {
+            labels: ["Busy", "Idle"],
+            datasets: [{
+              data: [ msg.executorsBusy, msg.executorsTotal - msg.executorsBusy ],
+              backgroundColor: ["tan", "darkseagreen"]
+            }]
           }
-        );
-        chtBuildsPerDay = new Chart(document.getElementById("chartBpd").getContext("2d")).Line({
-          labels: function() {
-            res = [];
-            var now = new Date();
-            for (var i = 6; i >= 0; --i) {
-              var then = new Date(now.getTime() - i * 86400000);
-              res.push(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][then.getDay()]);
-            }
-            return res;
-          }(),
-          datasets: [{
-            label: "Successful Builds",
-            fillColor: "rgba(143,188,143,0.65)", //darkseagreen at 0.65
-            strokeColor: "forestgreen",
-            data: msg.buildsPerDay.map(function(e) {
-              return e.success || 0;
-            })
-          }, {
-            label: "Failed Bulids",
-            fillColor: "rgba(233,150,122,0.65)", //darksalmon at 0.65
-            strokeColor: "crimson",
-            data: msg.buildsPerDay.map(function(e) {
-              return e.failed || 0;
-            })
-          }]
-        }, {
-          showTooltips: false
         });
-        chtBuildsPerJob = new Chart(document.getElementById("chartBpj").getContext("2d")).HorizontalBar({
-          labels: Object.keys(msg.buildsPerJob),
-          datasets: [{
-            fillColor: "lightsteelblue",
-            data: Object.keys(msg.buildsPerJob).map(function(e) {
-              return msg.buildsPerJob[e];
-            })
-          }]
-        }, {});
-        chtTimePerJob = new Chart(document.getElementById("chartTpj").getContext("2d")).HorizontalBar({
-          labels: Object.keys(msg.timePerJob),
-          datasets: [{
-            fillColor: "lightsteelblue",
-            data: Object.keys(msg.timePerJob).map(function(e) {
-              return msg.timePerJob[e];
-            })
-          }]
-        }, {});
-
-
+        chtBuildsPerDay = new Chart(document.getElementById("chartBpd"), {
+          type: 'line',
+          data: {
+            labels: (()=>{
+              res = [];
+              var now = new Date();
+              for (var i = 6; i >= 0; --i) {
+                var then = new Date(now.getTime() - i * 86400000);
+                res.push(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][then.getDay()]);
+              }
+              return res;
+            })(),
+            datasets: [{
+              label: 'Successful Builds',
+              backgroundColor: "rgba(143,188,143,0.65)", //darkseagreen at 0.65
+              borderColor: "forestgreen",
+              data: msg.buildsPerDay.map((e)=>{ return e.success || 0; })
+            }, {
+              label: 'Failed Builds',
+              backgroundColor: "rgba(233,150,122,0.65)", //darkseagreen at 0.65
+              borderColor: "crimson",
+              data: msg.buildsPerDay.map((e)=>{ return e.failed || 0; })
+            }]
+          }
+        });
+        chtBuildsPerJob = new Chart(document.getElementById("chartBpj"), {
+          type: 'horizontalBar',
+          data: {
+            labels: Object.keys(msg.buildsPerJob),
+            datasets: [{
+              label: 'Most runs per job in last 24hrs',
+              backgroundColor: "lightsteelblue",
+              data: Object.keys(msg.buildsPerJob).map((e)=>{ return msg.buildsPerJob[e]; })
+            }]
+          }
+        });
+        chtTimePerJob = new Chart(document.getElementById("chartTpj"), {
+          type: 'horizontalBar',
+          data: {
+            labels: Object.keys(msg.timePerJob),
+            datasets: [{
+              label: 'Longest average runtime this week',
+              backgroundColor: "lightsteelblue",
+              data: Object.keys(msg.timePerJob).map((e)=>{ return msg.timePerJob[e]; })
+            }]
+          }
+        });
       },
       job_queued: function(data) {
         state.jobsQueued.splice(0, 0, data);
@@ -272,9 +266,9 @@ const Home = function() {
       },
       job_completed: function(data) {
         if (data.result === "success")
-          chtBuildsPerDay.datasets[0].points[6].value++;
+          chtBuildsPerDay.data.datasets[0].data[6]++;
         else
-          chtBuildsPerDay.datasets[1].points[6].value++;
+          chtBuildsPerDay.data.datasets[1].data[6]++;
         chtBuildsPerDay.update();
 
         for (var i = 0; i < state.jobsRunning.length; ++i) {
@@ -287,9 +281,9 @@ const Home = function() {
           }
         }
         updateUtilization(false);
-        for (var j = 0; j < chtBuildsPerJob.datasets[0].bars.length; ++j) {
-          if (chtBuildsPerJob.datasets[0].bars[j].label == job.name) {
-            chtBuildsPerJob.datasets[0].bars[j].value++;
+        for (var j = 0; j < chtBuildsPerJob.data.datasets[0].data.length; ++j) {
+          if (chtBuildsPerJob.data.labels[j] == job.name) {
+            chtBuildsPerJob.data.datasets[0].data[j]++;
             chtBuildsPerJob.update();
             break;
           }
@@ -426,27 +420,27 @@ var Job = function() {
         state.pages = msg.pages;
         state.page = msg.page;
 
-        var chtBt = new Chart(document.getElementById("chartBt").getContext("2d")).Bar({
-          labels: msg.recent.map(function(e) {
-            return '#' + e.number;
-          }).reverse(),
-          datasets: [{
-            fillColor: "darkseagreen",
-            strokeColor: "forestgreen",
-            data: msg.recent.map(function(e) {
-              return e.completed - e.started;
-            }).reverse()
-          }]
-        }, {
-          barValueSpacing: 1,
-          barStrokeWidth: 1,
-          barDatasetSpacing: 0
+        var chtBt = new Chart(document.getElementById("chartBt"), {
+          type: 'bar',
+          data: {
+            labels: msg.recent.map(function(e) {
+              return '#' + e.number;
+            }).reverse(),
+            datasets: [{
+              label: 'Build time',
+              backgroundColor: (new Array(msg.recent.length)).fill('darkseagreen'),
+              borderColor: (new Array(msg.recent.length)).fill('forestgreen'),
+              data: msg.recent.map(function(e) {
+                return e.completed - e.started;
+              }).reverse()
+            }]
+          }
         });
 
         for (var i = 0, n = msg.recent.length; i < n; ++i) {
           if (msg.recent[i].result != "success") {
-            chtBt.datasets[0].bars[n - i - 1].fillColor = "darksalmon";
-            chtBt.datasets[0].bars[n - i - 1].strokeColor = "crimson";
+            chtBt.data.datasets[0].backgroundColor[n - i - 1] = "darksalmon";
+            chtBt.data.datasets[0].borderColor[n - i - 1] = "crimson";
           }
         }
         chtBt.update();

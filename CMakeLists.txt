@@ -71,15 +71,13 @@ file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue-router/2.7.0/vue-router
         js/vue-router.min.js EXPECTED_MD5 5d3e35710dbe02de78c39e3e439b8d4e)
 file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v1.3.0/ansi_up.js
         js/ansi_up.js EXPECTED_MD5 158566dc1ff8f2804de972f7e841e2f6)
-file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js
-        js/Chart.min.js EXPECTED_MD5 0d3004601c1a855a3d203502549528a7)
-file(DOWNLOAD https://raw.githubusercontent.com/tomsouthall/Chart.HorizontalBar.js/v1.04/Chart.HorizontalBar.js
-        js/Chart.HorizontalBar.js EXPECTED_MD5 95070a38e69bc56534e1b2086d985270)
+file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js
+        js/Chart.min.js EXPECTED_MD5 f6c8efa65711e0cbbc99ba72997ecd0e)
 file(DOWNLOAD https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css
         css/bootstrap.min.css EXPECTED_MD5 5d5357cb3704e1f43a1f5bfed2aebf42)
 # ...and compile them
 generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
-    js/ansi_up.js js/Chart.min.js js/Chart.HorizontalBar.js css/bootstrap.min.css)
+    js/ansi_up.js js/Chart.min.js css/bootstrap.min.css)
 # (see resources.cpp where these are fetched)
 
 ## Server
