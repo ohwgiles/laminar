@@ -31,7 +31,7 @@ protected:
     }
     void wait() {
         int state = -1;
-        waitpid(run.pid, &state, 0);
+        waitpid(run.current_pid, &state, 0);
         run.reaped(state);
     }
     void runAll() {
@@ -41,7 +41,7 @@ protected:
     std::string readAllOutput() {
         std::string res;
         char tmp[64];
-        for(ssize_t n = read(run.fd, tmp, 64); n > 0; n = read(run.fd, tmp, 64))
+        for(ssize_t n = read(run.output_fd, tmp, 64); n > 0; n = read(run.output_fd, tmp, 64))
             res += std::string(tmp, n);
         // strip the first "[laminar] executing.. line
         return strchr(res.c_str(), '\n') + 1;

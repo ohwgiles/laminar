@@ -42,8 +42,9 @@ public:
 
     // add a file descriptor to be monitored for output. The callback will be
     // invoked with the read data
-    void addDescriptor(int fd, std::function<void(const char*,size_t)> cb);
+    kj::Promise<void> readDescriptor(int fd, std::function<void(const char*,size_t)> cb);
 
+    void addTask(kj::Promise<void> &&task);
     // add a one-shot timer callback
     kj::Promise<void> addTimeout(int seconds, std::function<void()> cb);
 

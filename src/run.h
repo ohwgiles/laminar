@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -52,11 +52,8 @@ public:
     Run& operator=(const Run&) = delete;
 
     // executes the next script (if any), returning true if there is nothing
-    // more to be done - in this case the caller should call complete()
+    // more to be done.
     bool step();
-
-    // call this when all scripts are done to get the notifyCompletion callback
-    void complete();
 
     // adds a script to the queue of scripts to be executed by this run
     void addScript(std::string scriptPath, std::string scriptWorkingDir);
@@ -76,7 +73,6 @@ public:
 
     std::string reason() const;
 
-    std::function<void(Run*)> notifyCompletion;
     std::shared_ptr<Node> node;
     RunState result;
     RunState lastResult;
@@ -88,8 +84,8 @@ public:
     std::string reasonMsg;
     uint build = 0;
     std::string log;
-    pid_t pid;
-    int fd;
+    pid_t current_pid;
+    int output_fd;
     std::unordered_map<std::string, std::string> params;
     kj::Promise<void> timeout = kj::NEVER_DONE;
     kj::PromiseFulfillerPair<void> started = kj::newPromiseAndFulfiller<void>();
@@ -97,7 +93,6 @@ public:
     time_t queuedAt;
     time_t startedAt;
 private:
-
     struct Script {
         std::string path;
         std::string cwd;
@@ -132,8 +127,6 @@ struct _run_same {
 
 // A single Run can be fetched by...
 struct _run_index : bmi::indexed_by<
-        // their current running pid
-        bmi::hashed_unique<bmi::member<Run, pid_t, &Run::pid>>,
         bmi::hashed_unique<bmi::composite_key<
             std::shared_ptr<Run>,
         // a combination of their job name and build number
@@ -153,20 +146,17 @@ struct RunSet: public boost::multi_index_container<
     std::shared_ptr<Run>,
     _run_index
 > {
-    typename bmi::nth_index<RunSet, 0>::type& byPid() { return get<0>(); }
-    typename bmi::nth_index<RunSet, 0>::type const& byPid() const { return get<0>(); }
+    typename bmi::nth_index<RunSet, 0>::type& byNameNumber() { return get<0>(); }
+    typename bmi::nth_index<RunSet, 0>::type const& byNameNumber() const { return get<0>(); }
 
-    typename bmi::nth_index<RunSet, 1>::type& byRun() { return get<1>(); }
-    typename bmi::nth_index<RunSet, 1>::type const& byRun() const { return get<1>(); }
+    typename bmi::nth_index<RunSet, 1>::type& byRunPtr() { return get<1>(); }
+    typename bmi::nth_index<RunSet, 1>::type const& byRunPtr() const { return get<1>(); }
 
-    typename bmi::nth_index<RunSet, 2>::type& byRunPtr() { return get<2>(); }
-    typename bmi::nth_index<RunSet, 2>::type const& byRunPtr() const { return get<2>(); }
+    typename bmi::nth_index<RunSet, 2>::type& byStartedAt() { return get<2>(); }
+    typename bmi::nth_index<RunSet, 2>::type const& byStartedAt() const { return get<2>(); }
 
-    typename bmi::nth_index<RunSet, 3>::type& byStartedAt() { return get<3>(); }
-    typename bmi::nth_index<RunSet, 3>::type const& byStartedAt() const { return get<3>(); }
-
-    typename bmi::nth_index<RunSet, 4>::type& byJobName() { return get<4>(); }
-    typename bmi::nth_index<RunSet, 4>::type const& byJobName() const { return get<4>(); }
+    typename bmi::nth_index<RunSet, 3>::type& byJobName() { return get<3>(); }
+    typename bmi::nth_index<RunSet, 3>::type const& byJobName() const { return get<3>(); }
 };
 
 #endif // LAMINAR_RUN_H_

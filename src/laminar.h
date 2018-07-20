@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -64,16 +64,16 @@ public:
 private:
     bool loadConfiguration();
     void assignNewJobs();
-    bool stepRun(std::shared_ptr<Run> run);
-    void handleRunLog(std::shared_ptr<Run> run, std::string log);
+    bool tryStartRun(std::shared_ptr<Run> run, int queueIndex);
+    kj::Promise<void> handleRunStep(Run *run);
     void runFinished(Run*);
     bool nodeCanQueue(const Node&, const Run&) const;
     // expects that Json has started an array
     void populateArtifacts(Json& out, std::string job, uint num) const;
 
-    Run* activeRun(std::string name, uint num) {
-        auto it = activeJobs.byRun().find(boost::make_tuple(name, num));
-        return it == activeJobs.byRun().end() ? nullptr : it->get();
+    Run* activeRun(const std::string name, uint num) {
+        auto it = activeJobs.byNameNumber().find(boost::make_tuple(name, num));
+        return it == activeJobs.byNameNumber().end() ? nullptr : it->get();
     }
 
     std::list<std::shared_ptr<Run>> queuedJobs;
@@ -83,6 +83,7 @@ private:
     std::unordered_map<std::string, std::set<std::string>> jobTags;
 
     RunSet activeJobs;
+    std::map<pid_t, kj::Own<kj::PromiseFulfiller<int>>> pids;
     Database* db;
     Server* srv;
     NodeMap nodes;

@@ -501,50 +501,16 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
     return run;
 }
 
-bool Laminar::stepRun(std::shared_ptr<Run> run) {
-    bool complete = run->step();
-    if(!complete) {
-        srv->addDescriptor(run->fd, [this, run](const char* b,size_t n){
-            handleRunLog(run, std::string(b,n));
-        });
-    }
-    return complete;
-}
-
-void Laminar::handleRunLog(std::shared_ptr<Run> run, std::string s) {
-    run->log += s;
-    for(LaminarClient* c : clients) {
-        if(c->scope.wantsLog(run->name, run->build))
-            c->sendMessage(s);
-    }
-}
-
 // Reaps a zombie and steps the corresponding Run to its next state.
 // Should be called on SIGCHLD
 void Laminar::reapChildren() {
     int ret = 0;
     pid_t pid;
-    constexpr int bufsz = 1024;
-    static thread_local char buf[bufsz];
     while((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
         LLOG(INFO, "Reaping", pid);
-        auto it = activeJobs.byPid().find(pid);
-        std::shared_ptr<Run> run = *it;
-        // The main event loop might schedule this SIGCHLD handler before the final
-        // output handler (from addDescriptor). In that case, because it keeps a
-        // shared_ptr to the run it would successfully add to the log output buffer,
-        // but by then reapAdvance would have stored the log and ensured no-one cares.
-        // Preempt this case by forcing a final (non-blocking) read here.
-        for(ssize_t n = read(run->fd, buf, bufsz); n > 0; n = read(run->fd, buf, bufsz)) {
-            handleRunLog(run, std::string(buf, static_cast<size_t>(n)));
-        }
-        bool completed = true;
-        activeJobs.byPid().modify(it, [&](std::shared_ptr<Run> run){
-            run->reaped(ret);
-            completed = stepRun(run);
-        });
-        if(completed)
-            run->complete();
+        auto it = pids.find(pid);
+        it->second->fulfill(kj::mv(ret));
+        pids.erase(it);
     }
 
     assignNewJobs();
@@ -586,167 +552,191 @@ bool Laminar::nodeCanQueue(const Node& node, const Run& run) const {
     return false;
 }
 
+bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
+    for(auto& sn : nodes) {
+        std::shared_ptr<Node> node = sn.second;
+        if(nodeCanQueue(*node.get(), *run)) {
+            fs::path cfgDir = fs::path(homeDir)/"cfg";
+            boost::system::error_code err;
+
+            // create a workspace for this job if it doesn't exist
+            fs::path ws = fs::path(homeDir)/"run"/run->name/"workspace";
+            if(!fs::exists(ws)) {
+                if(!fs::create_directories(ws, err)) {
+                    LLOG(ERROR, "Could not create job workspace", run->name);
+                    break;
+                }
+                // prepend the workspace init script
+                if(fs::exists(cfgDir/"jobs"/run->name+".init"))
+                    run->addScript((cfgDir/"jobs"/run->name+".init").string(), ws.string());
+            }
+
+            uint buildNum = buildNums[run->name] + 1;
+            // create the run directory
+            fs::path rd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
+            bool createWorkdir = true;
+            if(fs::is_directory(rd)) {
+                LLOG(WARNING, "Working directory already exists, removing", rd.string());
+                fs::remove_all(rd, err);
+                if(err) {
+                    LLOG(WARNING, "Failed to remove working directory", err.message());
+                    createWorkdir = false;
+                }
+            }
+            if(createWorkdir && !fs::create_directory(rd, err)) {
+                LLOG(ERROR, "Could not create working directory", rd.string());
+                break;
+            }
+            run->runDir = rd.string();
+
+            // create an archive directory
+            fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
+            if(fs::is_directory(archive)) {
+                LLOG(WARNING, "Archive directory already exists", archive.string());
+            } else if(!fs::create_directories(archive)) {
+                LLOG(ERROR, "Could not create archive directory", archive.string());
+                break;
+            }
+
+            // add scripts
+            // global before-run script
+            if(fs::exists(cfgDir/"before"))
+                run->addScript((cfgDir/"before").string());
+            // per-node before-run script
+            if(fs::exists(cfgDir/"nodes"/node->name+".before"))
+                run->addScript((cfgDir/"nodes"/node->name+".before").string());
+            // job before-run script
+            if(fs::exists(cfgDir/"jobs"/run->name+".before"))
+                run->addScript((cfgDir/"jobs"/run->name+".before").string());
+            // main run script. must exist.
+            run->addScript((cfgDir/"jobs"/run->name+".run").string());
+            // job after-run script
+            if(fs::exists(cfgDir/"jobs"/run->name+".after"))
+                run->addScript((cfgDir/"jobs"/run->name+".after").string());
+            // per-node after-run script
+            if(fs::exists(cfgDir/"nodes"/node->name+".after"))
+                run->addScript((cfgDir/"nodes"/node->name+".after").string());
+            // global after-run script
+            if(fs::exists(cfgDir/"after"))
+                run->addScript((cfgDir/"after").string());
+
+            // add environment files
+            if(fs::exists(cfgDir/"env"))
+                run->addEnv((cfgDir/"env").string());
+            if(fs::exists(cfgDir/"nodes"/node->name+".env"))
+                run->addEnv((cfgDir/"nodes"/node->name+".env").string());
+            if(fs::exists(cfgDir/"jobs"/run->name+".env"))
+                run->addEnv((cfgDir/"jobs"/run->name+".env").string());
+
+            // add job timeout if specified
+            if(fs::exists(cfgDir/"jobs"/run->name+".conf")) {
+                int timeout = parseConfFile(fs::path(cfgDir/"jobs"/run->name+".conf").string().c_str()).get<int>("TIMEOUT", 0);
+                if(timeout > 0) {
+                    // A raw pointer to run is used here so as not to have a circular reference.
+                    // The captured raw pointer is safe because if the Run is destroyed the Promise
+                    // will be cancelled and the callback never called.
+                    Run* r = run.get();
+                    r->timeout = srv->addTimeout(timeout, [r](){
+                        r->abort();
+                    });
+                }
+            }
+
+            // start the job
+            node->busyExecutors++;
+            run->node = node;
+            run->startedAt = time(nullptr);
+            run->laminarHome = homeDir;
+            run->build = buildNum;
+            // set the last known result if exists
+            db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+             .bind(run->name)
+             .fetch<int>([=](int result){
+                run->lastResult = RunState(result);
+            });
+            // update next build number
+            buildNums[run->name] = buildNum;
+
+            LLOG(INFO, "Queued job to node", run->name, run->build, node->name);
+
+            // notify clients
+            Json j;
+            j.set("type", "job_started")
+             .startObject("data")
+             .set("queueIndex", queueIndex)
+             .set("name", run->name)
+             .set("queued", run->startedAt - run->queuedAt)
+             .set("started", run->startedAt)
+             .set("number", run->build)
+             .set("reason", run->reason());
+            db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+             .bind(run->name)
+             .fetch<uint>([&](uint etc){
+                j.set("etc", time(nullptr) + etc);
+            });
+            j.EndObject();
+            const char* msg = j.str();
+            for(LaminarClient* c : clients) {
+                if(c->scope.wantsStatus(run->name, run->build)
+                    // The run page also should know that another job has started
+                    // (so maybe it can show a previously hidden "next" button).
+                    // Hence this small hack:
+                        || (c->scope.type == MonitorScope::Type::RUN && c->scope.job == run->name))
+                    c->sendMessage(msg);
+            }
+
+            // notify the rpc client if the start command was used
+            run->started.fulfiller->fulfill();
+
+            srv->addTask(handleRunStep(run.get()).then([this,run]{
+                runFinished(run.get());
+            }));
+
+            return true;
+        }
+    }
+    return false;
+}
+
 void Laminar::assignNewJobs() {
     auto it = queuedJobs.begin();
     while(it != queuedJobs.end()) {
-        bool assigned = false;
-        for(auto& sn : nodes) {
-            std::shared_ptr<Node> node = sn.second;
-            std::shared_ptr<Run> run = *it;
-            if(nodeCanQueue(*node.get(), *run)) {
-                fs::path cfgDir = fs::path(homeDir)/"cfg";
-                boost::system::error_code err;
-
-                // create a workspace for this job if it doesn't exist
-                fs::path ws = fs::path(homeDir)/"run"/run->name/"workspace";
-                if(!fs::exists(ws)) {
-                    if(!fs::create_directories(ws, err)) {
-                        LLOG(ERROR, "Could not create job workspace", run->name);
-                        break;
-                    }
-                    // prepend the workspace init script
-                    if(fs::exists(cfgDir/"jobs"/run->name+".init"))
-                        run->addScript((cfgDir/"jobs"/run->name+".init").string(), ws.string());
-                }
-
-                uint buildNum = buildNums[run->name] + 1;
-                // create the run directory
-                fs::path rd = fs::path(homeDir)/"run"/run->name/std::to_string(buildNum);
-                bool createWorkdir = true;
-                if(fs::is_directory(rd)) {
-                    LLOG(WARNING, "Working directory already exists, removing", rd.string());
-                    fs::remove_all(rd, err);
-                    if(err) {
-                        LLOG(WARNING, "Failed to remove working directory", err.message());
-                        createWorkdir = false;
-                    }
-                }
-                if(createWorkdir && !fs::create_directory(rd, err)) {
-                    LLOG(ERROR, "Could not create working directory", rd.string());
-                    break;
-                }
-                run->runDir = rd.string();
-
-                // create an archive directory
-                fs::path archive = fs::path(homeDir)/"archive"/run->name/std::to_string(buildNum);
-                if(fs::is_directory(archive)) {
-                    LLOG(WARNING, "Archive directory already exists", archive.string());
-                } else if(!fs::create_directories(archive)) {
-                    LLOG(ERROR, "Could not create archive directory", archive.string());
-                    break;
-                }
-
-                // add scripts
-                // global before-run script
-                if(fs::exists(cfgDir/"before"))
-                    run->addScript((cfgDir/"before").string());
-                // per-node before-run script
-                if(fs::exists(cfgDir/"nodes"/node->name+".before"))
-                    run->addScript((cfgDir/"nodes"/node->name+".before").string());
-                // job before-run script
-                if(fs::exists(cfgDir/"jobs"/run->name+".before"))
-                    run->addScript((cfgDir/"jobs"/run->name+".before").string());
-                // main run script. must exist.
-                run->addScript((cfgDir/"jobs"/run->name+".run").string());
-                // job after-run script
-                if(fs::exists(cfgDir/"jobs"/run->name+".after"))
-                    run->addScript((cfgDir/"jobs"/run->name+".after").string());
-                // per-node after-run script
-                if(fs::exists(cfgDir/"nodes"/node->name+".after"))
-                    run->addScript((cfgDir/"nodes"/node->name+".after").string());
-                // global after-run script
-                if(fs::exists(cfgDir/"after"))
-                    run->addScript((cfgDir/"after").string());
-
-                // add environment files
-                if(fs::exists(cfgDir/"env"))
-                    run->addEnv((cfgDir/"env").string());
-                if(fs::exists(cfgDir/"nodes"/node->name+".env"))
-                    run->addEnv((cfgDir/"nodes"/node->name+".env").string());
-                if(fs::exists(cfgDir/"jobs"/run->name+".env"))
-                    run->addEnv((cfgDir/"jobs"/run->name+".env").string());
-
-                // add job timeout if specified
-                if(fs::exists(cfgDir/"jobs"/run->name+".conf")) {
-                    int timeout = parseConfFile(fs::path(cfgDir/"jobs"/run->name+".conf").string().c_str()).get<int>("TIMEOUT", 0);
-                    if(timeout > 0) {
-                        // A raw pointer to run is used here so as not to have a circular reference.
-                        // The captured raw pointer is safe because if the Run is destroyed the Promise
-                        // will be cancelled and the callback never called.
-                        Run* r = run.get();
-                        r->timeout = srv->addTimeout(timeout, [r](){
-                            r->abort();
-                        });
-                    }
-                }
-
-                // start the job
-                node->busyExecutors++;
-                run->node = node;
-                run->startedAt = time(nullptr);
-                run->laminarHome = homeDir;
-                run->build = buildNum;
-                // set the last known result if exists
-                db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
-                 .bind(run->name)
-                 .fetch<int>([=](int result){
-                    run->lastResult = RunState(result);
-                });
-                // update next build number
-                buildNums[run->name] = buildNum;
-
-                LLOG(INFO, "Queued job to node", run->name, run->build, node->name);
-
-                // notify clients
-                Json j;
-                j.set("type", "job_started")
-                 .startObject("data")
-                 .set("queueIndex", std::distance(it,queuedJobs.begin()))
-                 .set("name", run->name)
-                 .set("queued", run->startedAt - run->queuedAt)
-                 .set("started", run->startedAt)
-                 .set("number", run->build)
-                 .set("reason", run->reason());
-                db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
-                 .bind(run->name)
-                 .fetch<uint>([&](uint etc){
-                    j.set("etc", time(nullptr) + etc);
-                });
-                j.EndObject();
-                const char* msg = j.str();
-                for(LaminarClient* c : clients) {
-                    if(c->scope.wantsStatus(run->name, run->build)
-                        // The run page also should know that another job has started
-                        // (so maybe it can show a previously hidden "next" button).
-                        // Hence this small hack:
-                            || (c->scope.type == MonitorScope::Type::RUN && c->scope.job == run->name))
-                        c->sendMessage(msg);
-                }
-
-                // notify the rpc client if the start command was used
-                run->started.fulfiller->fulfill();
-
-                // setup run completion handler
-                run->notifyCompletion = [this](Run* r) { runFinished(r); };
-
-                // trigger the first step of the run
-                if(stepRun(run)) {
-                    // should never happen
-                    LLOG(INFO, "No steps for run");
-                    run->complete();
-                }
-
-                assigned = true;
-                break;
-            }
-        }
-        if(assigned) {
+        if(tryStartRun(*it, std::distance(it, queuedJobs.begin()))) {
             activeJobs.insert(*it);
             it = queuedJobs.erase(it);
-        } else
+        } else {
             ++it;
-
+        }
     }
+}
+
+kj::Promise<void> Laminar::handleRunStep(Run* run) {
+    if(run->step()) {
+        // no more steps
+        return kj::READY_NOW;
+    }
+
+    // promise is fulfilled when the process is reaped. But first we wait for all
+    // output from the pipe (Run::output_fd) to be consumed.
+    auto paf = kj::newPromiseAndFulfiller<int>();
+    pids.emplace(run->current_pid, kj::mv(paf.fulfiller));
+
+    return srv->readDescriptor(run->output_fd, [this,run](const char*b,size_t n){
+        // handle log output
+        std::string s(b, n);
+        run->log += s;
+        for(LaminarClient* c : clients) {
+            if(c->scope.wantsLog(run->name, run->build))
+                c->sendMessage(s);
+        }
+    }).then([p = std::move(paf.promise)]() mutable {
+        // wait until the process is reaped
+        return kj::mv(p);
+    }).then([this, run](int status){
+        run->reaped(status);
+        // next step in Run
+        return handleRunStep(run);
+    });
 }
 
 void Laminar::runFinished(Run * r) {

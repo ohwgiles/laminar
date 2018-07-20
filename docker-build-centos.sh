@@ -8,11 +8,13 @@ VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM centos:7
-RUN yum -y install epel-release && yum -y install rpm-build cmake3 make gcc gcc-c++ wget sqlite-devel boost-devel zlib-devel
+RUN yum -y install epel-release centos-release-scl && yum-config-manager --enable rhel-server-rhscl-7-rpms && yum -y install rpm-build cmake3 make devtoolset-7-gcc-c++ wget sqlite-devel boost-devel zlib-devel
 EOS
 )
 
 docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output $DOCKER_TAG bash -xe <<EOS
+# for new gcc
+export PATH=/opt/rh/devtoolset-7/root/usr/bin:\$PATH
 
 mkdir /build
 cd /build

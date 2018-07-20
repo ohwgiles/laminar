@@ -447,10 +447,15 @@ void Server::stop() {
     eventfd_write(efd_quit, 1);
 }
 
-void Server::addDescriptor(int fd, std::function<void(const char*,size_t)> cb) {
+kj::Promise<void> Server::readDescriptor(int fd, std::function<void(const char*,size_t)> cb) {
     auto event = this->ioContext.lowLevelProvider->wrapInputFd(fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
     auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
-    childTasks.add(handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer)));
+    return handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer));
+}
+
+void Server::addTask(kj::Promise<void>&& task)
+{
+    childTasks.add(kj::mv(task));
 }
 
 kj::Promise<void> Server::addTimeout(int seconds, std::function<void ()> cb) {
