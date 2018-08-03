@@ -58,7 +58,6 @@ public:
     kj::Own<MappedFile> getArtefact(std::string path) override;
     std::string getCustomCss() override;
     void abortAll() override;
-    void reapChildren() override;
     void notifyConfigChanged() override;
 
 private:
@@ -83,7 +82,6 @@ private:
     std::unordered_map<std::string, std::set<std::string>> jobTags;
 
     RunSet activeJobs;
-    std::map<pid_t, kj::Own<kj::PromiseFulfiller<int>>> pids;
     Database* db;
     Server* srv;
     NodeMap nodes;

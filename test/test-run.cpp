@@ -31,7 +31,7 @@ protected:
     }
     void wait() {
         int state = -1;
-        waitpid(run.current_pid, &state, 0);
+        waitpid(run.current_pid.orDefault(0), &state, 0);
         run.reaped(state);
     }
     void runAll() {

@@ -139,7 +139,10 @@ void Run::addEnv(std::string path) {
 void Run::abort() {
     // clear all pending scripts
     std::queue<Script>().swap(scripts);
-    kill(-current_pid, SIGTERM);
+    // if the Maybe is empty, wait() was already called on this process
+    KJ_IF_MAYBE(p, current_pid) {
+        kill(-*p, SIGTERM);
+    }
 }
 
 void Run::reaped(int status) {

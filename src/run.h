@@ -84,7 +84,7 @@ public:
     std::string reasonMsg;
     uint build = 0;
     std::string log;
-    pid_t current_pid;
+    kj::Maybe<pid_t> current_pid;
     int output_fd;
     std::unordered_map<std::string, std::string> params;
     kj::Promise<void> timeout = kj::NEVER_DONE;

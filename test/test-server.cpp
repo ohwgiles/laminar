@@ -66,7 +66,6 @@ public:
     MOCK_METHOD4(setParam, bool(std::string job, uint buildNum, std::string param, std::string value));
     MOCK_METHOD0(getCustomCss, std::string());
     MOCK_METHOD0(abortAll, void());
-    MOCK_METHOD0(reapChildren, void());
     MOCK_METHOD0(notifyConfigChanged, void());
 };
 

@@ -26,6 +26,7 @@
 #include <capnp/rpc-twoparty.h>
 #include <capnp/rpc.capnp.h>
 #include <kj/async-io.h>
+#include <kj/async-unix.h>
 #include <kj/threadlocal.h>
 
 #include <sys/eventfd.h>
@@ -386,30 +387,12 @@ Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
         return httpServer->listenHttp(*listener).attach(kj::mv(listener));
     }));
 
-    // handle SIGCHLD
-    {
-        sigset_t mask;
-        sigemptyset(&mask);
-        sigaddset(&mask, SIGCHLD);
-        sigprocmask(SIG_BLOCK, &mask, nullptr);
-        int sigchld = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
-        auto event = ioContext.lowLevelProvider->wrapInputFd(sigchld, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
-        auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
-        reapWatch = handleFdRead(event, buffer.asPtr().begin(), [this](const char* buf, size_t){
-            const struct signalfd_siginfo* siginfo = reinterpret_cast<const struct signalfd_siginfo*>(buf);
-            KJ_ASSERT(siginfo->ssi_signo == SIGCHLD);
-            laminarInterface.reapChildren();
-        }).attach(std::move(event)).attach(std::move(buffer));
-    }
-
     // handle watched paths
     {
         inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-        auto event = ioContext.lowLevelProvider->wrapInputFd(inotify_fd, kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
-        auto buffer = kj::heapArrayBuilder<char>(PROC_IO_BUFSIZE);
-        pathWatch = handleFdRead(event, buffer.asPtr().begin(), [this](const char*, size_t){
+        pathWatch = readDescriptor(inotify_fd, [this](const char*, size_t){
             laminarInterface.notifyConfigChanged();
-        }).attach(std::move(event)).attach(std::move(buffer));
+        });
     }
 }
 
@@ -438,7 +421,7 @@ void Server::start() {
     childTasks.onEmpty().wait(ioContext.waitScope);
     // 4. run the loop once more to send any pending output to websocket clients
     ioContext.waitScope.poll();
-    // 5. return: websockets will be destructed
+    // 5. return: websockets will be destructed when class is deleted
 }
 
 void Server::stop() {
@@ -453,8 +436,7 @@ kj::Promise<void> Server::readDescriptor(int fd, std::function<void(const char*,
     return handleFdRead(event, buffer.asPtr().begin(), cb).attach(std::move(event)).attach(std::move(buffer));
 }
 
-void Server::addTask(kj::Promise<void>&& task)
-{
+void Server::addTask(kj::Promise<void>&& task) {
     childTasks.add(kj::mv(task));
 }
 
@@ -462,6 +444,10 @@ kj::Promise<void> Server::addTimeout(int seconds, std::function<void ()> cb) {
     return ioContext.lowLevelProvider->getTimer().afterDelay(seconds * kj::SECONDS).then([cb](){
         cb();
     }).eagerlyEvaluate(nullptr);
+}
+
+kj::Promise<int> Server::onChildExit(kj::Maybe<pid_t> &pid) {
+    return ioContext.unixEventPort.onChildExit(pid);
 }
 
 void Server::addWatchPath(const char* dpath) {

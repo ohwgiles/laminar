@@ -19,10 +19,10 @@ export PATH=/opt/rh/devtoolset-7/root/usr/bin:\$PATH
 mkdir /build
 cd /build
 
-wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/06a7136708955d91f8ddc1fa3d54e620eacba13e.tar.gz
+wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/df67f26862c011c6efb31a28fb0d2a2ca1b94ac8.tar.gz
 wget -O rapidjson.tar.gz https://github.com/miloyip/rapidjson/archive/v1.1.0.tar.gz
 md5sum -c <<EOF
-a24b4d6e671d97c8a2aacd0dd4677726  capnproto.tar.gz
+80c28dc26842b84dcbe8d930a97c70cf  capnproto.tar.gz
 badd12c511e081fec6c89c43a7027bce  rapidjson.tar.gz
 EOF
 

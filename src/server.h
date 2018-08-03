@@ -48,6 +48,8 @@ public:
     // add a one-shot timer callback
     kj::Promise<void> addTimeout(int seconds, std::function<void()> cb);
 
+    // get a promise which resolves when a child process exits
+    kj::Promise<int> onChildExit(kj::Maybe<pid_t>& pid);
     // add a path to be watched for changes
     void addWatchPath(const char* dpath);
 

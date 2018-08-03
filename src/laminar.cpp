@@ -360,7 +360,6 @@ void Laminar::sendStatus(LaminarClient* client) {
     }
     j.EndObject();
     client->sendMessage(j.str());
-
 }
 
 Laminar::~Laminar() {
@@ -499,21 +498,6 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 
     assignNewJobs();
     return run;
-}
-
-// Reaps a zombie and steps the corresponding Run to its next state.
-// Should be called on SIGCHLD
-void Laminar::reapChildren() {
-    int ret = 0;
-    pid_t pid;
-    while((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
-        LLOG(INFO, "Reaping", pid);
-        auto it = pids.find(pid);
-        it->second->fulfill(kj::mv(ret));
-        pids.erase(it);
-    }
-
-    assignNewJobs();
 }
 
 void Laminar::notifyConfigChanged()
@@ -688,6 +672,7 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
             // notify the rpc client if the start command was used
             run->started.fulfiller->fulfill();
 
+            // this actually spawns the first step
             srv->addTask(handleRunStep(run.get()).then([this,run]{
                 runFinished(run.get());
             }));
@@ -716,11 +701,9 @@ kj::Promise<void> Laminar::handleRunStep(Run* run) {
         return kj::READY_NOW;
     }
 
+    kj::Promise<int> exited = srv->onChildExit(run->current_pid);
     // promise is fulfilled when the process is reaped. But first we wait for all
     // output from the pipe (Run::output_fd) to be consumed.
-    auto paf = kj::newPromiseAndFulfiller<int>();
-    pids.emplace(run->current_pid, kj::mv(paf.fulfiller));
-
     return srv->readDescriptor(run->output_fd, [this,run](const char*b,size_t n){
         // handle log output
         std::string s(b, n);
@@ -729,7 +712,7 @@ kj::Promise<void> Laminar::handleRunStep(Run* run) {
             if(c->scope.wantsLog(run->name, run->build))
                 c->sendMessage(s);
         }
-    }).then([p = std::move(paf.promise)]() mutable {
+    }).then([p = std::move(exited)]() mutable {
         // wait until the process is reaped
         return kj::mv(p);
     }).then([this, run](int status){
@@ -791,7 +774,9 @@ void Laminar::runFinished(Run * r) {
         w->complete(r);
     }
 
-    // erase reference to run from activeJobs
+    // erase reference to run from activeJobs. Since runFinished is called in a
+    // lambda whose context contains a shared_ptr<Run>, the run won't be deleted
+    // until the context is destroyed at the end of the lambda execution.
     activeJobs.byRunPtr().erase(r);
 
     // remove old run directories
@@ -813,6 +798,9 @@ void Laminar::runFinished(Run * r) {
             break;
         fs::remove_all(d);
     }
+
+    // in case we freed up an executor, check the queue
+    assignNewJobs();
 }
 
 class MappedFileImpl : public MappedFile {
