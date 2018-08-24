@@ -403,6 +403,7 @@ var Job = function() {
     pages: 0,
     sort: {}
   };
+  var chtBt = null;
   return Vue.extend({
     template: '#job',
     mixins: [WebsocketHandler, Utils, ProgressUpdater],
@@ -419,7 +420,11 @@ var Job = function() {
         state.pages = msg.pages;
         state.sort = msg.sort;
 
-        var chtBt = new Chart(document.getElementById("chartBt"), {
+        // "status" comes again if we change page/sorting. Delete the
+        // old chart and recreate it to prevent flickering of old data
+        if(chtBt)
+          chtBt.destroy();
+        chtBt = new Chart(document.getElementById("chartBt"), {
           type: 'bar',
           data: {
             labels: msg.recent.map(function(e) {
@@ -443,7 +448,6 @@ var Job = function() {
           }
         }
         chtBt.update();
-
       },
       job_queued: function() {
         state.nQueued++;
