@@ -304,24 +304,6 @@ const Jobs = function() {
     template: '#jobs',
     mixins: [WebsocketHandler, Utils, ProgressUpdater],
     data: function() { return state; },
-    computed: {
-      filteredJobs() {
-        var ret = this.jobs;
-        var tag = this.tag;
-        if (tag) {
-          ret = ret.filter(function(job) {
-            return job.tags.indexOf(tag) >= 0;
-          });
-        }
-        var search = this.search;
-        if (search) {
-          ret = ret.filter(function(job) {
-            return job.name.indexOf(search) > -1;
-          });
-        }
-        return ret;
-      }
-    },
     methods: {
       status: function(msg) {
         state.jobs = msg.jobs;
@@ -347,6 +329,7 @@ const Jobs = function() {
       },
       job_started: function(data) {
         var updAt = null;
+        // jobsRunning must be maintained for ProgressUpdater
         for (var i in state.jobsRunning) {
           if (state.jobsRunning[i].name === data.name) {
             updAt = i;
@@ -389,7 +372,23 @@ const Jobs = function() {
             break;
           }
         }
-      }
+      },
+      filteredJobs: function() {
+        var ret = state.jobs;
+        var tag = state.tag;
+        if (tag) {
+          ret = ret.filter(function(job) {
+            return job.tags.indexOf(tag) >= 0;
+          });
+        }
+        var search = this.search;
+        if (search) {
+          ret = ret.filter(function(job) {
+            return job.name.indexOf(search) > -1;
+          });
+        }
+        return ret;
+      },
     }
   };
 }();

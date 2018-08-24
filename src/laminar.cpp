@@ -678,6 +678,11 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
              .fetch<uint>([&](uint etc){
                 j.set("etc", time(nullptr) + etc);
             });
+            j.startArray("tags");
+            for(const str& t: jobTags[run->name]) {
+                j.String(t.c_str());
+            }
+            j.EndArray();
             j.EndObject();
             const char* msg = j.str();
             for(LaminarClient* c : clients) {
@@ -779,6 +784,11 @@ void Laminar::runFinished(Run * r) {
             .set("started", r->startedAt)
             .set("result", to_string(r->result))
             .set("reason", r->reason());
+    j.startArray("tags");
+    for(const str& t: jobTags[r->name]) {
+        j.String(t.c_str());
+    }
+    j.EndArray();
     j.startArray("artifacts");
     populateArtifacts(j, r->name, r->build);
     j.EndArray();

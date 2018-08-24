@@ -165,7 +165,7 @@
      <li v-for="t in tags" :class="{'active':t==tag}"><a href v-on:click.prevent="tag = t">{{t}}</a></li>
     </ul>
     <table class="table table-striped" id="joblist">
-     <tr   v-for="job in filteredJobs">
+     <tr   v-for="job in filteredJobs()">
       <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td>
       <td class="text-center"><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
