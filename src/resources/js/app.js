@@ -556,6 +556,11 @@ const Run = function() {
   };
 }();
 
+// For all charts, set miniumum Y to 0
+Chart.scaleService.updateScaleDefaults('linear', {
+    ticks: { min: 0 }
+});
+
 new Vue({
   el: '#app',
   data: {
