@@ -42,7 +42,10 @@ struct MonitorScope {
     MonitorScope(Type type = HOME, std::string job = std::string(), uint num = 0) :
         type(type),
         job(job),
-        num(num)
+        num(num),
+        page(0),
+        field("number"),
+        order_desc(true)
     {}
 
     // whether this scope wants status information about the given job or run
@@ -60,7 +63,10 @@ struct MonitorScope {
     Type type;
     std::string job;
     uint num = 0;
+    // sorting
     uint page = 0;
+    std::string field;
+    bool order_desc;
 };
 
 // Represents a (websocket) client that wants to be notified about events

@@ -402,7 +402,7 @@ var Job = function() {
     lastFailed: null,
     nQueued: 0,
     pages: 0,
-    page: 0
+    sort: {}
   };
   return Vue.extend({
     template: '#job',
@@ -418,7 +418,7 @@ var Job = function() {
         state.lastFailed = msg.lastFailed;
         state.nQueued = msg.nQueued;
         state.pages = msg.pages;
-        state.page = msg.page;
+        state.sort = msg.sort;
 
         var chtBt = new Chart(document.getElementById("chartBt"), {
           type: 'bar',
@@ -467,10 +467,21 @@ var Job = function() {
         }
       },
       page_next: function() {
-        this.ws.send(JSON.stringify({page:++state.page}));
+        state.sort.page++;
+        this.ws.send(JSON.stringify(state.sort));
       },
       page_prev: function() {
-        this.ws.send(JSON.stringify({page:--state.page}));
+        state.sort.page--;
+        this.ws.send(JSON.stringify(state.sort));
+      },
+      do_sort: function(field) {
+        if(state.sort.field == field) {
+          state.sort.order = state.sort.order == 'asc' ? 'dsc' : 'asc';
+        } else {
+          state.sort.order = 'dsc';
+          state.sort.field = field;
+        }
+        this.ws.send(JSON.stringify(state.sort));
       }
     }
   });

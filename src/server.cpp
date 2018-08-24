@@ -226,9 +226,10 @@ private:
                 KJ_CASE_ONEOF(str, kj::String) {
                     rapidjson::Document d;
                     d.ParseInsitu(const_cast<char*>(str.cStr()));
-                    if(d.HasMember("page") && d["page"].IsInt()) {
-                        int page = d["page"].GetInt();
-                        lc.scope.page = page;
+                    if(d.HasMember("page") && d["page"].IsInt() && d.HasMember("field") && d["field"].IsString() && d.HasMember("order") && d["order"].IsString()) {
+                        lc.scope.page = d["page"].GetInt();
+                        lc.scope.field = d["field"].GetString();
+                        lc.scope.order_desc = strcmp(d["order"].GetString(), "dsc") == 0;
                         laminar.sendStatus(&lc);
                         return websocketRead(lc);
                     }

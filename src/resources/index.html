@@ -63,6 +63,35 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+  /* sort indicators */
+  a.sort {
+    position: relative;
+    margin-left: 7px;
+  }
+  a.sort:before, a.sort:after {
+    border: 4px solid transparent;
+    content: "";
+    position: absolute;
+    display: block;
+    height: 0;
+    width: 0;
+    right: 0;
+    top: 50%;
+  }
+  a.sort:before {
+    border-bottom-color: #ccc;
+    margin-top: -9px;
+  }
+  a.sort:after {
+    border-top-color: #ccc;
+    margin-top: 1px;
+  }
+  a.sort.dsc:after { border-top-color: #000; }
+  a.sort.asc:before { border-bottom-color: #000; }
+  a.sort:hover { text-decoration: none; cursor:pointer; }
+  a.sort:not(.asc):hover:before { border-bottom-color: #777;  }
+  a.sort:not(.dsc):hover:after { border-top-color: #777;  }
+
  </style>
 </head>
 <body>
@@ -170,28 +199,36 @@
     </div>
    </div>
    <div class="row"><div class="col-xs-12">
-    <table class="table table-striped"><thead>
-     <tr><th>Run</th><th class="text-center">Started</th><th class="text-center">Duration</th><th class="text-center hidden-xs">Reason</th></tr></thead>
+    <table class="table table-striped">
+     <thead><tr>
+      <th><a class="sort" :class="(sort.field=='result'?sort.order:'')" v-on:click="do_sort('result')">&nbsp;</a></th>
+      <th>Run <a class="sort" :class="(sort.field=='number'?sort.order:'')" v-on:click="do_sort('number')">&nbsp;</a></th>
+      <th class="text-center">Started <a class="sort" :class="(sort.field=='started'?sort.order:'')" v-on:click="do_sort('started')">&nbsp;</a></th>
+      <th class="text-center">Duration <a class="sort" :class="(sort.field=='duration'?sort.order:'')" v-on:click="do_sort('duration')">&nbsp;</a></th>
+      <th class="text-center hidden-xs">Reason <a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
+     </tr></thead>
      <tr v-show="nQueued">
-      <td colspan="4"><i>{{nQueued}} run(s) queued</i></td>
+      <td colspan="5"><i>{{nQueued}} run(s) queued</i></td>
      </tr>
      <tr v-for="job in jobsRunning" track-by="$index">
-      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
+      <td><router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
       <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
       <td class="text-center hidden-xs">{{job.reason}}</td>
      </tr>
      <tr v-for="job in jobsRecent" track-by="$index">
-      <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
+      <td><router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
       <td class="text-center">{{formatDate(job.started)}}</td>
       <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
       <td class="text-center hidden-xs">{{job.reason}}</td>
      </tr>
     </table>
     <ul class="pagination pull-right">
-      <li><button class="btn btn-default" v-on:click="page_prev" :disabled="page==0">&laquo;</button></li>
-      <li>Page {{page+1}} of {{pages}}</li>
-      <li><button class="btn btn-default" v-on:click="page_next" :disabled="page==pages-1">&raquo;</button></li>
+      <li><button class="btn btn-default" v-on:click="page_prev" :disabled="sort.page==0">&laquo;</button></li>
+      <li>Page {{sort.page+1}} of {{pages}}</li>
+      <li><button class="btn btn-default" v-on:click="page_next" :disabled="sort.page==pages-1">&raquo;</button></li>
     </ul>
    </div></div>
   </div>

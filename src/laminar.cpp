@@ -201,7 +201,22 @@ void Laminar::sendStatus(LaminarClient* client) {
     } else if(client->scope.type == MonitorScope::JOB) {
         const uint runsPerPage = 10;
         j.startArray("recent");
-        db->stmt("SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT ?,?")
+        // ORDER BY param cannot be bound
+        std::string order_by;
+        std::string direction = client->scope.order_desc ? "DESC" : "ASC";
+        if(client->scope.field == "number")
+            order_by = "number " + direction;
+        else if(client->scope.field == "result")
+            order_by = "result " + direction + ", number DESC";
+        else if(client->scope.field == "started")
+            order_by = "startedAt " + direction + ", number DESC";
+        else if(client->scope.field == "duration")
+            order_by = "(completedAt-startedAt) " + direction + ", number DESC";
+        else
+            order_by = "number DESC";
+        std::string stmt = "SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY "
+                + order_by + " LIMIT ?,?";
+        db->stmt(stmt.c_str())
         .bind(client->scope.job, client->scope.page * runsPerPage, runsPerPage)
         .fetch<uint,time_t,time_t,int,str>([&](uint build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
@@ -216,7 +231,12 @@ void Laminar::sendStatus(LaminarClient* client) {
         db->stmt("SELECT COUNT(*) FROM builds WHERE name = ?")
         .bind(client->scope.job)
         .fetch<uint>([&](uint nRuns){
-            j.set("pages", (nRuns-1) / runsPerPage + 1).set("page", client->scope.page);
+            j.set("pages", (nRuns-1) / runsPerPage + 1);
+            j.startObject("sort");
+            j.set("page", client->scope.page)
+             .set("field", client->scope.field)
+             .set("order", client->scope.order_desc ? "dsc" : "asc")
+             .EndObject();
         });
         j.startArray("running");
         auto p = activeJobs.byJobName().equal_range(client->scope.job);
