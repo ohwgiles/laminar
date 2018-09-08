@@ -3,6 +3,12 @@
  * https://laminar.ohwg.net
  */
 
+String.prototype.hashCode = function() {
+  for(var r=0, i=0; i<this.length; i++)
+    r=(r<<5)-r+this.charCodeAt(i),r&=r;
+  return r;
+};
+
 Vue.filter('iecFileSize', function(bytes) {
   var exp = Math.floor(Math.log(bytes) / Math.log(1024));
   return (bytes / Math.pow(1024, exp)).toFixed(1) + ' ' +
@@ -171,7 +177,8 @@ const ProgressUpdater = {
 const Home = function() {
   var state = {
     jobsQueued: [],
-    jobsRecent: []
+    jobsRecent: [],
+    resultChanged: []
   };
 
   var chtUtilization, chtBuildsPerDay, chtBuildsPerJob, chtTimePerJob;
@@ -193,6 +200,7 @@ const Home = function() {
         state.jobsQueued = msg.queued;
         state.jobsRunning = msg.running;
         state.jobsRecent = msg.recent;
+        state.resultChanged = msg.resultChanged;
         this.$forceUpdate();
 
         // setup charts
@@ -202,7 +210,7 @@ const Home = function() {
             labels: ["Busy", "Idle"],
             datasets: [{
               data: [ msg.executorsBusy, msg.executorsTotal - msg.executorsBusy ],
-              backgroundColor: ["tan", "darkseagreen"]
+              backgroundColor: ["darkgoldenrod", "forestgreen"]
             }]
           }
         });
@@ -220,13 +228,13 @@ const Home = function() {
             })(),
             datasets: [{
               label: 'Successful Builds',
-              backgroundColor: "rgba(143,188,143,0.65)", //darkseagreen at 0.65
+              backgroundColor: "rgba(34,139,34,0.65)", //forestgreen at 0.65
               borderColor: "forestgreen",
               data: msg.buildsPerDay.map((e)=>{ return e.success || 0; })
             }, {
               label: 'Failed Builds',
-              backgroundColor: "rgba(233,150,122,0.65)", //darkseagreen at 0.65
-              borderColor: "crimson",
+              backgroundColor: "rgba(178,34,34,0.65)", //firebrick at 0.65
+              borderColor: "firebrick",
               data: msg.buildsPerDay.map((e)=>{ return e.failed || 0; })
             }]
           }
@@ -237,7 +245,7 @@ const Home = function() {
             labels: Object.keys(msg.buildsPerJob),
             datasets: [{
               label: 'Most runs per job in last 24hrs',
-              backgroundColor: "lightsteelblue",
+              backgroundColor: "steelblue",
               data: Object.keys(msg.buildsPerJob).map((e)=>{ return msg.buildsPerJob[e]; })
             }]
           }
@@ -248,8 +256,70 @@ const Home = function() {
             labels: Object.keys(msg.timePerJob),
             datasets: [{
               label: 'Longest average runtime this week',
-              backgroundColor: "lightsteelblue",
+              backgroundColor: "steelblue",
               data: Object.keys(msg.timePerJob).map((e)=>{ return msg.timePerJob[e]; })
+            }]
+          }
+        });
+        var chtResultChanges = new Chart(document.getElementById("chartResultChanges"), {
+          type: 'horizontalBar',
+          data: {
+            labels: msg.resultChanged.map((e)=>{ return e.name; }),
+            datasets: [{
+              //label: '% Passed',
+              backgroundColor: msg.resultChanged.map((e)=>{return e.lastFailure > e.lastSuccess ? 'firebrick' : 'forestgreen';}),
+              data: msg.resultChanged.map((e)=>{ return e.lastSuccess - e.lastFailure; }),
+              itemid: msg.resultChanged.map((e)=> { return 'rcd_' + e.name; })
+            }]
+          },
+          options:{
+            scales:{
+              xAxes:[{ticks:{display: false}}],
+              yAxes:[{ticks:{display: false}}]
+            },
+            tooltips:{
+              enabled:false
+            }
+          }
+        });
+        var chtPassRates = new Chart(document.getElementById("chartPassRates"), {
+          type: 'horizontalBar',
+          data: {
+            labels: msg.lowPassRates.map((e)=>{ return e.name }),
+            datasets: [{
+              stack: 'passrate',
+              label: '% Passed',
+              backgroundColor: "forestgreen",
+              data: msg.lowPassRates.map((e)=>{ return e.passRate*100; })
+            },{
+              stack:'passrate',
+              label: '% Failed',
+              backgroundColor: "firebrick",
+              data: msg.lowPassRates.map((e)=>{ return (1-e.passRate)*100; })
+            }],
+          }
+        });
+        var chtBuildTimeChanges = new Chart(document.getElementById("chartBuildTimeChanges"), {
+          type: 'line',
+          data: {
+            labels: [...Array(10).keys()],
+            datasets: msg.buildTimeChanges.map((e)=>{return {
+              label: e.name,
+              data: e.durations,
+              borderColor: 'hsl('+(e.name.hashCode() % 360)+', 61%, 34%)',
+              backgroundColor: 'transparent'
+            }})
+          },
+          options:{legend:{display:true}}
+        });
+        var chtBuildTimeDist = new Chart(document.getElementById("chartBuildTimeDist"), {
+          type: 'line',
+          data: {
+            labels: ['<30s','30s-1m','1m-5m','5m-10m','10m-20m','20m-40m','40m-60m','>60m'],
+            datasets: [{
+              label: 'Number jobs with average build time in range',
+              data: msg.buildTimeDist,
+              backgroundColor: "steelblue",
             }]
           }
         });
@@ -562,7 +632,23 @@ const Run = function() {
 
 // For all charts, set miniumum Y to 0
 Chart.scaleService.updateScaleDefaults('linear', {
-    ticks: { min: 0 }
+    ticks: { suggestedMin: 0 }
+});
+// Don't display legend by default
+Chart.defaults.global.legend.display = false;
+// Plugin to move a DOM item on top of a chart element
+Chart.plugins.register({
+  afterDatasetsDraw: (chart) => {
+    chart.data.datasets.forEach((dataset, i) => {
+      var meta = chart.getDatasetMeta(i);
+      if(dataset.itemid)
+        meta.data.forEach((e,j) => {
+          var pos = e.getCenterPoint();
+          var node = document.getElementById(dataset.itemid[j]);
+          node.style.top = (pos.y - node.clientHeight/2) + 'px';
+        });
+    });
+  }
 });
 
 new Vue({

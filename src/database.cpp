@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2016 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -20,9 +20,38 @@
 
 #include <sqlite3.h>
 #include <string.h>
+#include <math.h>
+
+struct StdevCtx {
+    double mean;
+    double M2;
+    int64_t count;
+};
+
+static void stdevStep(sqlite3_context *ctx, int, sqlite3_value **args)
+{
+    StdevCtx* p = static_cast<StdevCtx*>(sqlite3_aggregate_context(ctx, sizeof(StdevCtx)));
+    // Welford's Online Algorithm
+    if(sqlite3_value_numeric_type(args[0]) != SQLITE_NULL) {
+        p->count++;
+        double val = sqlite3_value_double(args[0]);
+        double delta = val - p->mean;
+        p->mean += delta / p->count;
+        p->M2 += delta * (val - p->mean);
+    }
+}
+
+static void stdevFinalize(sqlite3_context *context){
+    StdevCtx* p = static_cast<StdevCtx*>(sqlite3_aggregate_context(context, 0));
+    if(p && p->count > 1)
+        sqlite3_result_double(context, sqrt(p->M2 / (p->count-1)));
+    else
+        sqlite3_result_null(context);
+}
 
 Database::Database(const char *path) {
     sqlite3_open(path, &hdl);
+    sqlite3_create_function(hdl, "STDEV", 1, SQLITE_UTF8|SQLITE_DETERMINISTIC, NULL, NULL, stdevStep, stdevFinalize);
 }
 
 Database::~Database() {
@@ -94,6 +123,10 @@ template<> long Database::Statement::fetchColumn(int col) {
 
 template<> ulong Database::Statement::fetchColumn(int col) {
     return static_cast<ulong>(sqlite3_column_int64(stmt, col));
+}
+
+template<> double Database::Statement::fetchColumn(int col) {
+    return sqlite3_column_double(stmt, col);
 }
 
 bool Database::Statement::row() {

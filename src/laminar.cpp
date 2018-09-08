@@ -51,6 +51,7 @@ public:
 private:
     rapidjson::StringBuffer buf;
 };
+template<> Json& Json::set(const char* key, double value) { String(key); Double(value); return *this; }
 template<> Json& Json::set(const char* key, const char* value) { String(key); String(value); return *this; }
 template<> Json& Json::set(const char* key, std::string value) { String(key); String(value.c_str()); return *this; }
 
@@ -354,7 +355,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         j.startArray("buildsPerDay");
         for(int i = 6; i >= 0; --i) {
             j.StartObject();
-            db->stmt("SELECT result, COUNT(*) FROM builds WHERE completedAt > ? AND completedAt < ? GROUP by result")
+            db->stmt("SELECT result, COUNT(*) FROM builds WHERE completedAt > ? AND completedAt < ? GROUP BY result")
                     .bind(86400*(time(nullptr)/86400 - i), 86400*(time(nullptr)/86400 - (i-1)))
                     .fetch<int,int>([&](int result, int num){
                 j.set(to_string(RunState(result)).c_str(), num);
@@ -370,12 +371,68 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndObject();
         j.startObject("timePerJob");
-        db->stmt("SELECT name, AVG(completedAt-startedAt) av FROM builds WHERE completedAt > ? GROUP BY name ORDER BY av DESC LIMIT 5")
+        db->stmt("SELECT name, AVG(completedAt-startedAt) av FROM builds WHERE completedAt > ? GROUP BY name ORDER BY av DESC LIMIT 8")
                 .bind(time(nullptr) - 7 * 86400)
                 .fetch<str, uint>([&](str job, uint time){
             j.set(job.c_str(), time);
         });
         j.EndObject();
+        j.startArray("resultChanged");
+        db->stmt("SELECT b.name,MAX(b.number) as lastSuccess,lastFailure FROM builds AS b JOIN (SELECT name,MAX(number) AS lastFailure FROM builds WHERE result<>? GROUP BY name) AS t ON t.name=b.name WHERE b.result=? GROUP BY b.name ORDER BY lastSuccess>lastFailure, lastFailure-lastSuccess DESC LIMIT 8")
+                .bind(int(RunState::SUCCESS), int(RunState::SUCCESS))
+                .fetch<str, uint, uint>([&](str job, uint lastSuccess, uint lastFailure){
+            j.StartObject();
+            j.set("name", job)
+             .set("lastSuccess", lastSuccess)
+             .set("lastFailure", lastFailure);
+            j.EndObject();
+        });
+        j.EndArray();
+        j.startArray("lowPassRates");
+        db->stmt("SELECT name,CAST(SUM(result==?) AS FLOAT)/COUNT(*) AS passRate FROM builds GROUP BY name ORDER BY passRate ASC LIMIT 8")
+                .bind(int(RunState::SUCCESS))
+                .fetch<str, double>([&](str job, double passRate){
+            j.StartObject();
+            j.set("name", job).set("passRate", passRate);
+            j.EndObject();
+        });
+        j.EndArray();
+        j.startArray("buildTimeChanges");
+        db->stmt("SELECT name,GROUP_CONCAT(number),GROUP_CONCAT(completedAt-startedAt) FROM builds WHERE number > (SELECT MAX(number)-10 FROM builds b WHERE b.name=builds.name) GROUP BY name ORDER BY (MAX(completedAt-startedAt)-MIN(completedAt-startedAt))-STDEV(completedAt-startedAt) DESC LIMIT 8")
+                .fetch<str,str,str>([&](str name, str numbers, str durations){
+            j.StartObject();
+            j.set("name", name);
+            j.startArray("numbers");
+            j.RawValue(numbers.data(), numbers.length(), rapidjson::Type::kArrayType);
+            j.EndArray();
+            j.startArray("durations");
+            j.RawValue(durations.data(), durations.length(), rapidjson::Type::kArrayType);
+            j.EndArray();
+            j.EndObject();
+        });
+        j.EndArray();
+
+        j.startArray("buildTimeDist");
+        db->stmt("WITH ba AS (SELECT name,AVG(completedAt-startedAt) a FROM builds GROUP BY name) SELECT "
+                 "COUNT(CASE WHEN               a <    30 THEN 1 END),"
+                 "COUNT(CASE WHEN a >=   30 AND a <    60 THEN 1 END),"
+                 "COUNT(CASE WHEN a >=   60 AND a <   300 THEN 1 END),"
+                 "COUNT(CASE WHEN a >=  300 AND a <   600 THEN 1 END),"
+                 "COUNT(CASE WHEN a >=  600 AND a <  1200 THEN 1 END),"
+                 "COUNT(CASE WHEN a >= 1200 AND a <  2400 THEN 1 END),"
+                 "COUNT(CASE WHEN a >= 2400 AND a <  3600 THEN 1 END),"
+                 "COUNT(CASE WHEN a >= 3600               THEN 1 END) FROM ba")
+                .fetch<uint,uint,uint,uint,uint,uint,uint,uint>([&](uint c1, uint c2, uint c3, uint c4, uint c5, uint c6, uint c7, uint c8){
+            j.Int(c1);
+            j.Int(c2);
+            j.Int(c3);
+            j.Int(c4);
+            j.Int(c5);
+            j.Int(c6);
+            j.Int(c7);
+            j.Int(c8);
+        });
+        j.EndArray();
 
     }
     j.EndObject();

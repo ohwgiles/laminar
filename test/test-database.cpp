@@ -73,3 +73,11 @@ TEST_F(DatabaseTest, MultiRow) {
     });
     EXPECT_EQ(10, i);
 }
+
+TEST_F(DatabaseTest, StdevFunc) {
+    double res = 0;
+    db.stmt("with a (x) as (values (7),(3),(45),(23)) select stdev(x) from a").fetch<double>([&](double r){
+        res = r;
+    });
+    EXPECT_FLOAT_EQ(19.0700463205171, res);
+}

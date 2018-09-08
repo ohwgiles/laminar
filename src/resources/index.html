@@ -47,6 +47,7 @@
     right: 10px;
     padding: 20px;
   }
+  /* status icons */
   span.status {
     display: inline-block;
     width: 1em;
@@ -62,6 +63,14 @@
   }
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+  /* chart overlay */
+  li.chart-overlay {
+    position: absolute;
+    display: inline-block;
+    background: white;
+    border: 1px solid lightgray;
+    padding: 3px;
   }
   /* sort indicators */
   a.sort {
@@ -132,7 +141,7 @@
        <canvas id="chartBpj"></canvas>
       </div>
      </div>
-    </div>
+    </div></div><div class="row">
     <div class="col-md-6">
      <div class="panel panel-default">
       <div class="panel-heading">Longest average run time per job this week</div>
@@ -146,6 +155,42 @@
       <div class="panel-heading">Current executor utilization</div>
       <div class="panel-body">
        <canvas id="chartUtil"></canvas>
+      </div>
+     </div>
+    </div></div><div class="row">
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Regressions and recoveries</div>
+      <div class="panel-body"><div style="position:relative">
+       <canvas id="chartResultChanges"></canvas>
+       <ul v-for="job in resultChanged">
+         <li v-if="job.lastFailure>job.lastSuccess" :id="'rcd_'+job.name" class="chart-overlay"><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>: <span v-html="runIcon('failed')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">#{{job.lastFailure}}</router-link> since <span v-html="runIcon('success')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link></li>
+         <li v-if="job.lastFailure<job.lastSuccess" :id="'rcd_'+job.name" class="chart-overlay"><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>: <span v-html="runIcon('success')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link> since <span v-html="runIcon('failed')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">#{{job.lastFailure}}</router-link></li>
+       </ul>
+      </div></div>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Low pass rates</div>
+      <div class="panel-body">
+       <canvas id="chartPassRates"></canvas>
+      </div>
+     </div>
+    </div></div><div class="row">
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Run time changes</div>
+      <div class="panel-body">
+       <canvas id="chartBuildTimeChanges"></canvas>
+      </div>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <div class="panel panel-default">
+      <div class="panel-heading">Average run time distribution</div>
+      <div class="panel-body">
+       <canvas id="chartBuildTimeDist"></canvas>
       </div>
      </div>
     </div>

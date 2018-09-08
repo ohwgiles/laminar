@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2016 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -151,5 +151,6 @@ template<> int Database::Statement::fetchColumn(int col);
 template<> uint Database::Statement::fetchColumn(int col);
 template<> long Database::Statement::fetchColumn(int col);
 template<> ulong Database::Statement::fetchColumn(int col);
+template<> double Database::Statement::fetchColumn(int col);
 
 #endif // LAMINAR_DATABASE_H_
