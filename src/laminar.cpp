@@ -229,9 +229,10 @@ void Laminar::sendStatus(LaminarClient* client) {
              .EndObject();
         });
         j.EndArray();
-        db->stmt("SELECT COUNT(*) FROM builds WHERE name = ?")
+        db->stmt("SELECT COUNT(*),AVG(completedAt-startedAt) FROM builds WHERE name = ?")
         .bind(client->scope.job)
-        .fetch<uint>([&](uint nRuns){
+        .fetch<uint,uint>([&](uint nRuns, uint averageRuntime){
+            j.set("averageRuntime", averageRuntime);
             j.set("pages", (nRuns-1) / runsPerPage + 1);
             j.startObject("sort");
             j.set("page", client->scope.page)

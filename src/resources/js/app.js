@@ -501,6 +501,16 @@ var Job = function() {
               return '#' + e.number;
             }).reverse(),
             datasets: [{
+              label: 'Average',
+              type: 'line',
+              data: [{x:0,y:msg.averageRuntime},{x:1,y:msg.averageRuntime}],
+              borderColor: 'steelblue',
+              backgroundColor: 'transparent',
+              xAxisID: 'avg',
+              pointRadius: 0,
+              pointHitRadius: 0,
+              pointHoverRadius: 0,
+            },{
               label: 'Build time',
               backgroundColor: (new Array(msg.recent.length)).fill('darkseagreen'),
               borderColor: (new Array(msg.recent.length)).fill('forestgreen'),
@@ -508,6 +518,21 @@ var Job = function() {
                 return e.completed - e.started;
               }).reverse()
             }]
+          },
+          options: {
+            scales:{
+              xAxes:[{},{
+                id: 'avg',
+                type: 'linear',
+                ticks: {
+                  display: false
+                },
+                gridLines: {
+                  display: false,
+                  drawBorder: false
+                }
+              }]
+            }
           }
         });
 
