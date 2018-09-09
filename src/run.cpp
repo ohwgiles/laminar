@@ -128,17 +128,17 @@ bool Run::step() {
     return false;
 }
 
-void Run::addScript(std::string scriptPath, std::string scriptWorkingDir) {
-    scripts.push({scriptPath, scriptWorkingDir});
+void Run::addScript(std::string scriptPath, std::string scriptWorkingDir, bool runOnAbort) {
+    scripts.push({scriptPath, scriptWorkingDir, runOnAbort});
 }
 
 void Run::addEnv(std::string path) {
     env.push_back(path);
 }
 
-void Run::abort() {
-    // clear all pending scripts
-    std::queue<Script>().swap(scripts);
+void Run::abort(bool respectRunOnAbort) {
+    while(scripts.size() && (!respectRunOnAbort || !scripts.front().runOnAbort))
+        scripts.pop();
     // if the Maybe is empty, wait() was already called on this process
     KJ_IF_MAYBE(p, current_pid) {
         kill(-*p, SIGTERM);

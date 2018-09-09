@@ -56,16 +56,16 @@ public:
     bool step();
 
     // adds a script to the queue of scripts to be executed by this run
-    void addScript(std::string scriptPath, std::string scriptWorkingDir);
+    void addScript(std::string scriptPath, std::string scriptWorkingDir, bool runOnAbort = false);
 
     // adds a script to the queue using the runDir as the scripts CWD
-    void addScript(std::string script) { addScript(script, runDir); }
+    void addScript(std::string script, bool runOnAbort = false) { addScript(script, runDir, runOnAbort); }
 
     // adds an environment file that will be sourced before this run
     void addEnv(std::string path);
 
     // aborts this run
-    void abort();
+    void abort(bool respectRunOnAbort);
 
     // called when a process owned by this run has been reaped. The status
     // may be used to set the run's job status
@@ -96,6 +96,7 @@ private:
     struct Script {
         std::string path;
         std::string cwd;
+        bool runOnAbort;
     };
 
     std::queue<Script> scripts;

@@ -587,7 +587,7 @@ void Laminar::notifyConfigChanged()
 
 void Laminar::abortAll() {
     for(std::shared_ptr<Run> run : activeJobs) {
-        run->abort();
+        run->abort(false);
     }
 }
 
@@ -674,13 +674,13 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
             run->addScript((cfgDir/"jobs"/run->name+".run").string());
             // job after-run script
             if(fs::exists(cfgDir/"jobs"/run->name+".after"))
-                run->addScript((cfgDir/"jobs"/run->name+".after").string());
+                run->addScript((cfgDir/"jobs"/run->name+".after").string(), true);
             // per-node after-run script
             if(fs::exists(cfgDir/"nodes"/node->name+".after"))
-                run->addScript((cfgDir/"nodes"/node->name+".after").string());
+                run->addScript((cfgDir/"nodes"/node->name+".after").string(), true);
             // global after-run script
             if(fs::exists(cfgDir/"after"))
-                run->addScript((cfgDir/"after").string());
+                run->addScript((cfgDir/"after").string(), true);
 
             // add environment files
             if(fs::exists(cfgDir/"env"))
@@ -699,7 +699,7 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
                     // will be cancelled and the callback never called.
                     Run* r = run.get();
                     r->timeout = srv->addTimeout(timeout, [r](){
-                        r->abort();
+                        r->abort(true);
                     });
                 }
             }

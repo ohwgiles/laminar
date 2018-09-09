@@ -105,7 +105,7 @@ TEST_F(RunTest, Abort) {
     run.addScript("/usr/bin/yes");
     run.step();
     usleep(200); // TODO fix
-    run.abort();
+    run.abort(false);
     wait();
     EXPECT_EQ(RunState::ABORTED, run.result);
 }
@@ -116,7 +116,7 @@ TEST_F(RunTest, AbortAfterFailed) {
     run.addScript("/usr/bin/yes");
     run.step();
     usleep(200); // TODO fix
-    run.abort();
+    run.abort(false);
     wait();
     EXPECT_EQ(RunState::FAILED, run.result);
 }
