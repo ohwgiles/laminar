@@ -542,6 +542,18 @@ This directory is also a good place to add any extra assets needed for this cust
 
 ---
 
+# Badges
+
+Laminar will serve a job's current status as a pretty badge at the url `/badge/JOBNAME.svg`. This can be used as a link to your server instance from your Github README.md file or cat blog:
+
+```
+<a href="https://my-example-laminar-server.com/jobs/my-project">
+  <img src="https://my-example-laminar-server.com/badge/my-project.svg">
+</a>
+```
+
+---
+
 # Reference
 
 ## Service configuration file

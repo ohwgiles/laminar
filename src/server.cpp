@@ -311,6 +311,7 @@ private:
         } else {
             // handle regular HTTP request
             const char* start, *end, *content_type;
+            std::string badge;
             responseHeaders.clear();
             if(resource.compare(0, strlen("/archive/"), "/archive/") == 0) {
                 kj::Own<MappedFile> file = laminar.getArtefact(resource.substr(strlen("/archive/")));
@@ -331,6 +332,11 @@ private:
                 responseHeaders.add("Content-Transfer-Encoding", "binary");
                 auto stream = response.send(200, "OK", responseHeaders, end-start);
                 return stream->write(start, end-start).attach(kj::mv(stream));
+            } else if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(resource.substr(7,resource.length()-11), badge)) {
+                responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "image/svg+xml");
+                responseHeaders.add("Cache-Control", "no-cache");
+                auto stream = response.send(200, "OK", responseHeaders, badge.size());
+                return stream->write(badge.data(), badge.size()).attach(kj::mv(badge)).attach(kj::mv(stream));
             }
             return response.sendError(404, "Not Found", responseHeaders);
         }

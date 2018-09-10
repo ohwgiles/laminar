@@ -65,6 +65,7 @@ public:
     MOCK_METHOD1(sendStatus, void(LaminarClient* client));
     MOCK_METHOD4(setParam, bool(std::string job, uint buildNum, std::string param, std::string value));
     MOCK_METHOD0(getCustomCss, std::string());
+    MOCK_METHOD2(handleBadgeRequest, bool(std::string, std::string&));
     MOCK_METHOD0(abortAll, void());
     MOCK_METHOD0(notifyConfigChanged, void());
 };

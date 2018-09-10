@@ -924,6 +924,48 @@ kj::Own<MappedFile> Laminar::getArtefact(std::string path) {
     return kj::heap<MappedFileImpl>(fs::path(fs::path(homeDir)/"archive"/path).c_str());
 }
 
+bool Laminar::handleBadgeRequest(std::string job, std::string &badge) {
+    RunState rs = RunState::UNKNOWN;
+    db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY number DESC LIMIT 1")
+            .bind(job)
+            .fetch<int>([&](int result){
+        rs = (RunState) result;
+    });
+    if(rs == RunState::UNKNOWN)
+        return false;
+
+    std::string status = to_string(rs);
+    // Empirical approximation of pixel width. Not particularly stable.
+    const int jobNameWidth = job.size() * 7 + 10;
+    const int statusWidth = status.size() * 7 + 10;
+    const char* gradient1 = (rs == RunState::SUCCESS) ? "#2aff4d" : "#ff2a2a";
+    const char* gradient2 = (rs == RunState::SUCCESS) ? "#24b43c" : "#b42424";
+    char* svg = NULL;
+    asprintf(&svg,
+R"x(
+<svg xmlns="http://www.w3.org/2000/svg">
+  <clipPath id="clip">
+    <rect width="%d" height="20" rx="4"/>
+  </clipPath>
+  <linearGradient id="job" x1="0" x2="0" y1="0" y2="1">
+    <stop offset="0" stop-color="#666" />
+    <stop offset="1" stop-color="#333" />
+  </linearGradient>
+  <linearGradient id="status" x1="0" x2="0" y1="0" y2="1">
+    <stop offset="0" stop-color="%s" />
+    <stop offset="1" stop-color="%s" />
+  </linearGradient>
+  <g clip-path="url(#clip)" font-family="DejaVu Sans,Verdana,sans-serif" font-size="12" text-anchor="middle">
+    <rect width="%d" height="20" fill="url(#job)"/>
+    <text x="%d" y="14" fill="#fff">%s</text>
+    <rect x="%d" width="%d" height="20" fill="url(#status)"/>
+    <text x="%d" y="14" fill="#000">%s</text>
+  </g>
+</svg>)x", jobNameWidth+statusWidth, gradient1, gradient2, jobNameWidth, jobNameWidth/2+1, job.data(), jobNameWidth, statusWidth, jobNameWidth+statusWidth/2, status.data());
+    badge = svg;
+    return true;
+}
+
 std::string Laminar::getCustomCss() {
     MappedFileImpl cssFile(fs::path(fs::path(homeDir)/"custom"/"style.css").c_str());
     if(cssFile.address()) {

@@ -135,6 +135,11 @@ struct LaminarInterface {
     // proper web server which handles this url.
     virtual kj::Own<MappedFile> getArtefact(std::string path) = 0;
 
+    // Given the name of a job, populate the provided string reference with
+    // SVG content describing the last known state of the job. Returns false
+    // if the job is unknown.
+    virtual bool handleBadgeRequest(std::string job, std::string& badge) = 0;
+
     // Fetches the content of $LAMINAR_HOME/custom/style.css or an empty
     // string. Ideally, this would instead be served by a proper web server
     // which handles this url.
