@@ -214,18 +214,22 @@ const Home = function() {
             }]
           }
         });
+        var buildsPerDayDates = function(){
+          res = [];
+          var now = new Date();
+          for (var i = 6; i >= 0; --i) {
+            var then = new Date(now.getTime() - i * 86400000);
+            res.push({
+              short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][then.getDay()],
+              long: then.toLocaleDateString()}
+            );
+          }
+          return res;
+        }();
         chtBuildsPerDay = new Chart(document.getElementById("chartBpd"), {
           type: 'line',
           data: {
-            labels: (()=>{
-              res = [];
-              var now = new Date();
-              for (var i = 6; i >= 0; --i) {
-                var then = new Date(now.getTime() - i * 86400000);
-                res.push(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][then.getDay()]);
-              }
-              return res;
-            })(),
+            labels: buildsPerDayDates.map((e)=>{ return e.short; }),
             datasets: [{
               label: 'Successful Builds',
               backgroundColor: "rgba(34,139,34,0.65)", //forestgreen at 0.65
@@ -237,6 +241,15 @@ const Home = function() {
               borderColor: "firebrick",
               data: msg.buildsPerDay.map((e)=>{ return e.failed || 0; })
             }]
+          },
+          options:{
+            tooltips:{callbacks:{title: function(tip, data) {
+              return buildsPerDayDates[tip[0].index].long;
+            }}},
+            scales:{yAxes:[{ticks:{userCallback: (label, index, labels)=>{
+              if(Number.isInteger(label))
+                return label;
+            }}}]}
           }
         });
         chtBuildsPerJob = new Chart(document.getElementById("chartBpj"), {
@@ -244,21 +257,46 @@ const Home = function() {
           data: {
             labels: Object.keys(msg.buildsPerJob),
             datasets: [{
-              label: 'Most runs per job in last 24hrs',
+              label: 'Runs in last 24 hours',
               backgroundColor: "steelblue",
               data: Object.keys(msg.buildsPerJob).map((e)=>{ return msg.buildsPerJob[e]; })
             }]
+          },
+          options:{
+            scales:{xAxes:[{ticks:{userCallback: (label, index, labels)=>{
+              if(Number.isInteger(label))
+                return label;
+            }}}]}
           }
         });
+        var tpjScale = function(max){
+          return max > 3600 ? 3600 : max > 60 ? 60 : 1;
+        }(Math.max(Object.values(msg.timePerJob)));
         chtTimePerJob = new Chart(document.getElementById("chartTpj"), {
           type: 'horizontalBar',
           data: {
             labels: Object.keys(msg.timePerJob),
             datasets: [{
-              label: 'Longest average runtime this week',
+              label: 'Mean run time this week',
               backgroundColor: "steelblue",
               data: Object.keys(msg.timePerJob).map((e)=>{ return msg.timePerJob[e]; })
             }]
+          },
+          options:{
+            scales:{xAxes:[{
+              ticks:{userCallback: (label, index, labels)=>{
+                return tpjScale == 1 ? label : Math.round(label/(tpjScale/10))/10;
+              }},
+              scaleLabel: {
+                display: true,
+                labelString: function(){
+                  return tpjScale == 3600 ? 'Hours' : tpjScale == 60 ? 'Minutes' : 'Seconds';
+                }()
+              }
+            }]},
+            tooltips:{callbacks:{label:(tip, data)=>{
+              return data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel + (tpjScale == 3600 ? ' hours' : tpjScale == 60 ? ' minutes' : ' seconds');
+            }}}
           }
         });
         var chtResultChanges = new Chart(document.getElementById("chartResultChanges"), {
@@ -297,8 +335,19 @@ const Home = function() {
               backgroundColor: "firebrick",
               data: msg.lowPassRates.map((e)=>{ return (1-e.passRate)*100; })
             }],
+          },
+          options:{
+            scales:{xAxes:[{ticks:{callback:(val,idx,values)=>{
+              return val + '%';
+            }}}]},
+            tooltips:{
+              enabled:false
+            }
           }
         });
+        var btcScale = function(max){
+          return max > 3600 ? 3600 : max > 60 ? 60 : 1;
+        }(Math.max(msg.buildTimeChanges.map((e)=>{return Math.max(e.durations)})));
         var chtBuildTimeChanges = new Chart(document.getElementById("chartBuildTimeChanges"), {
           type: 'line',
           data: {
@@ -310,7 +359,26 @@ const Home = function() {
               backgroundColor: 'transparent'
             }})
           },
-          options:{legend:{display:true}}
+          options:{
+            legend:{display:true},
+            scales:{
+              xAxes:[{ticks:{display: false}}],
+              yAxes:[{
+                ticks:{userCallback: (label, index, labels)=>{
+                  return btcScale == 1 ? label : Math.round(label/(btcScale/10))/10;
+                }},
+                scaleLabel: {
+                  display: true,
+                  labelString: function(){
+                    return btcScale == 3600 ? 'Hours' : btcScale == 60 ? 'Minutes' : 'Seconds';
+                  }()
+                }
+              }]
+            },
+            tooltips:{
+              enabled:false
+            }
+          }
         });
         var chtBuildTimeDist = new Chart(document.getElementById("chartBuildTimeDist"), {
           type: 'line',
