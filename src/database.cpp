@@ -51,7 +51,11 @@ static void stdevFinalize(sqlite3_context *context){
 
 Database::Database(const char *path) {
     sqlite3_open(path, &hdl);
-    sqlite3_create_function(hdl, "STDEV", 1, SQLITE_UTF8|SQLITE_DETERMINISTIC, NULL, NULL, stdevStep, stdevFinalize);
+    int create_func_flags = SQLITE_UTF8;
+#if SQLITE_VERSION_NUMBER >= 3008003
+    create_func_flags |= SQLITE_DETERMINISTIC;
+#endif
+    sqlite3_create_function(hdl, "STDEV", 1, create_func_flags, NULL, NULL, stdevStep, stdevFinalize);
 }
 
 Database::~Database() {
