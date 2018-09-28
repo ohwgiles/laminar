@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <memory>
 #include <kj/async.h>
+#include <kj/filesystem.h>
 
 enum class RunState {
     UNKNOWN,
@@ -41,28 +42,24 @@ std::string to_string(const RunState& rs);
 
 class Node;
 
-// Represents an execution of a job. Not much more than POD
+typedef std::unordered_map<std::string, std::string> ParamMap;
+
+// Represents an execution of a job.
 class Run {
 public:
-    Run();
+    Run(std::string name, ParamMap params, kj::Path&& rootPath);
     ~Run();
 
     // copying this class would be asking for trouble...
     Run(const Run&) = delete;
     Run& operator=(const Run&) = delete;
 
+    // Call this to "start" the run with a specific number and node
+    bool configure(uint buildNum, std::shared_ptr<Node> node, const kj::Directory &fsHome);
+
     // executes the next script (if any), returning true if there is nothing
     // more to be done.
     bool step();
-
-    // adds a script to the queue of scripts to be executed by this run
-    void addScript(std::string scriptPath, std::string scriptWorkingDir, bool runOnAbort = false);
-
-    // adds a script to the queue using the runDir as the scripts CWD
-    void addScript(std::string script, bool runOnAbort = false) { addScript(script, runDir, runOnAbort); }
-
-    // adds an environment file that will be sourced before this run
-    void addEnv(std::string path);
 
     // aborts this run
     void abort(bool respectRunOnAbort);
@@ -73,35 +70,41 @@ public:
 
     std::string reason() const;
 
+    kj::Promise<void>&& whenStarted() { return kj::mv(started.promise); }
+
     std::shared_ptr<Node> node;
     RunState result;
     RunState lastResult;
-    std::string laminarHome;
     std::string name;
-    std::string runDir;
     std::string parentName;
     int parentBuild = 0;
-    std::string reasonMsg;
     uint build = 0;
     std::string log;
     kj::Maybe<pid_t> current_pid;
     int output_fd;
     std::unordered_map<std::string, std::string> params;
-    kj::Promise<void> timeout = kj::NEVER_DONE;
-    kj::PromiseFulfillerPair<void> started = kj::newPromiseAndFulfiller<void>();
+    int timeout;
 
     time_t queuedAt;
     time_t startedAt;
 private:
+    // adds a script to the queue of scripts to be executed by this run
+    void addScript(kj::Path scriptPath, kj::Path scriptWorkingDir, bool runOnAbort = false);
+
+    // adds an environment file that will be sourced before this run
+    void addEnv(kj::Path path);
+
     struct Script {
-        std::string path;
-        std::string cwd;
+        kj::Path path;
+        kj::Path cwd;
         bool runOnAbort;
     };
 
+    kj::Path rootPath;
     std::queue<Script> scripts;
-    Script currentScript;
-    std::list<std::string> env;
+    std::list<kj::Path> env;
+    std::string reasonMsg;
+    kj::PromiseFulfillerPair<void> started;
 };
 
 

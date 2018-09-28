@@ -96,7 +96,7 @@ public:
         }
         std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
         if(Run* r = run.get()) {
-            return r->started.promise.then([context,r]() mutable {
+            return r->whenStarted().then([context,r]() mutable {
                 context.getResults().setResult(LaminarCi::MethodResult::SUCCESS);
                 context.getResults().setBuildNum(r->build);
             });
@@ -314,11 +314,11 @@ private:
             std::string badge;
             responseHeaders.clear();
             if(resource.compare(0, strlen("/archive/"), "/archive/") == 0) {
-                kj::Own<MappedFile> file = laminar.getArtefact(resource.substr(strlen("/archive/")));
-                if(file->address() != nullptr) {
+                KJ_IF_MAYBE(file, laminar.getArtefact(resource.substr(strlen("/archive/")))) {
+                    auto array = (*file)->mmap(0, (*file)->stat().size);
                     responseHeaders.add("Content-Transfer-Encoding", "binary");
-                    auto stream = response.send(200, "OK", responseHeaders, file->size());
-                    return stream->write(file->address(), file->size()).attach(kj::mv(file)).attach(kj::mv(stream));
+                    auto stream = response.send(200, "OK", responseHeaders, array.size());
+                    return stream->write(array.begin(), array.size()).attach(kj::mv(array)).attach(kj::mv(file)).attach(kj::mv(stream));
                 }
             } else if(resource.compare("/custom/style.css") == 0) {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/css; charset=utf-8");

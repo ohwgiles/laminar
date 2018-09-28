@@ -8,7 +8,7 @@ VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM debian:9-slim
-RUN apt-get update && apt-get install -y wget cmake g++ libsqlite3-dev libboost-filesystem1.62-dev zlib1g-dev
+RUN apt-get update && apt-get install -y wget cmake g++ libsqlite3-dev libboost-dev zlib1g-dev
 EOS
 )
 
@@ -50,7 +50,7 @@ Section:
 Priority: optional
 Architecture: amd64
 Maintainer: Oliver Giles <web ohwg net>
-Depends: libsqlite3-0, libboost-filesystem1.62.0, zlib1g
+Depends: libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 cat <<EOF > laminar/DEBIAN/postinst

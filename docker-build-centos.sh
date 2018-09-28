@@ -46,7 +46,7 @@ Version: $VERSION
 Release: 1
 License: GPL
 BuildRequires: systemd-units
-Requires: sqlite boost-filesystem zlib
+Requires: sqlite zlib
 
 %description
 Lightweight Continuous Integration Service

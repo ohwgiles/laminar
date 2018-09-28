@@ -25,8 +25,6 @@
 #include <memory>
 #include <unordered_map>
 
-typedef std::unordered_map<std::string, std::string> ParamMap;
-
 // Simple struct to define which information a frontend client is interested
 // in, both in initial request phase and real-time updates. It corresponds
 // loosely to frontend URLs
@@ -133,7 +131,7 @@ struct LaminarInterface {
     // Fetches the content of an artifact given its filename relative to
     // $LAMINAR_HOME/archive. Ideally, this would instead be served by a
     // proper web server which handles this url.
-    virtual kj::Own<MappedFile> getArtefact(std::string path) = 0;
+    virtual kj::Maybe<kj::Own<const kj::ReadableFile>> getArtefact(std::string path) = 0;
 
     // Given the name of a job, populate the provided string reference with
     // SVG content describing the last known state of the job. Returns false

@@ -25,6 +25,7 @@
 #include "database.h"
 
 #include <unordered_map>
+#include <kj/filesystem.h>
 
 // Node name to node object map
 typedef std::unordered_map<std::string, std::shared_ptr<Node>> NodeMap;
@@ -38,8 +39,8 @@ class Json;
 // the LaminarClient objects (see interface.h)
 class Laminar final : public LaminarInterface {
 public:
-    Laminar();
-    ~Laminar() override;
+    Laminar(const char* homePath);
+    ~Laminar() noexcept override;
 
     // Runs the application forever
     void run();
@@ -55,7 +56,7 @@ public:
 
     void sendStatus(LaminarClient* client) override;
     bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
-    kj::Own<MappedFile> getArtefact(std::string path) override;
+    kj::Maybe<kj::Own<const kj::ReadableFile>> getArtefact(std::string path) override;
     bool handleBadgeRequest(std::string job, std::string& badge) override;
     std::string getCustomCss() override;
     void abortAll() override;
@@ -67,7 +68,7 @@ private:
     bool tryStartRun(std::shared_ptr<Run> run, int queueIndex);
     kj::Promise<void> handleRunStep(Run *run);
     void runFinished(Run*);
-    bool nodeCanQueue(const Node&, const Run&) const;
+    bool nodeCanQueue(const Node&, std::string jobName) const;
     // expects that Json has started an array
     void populateArtifacts(Json& out, std::string job, uint num) const;
 
@@ -86,7 +87,8 @@ private:
     Database* db;
     Server* srv;
     NodeMap nodes;
-    std::string homeDir;
+    kj::Path homePath;
+    kj::Own<const kj::Directory> fsHome;
     std::set<LaminarClient*> clients;
     std::set<LaminarWaiter*> waiters;
     uint numKeepRunDirs;

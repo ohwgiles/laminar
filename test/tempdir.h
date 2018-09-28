@@ -16,32 +16,30 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#include <gtest/gtest.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/document.h>
-#include "laminar.h"
+#ifndef LAMINAR_TEMPDIR_H_
+#define LAMINAR_TEMPDIR_H_
 
-class TestLaminarClient : public LaminarClient {
+#include <kj/filesystem.h>
+#include <stdlib.h>
+
+class TempDir {
 public:
-    virtual void sendMessage(std::string p) { payload = p; }
-    std::string payload;
+    TempDir() :
+        path(mkdtemp()),
+        fs(kj::newDiskFilesystem()->getRoot().openSubdir(path, kj::WriteMode::CREATE|kj::WriteMode::MODIFY))
+    {
+    }
+    ~TempDir() noexcept {
+        kj::newDiskFilesystem()->getRoot().remove(path);
+    }
+    kj::Path path;
+    kj::Own<const kj::Directory> fs;
+private:
+    static kj::Path mkdtemp() {
+        char dir[] = "/tmp/laminar-test-XXXXXX";
+        ::mkdtemp(dir);
+        return kj::Path::parse(&dir[1]);
+    }
 };
 
-class LaminarTest : public testing::Test {
-protected:
-    LaminarTest() :
-        testing::Test(),
-        laminar("/tmp")
-    {}
-    Laminar laminar;
-};
-
-TEST_F(LaminarTest, StatusMessageContainsTime) {
-    TestLaminarClient testClient;
-    laminar.sendStatus(&testClient);
-    rapidjson::Document d;
-    d.Parse(testClient.payload.c_str());
-    ASSERT_TRUE(d.IsObject());
-    ASSERT_TRUE(d.HasMember("time"));
-    EXPECT_GE(1, d["time"].GetInt() - time(nullptr));
-}
+#endif // LAMINAR_TEMPDIR_H_

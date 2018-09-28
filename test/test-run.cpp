@@ -21,23 +21,31 @@
 #include "log.h"
 #include "node.h"
 #include "conf.h"
+#include "tempdir.h"
 
-class RunTest : public ::testing::Test {
+class RunTest : public testing::Test {
 protected:
-    virtual ~RunTest() noexcept override {}
-
-    void SetUp() override {
-        run.node = node;
+    RunTest() :
+        testing::Test(),
+        node(std::make_shared<Node>()),
+        tmp(),
+        run("foo", ParamMap{}, tmp.path.clone())
+    {
     }
+
+    ~RunTest() noexcept {}
+
     void wait() {
         int state = -1;
         waitpid(run.current_pid.orDefault(0), &state, 0);
         run.reaped(state);
     }
+
     void runAll() {
         while(!run.step())
             wait();
     }
+
     std::string readAllOutput() {
         std::string res;
         char tmp[64];
@@ -56,53 +64,66 @@ protected:
         return map;
     }
 
+    std::shared_ptr<Node> node;
+    TempDir tmp;
     class Run run;
-    std::shared_ptr<Node> node = std::shared_ptr<Node>(new Node);
+
+    void setRunLink(const char* path) {
+        tmp.fs->symlink(kj::Path{"cfg","jobs",run.name+".run"}, path, kj::WriteMode::CREATE|kj::WriteMode::CREATE_PARENT|kj::WriteMode::EXECUTABLE);
+    }
 };
 
 TEST_F(RunTest, WorkingDirectory) {
-    run.addScript("/bin/pwd", "/home");
+    setRunLink("/bin/pwd");
+    run.configure(1, node, *tmp.fs);
     runAll();
-    EXPECT_EQ("/home\n", readAllOutput());
+    std::string cwd{tmp.path.append(kj::Path{"run","foo","1"}).toString(true).cStr()};
+    EXPECT_EQ(cwd + "\n", readAllOutput());
 }
 
 TEST_F(RunTest, SuccessStatus) {
-    run.addScript("/bin/true");
+    setRunLink("/bin/true");
+    run.configure(1, node, *tmp.fs);
     runAll();
     EXPECT_EQ(RunState::SUCCESS, run.result);
 }
 
 TEST_F(RunTest, FailedStatus) {
-    run.addScript("/bin/false");
+    setRunLink("/bin/false");
+    run.configure(1, node, *tmp.fs);
     runAll();
     EXPECT_EQ(RunState::FAILED, run.result);
 }
 
 TEST_F(RunTest, Environment) {
-    run.name = "foo";
-    run.build = 1234;
-    run.laminarHome = "/tmp";
-    run.addScript("/usr/bin/env");
+    setRunLink("/usr/bin/env");
+    run.configure(1234, node, *tmp.fs);
     runAll();
+
+    std::string ws{tmp.path.append(kj::Path{"run","foo","workspace"}).toString(true).cStr()};
+    std::string archive{tmp.path.append(kj::Path{"archive","foo","1234"}).toString(true).cStr()};
+
     StringMap map = parseFromString(readAllOutput());
     EXPECT_EQ("1234", map["RUN"]);
     EXPECT_EQ("foo", map["JOB"]);
     EXPECT_EQ("success", map["RESULT"]);
     EXPECT_EQ("unknown", map["LAST_RESULT"]);
-    EXPECT_EQ("/tmp/run/foo/workspace", map["WORKSPACE"]);
-    EXPECT_EQ("/tmp/archive/foo/1234", map["ARCHIVE"]);
+    EXPECT_EQ(ws, map["WORKSPACE"]);
+    EXPECT_EQ(archive, map["ARCHIVE"]);
 }
 
 TEST_F(RunTest, ParamsToEnv) {
+    setRunLink("/usr/bin/env");
     run.params["foo"] = "bar";
-    run.addScript("/usr/bin/env");
+    run.configure(1, node, *tmp.fs);
     runAll();
     StringMap map = parseFromString(readAllOutput());
     EXPECT_EQ("bar", map["foo"]);
 }
 
 TEST_F(RunTest, Abort) {
-    run.addScript("/usr/bin/yes");
+    setRunLink("/usr/bin/yes");
+    run.configure(1, node, *tmp.fs);
     run.step();
     usleep(200); // TODO fix
     run.abort(false);
@@ -110,13 +131,3 @@ TEST_F(RunTest, Abort) {
     EXPECT_EQ(RunState::ABORTED, run.result);
 }
 
-TEST_F(RunTest, AbortAfterFailed) {
-    run.addScript("/bin/false");
-    runAll();
-    run.addScript("/usr/bin/yes");
-    run.step();
-    usleep(200); // TODO fix
-    run.abort(false);
-    wait();
-    EXPECT_EQ(RunState::FAILED, run.result);
-}
