@@ -75,11 +75,7 @@ public:
     kj::Promise<void> queue(QueueContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC queue", jobName);
-        ParamMap params;
-        for(auto p : context.getParams().getParams()) {
-            params[p.getName().cStr()] = p.getValue().cStr();
-        }
-        LaminarCi::MethodResult result = laminar.queueJob(jobName, params)
+        LaminarCi::MethodResult result = laminar.queueJob(jobName, params(context.getParams().getParams()))
                 ? LaminarCi::MethodResult::SUCCESS
                 : LaminarCi::MethodResult::FAILED;
         context.getResults().setResult(result);
@@ -90,11 +86,7 @@ public:
     kj::Promise<void> start(StartContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC start", jobName);
-        ParamMap params;
-        for(auto p : context.getParams().getParams()) {
-            params[p.getName().cStr()] = p.getValue().cStr();
-        }
-        std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
         if(Run* r = run.get()) {
             return r->whenStarted().then([context,r]() mutable {
                 context.getResults().setResult(LaminarCi::MethodResult::SUCCESS);
@@ -110,11 +102,7 @@ public:
     kj::Promise<void> run(RunContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC run", jobName);
-        ParamMap params;
-        for(auto p : context.getParams().getParams()) {
-            params[p.getName().cStr()] = p.getValue().cStr();
-        }
-        std::shared_ptr<Run> run = laminar.queueJob(jobName, params);
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
         if(const Run* r = run.get()) {
             runWaiters[r].emplace_back(kj::newPromiseAndFulfiller<RunState>());
             return runWaiters[r].back().promise.then([context,run](RunState state) mutable {
@@ -142,6 +130,15 @@ public:
     }
 
 private:
+    // Helper to convert an RPC parameter list to a hash map
+    ParamMap params(const capnp::List<LaminarCi::JobParam>::Reader& paramReader) {
+        ParamMap res;
+        for(auto p : paramReader) {
+            res[p.getName().cStr()] = p.getValue().cStr();
+        }
+        return res;
+    }
+
     // Implements LaminarWaiter::complete
     void complete(const Run* r) override {
         for(kj::PromiseFulfillerPair<RunState>& w : runWaiters[r])
