@@ -180,14 +180,6 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Missing $JOB or $RUN or param is not in the format key=value\n");
             return EINVAL;
         }
-    } else if(strcmp(argv[1], "lock") == 0) {
-        auto req = laminar.lockRequest();
-        req.setLockName(argv[2]);
-        req.send().wait(waitScope);
-    } else if(strcmp(argv[1], "release") == 0) {
-        auto req = laminar.releaseRequest();
-        req.setLockName(argv[2]);
-        req.send().wait(waitScope);
     } else {
         fprintf(stderr, "Unknown command %s\n", argv[1]);
         return EINVAL;

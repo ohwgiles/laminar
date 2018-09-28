@@ -141,31 +141,6 @@ public:
         return kj::READY_NOW;
     }
 
-    // Take a named lock
-    kj::Promise<void> lock(LockContext context) override {
-        std::string lockName = context.getParams().getLockName();
-        LLOG(INFO, "RPC lock", lockName);
-        auto& lockList = locks[lockName];
-        lockList.emplace_back(kj::newPromiseAndFulfiller<void>());
-        if(lockList.size() == 1)
-            lockList.front().fulfiller->fulfill();
-        return std::move(lockList.back().promise);
-    }
-
-    // Release a named lock
-    kj::Promise<void> release(ReleaseContext context) override {
-        std::string lockName = context.getParams().getLockName();
-        LLOG(INFO, "RPC release", lockName);
-        auto& lockList = locks[lockName];
-        if(lockList.size() == 0) {
-            LLOG(INFO, "Attempt to release unheld lock", lockName);
-            return kj::READY_NOW;
-        }
-        lockList.erase(lockList.begin());
-        if(lockList.size() > 0)
-            lockList.front().fulfiller->fulfill();
-        return kj::READY_NOW;
-    }
 private:
     // Implements LaminarWaiter::complete
     void complete(const Run* r) override {
@@ -175,7 +150,6 @@ private:
     }
 private:
     LaminarInterface& laminar;
-    std::unordered_map<std::string, std::list<kj::PromiseFulfillerPair<void>>> locks;
     std::unordered_map<const Run*, std::list<kj::PromiseFulfillerPair<RunState>>> runWaiters;
 };
 

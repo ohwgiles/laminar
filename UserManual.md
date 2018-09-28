@@ -390,9 +390,46 @@ cmake $WORKSPACE/myproject
 make -j4
 ```
 
-**CAUTION**: By default, laminar permits multiple simultaneous runs of the same job. If a job can **modify** the workspace, this might result in inconsistent builds when the job has multiple simultaneous runs. This is unlikely to be an issue for nightly builds, but for SCM-triggered builds it will be. To solve this, use [nodes](#Nodes-and-Tags) to restrict simultaneous execution of jobs, or [locks](#Locks) to temporarily take exclusive control of a resource.
+Laminar will automatically create the workspace for a job if it doesn't exist when a job is executed. In this case, the `/var/lib/laminar/cfg/jobs/JOBNAME.init` will be executed if it exists. This is an excellent place to prepare the workspace to a state where subsequent builds can rely on its content:
 
-Laminar will automatically create the workspace for a job if it doesn't exist when a job is executed. In this case, the `/var/lib/laminar/cfg/jobs/JOBNAME.init` will be executed if it exists. This is an excellent place to prepare the workspace to a state where subsequent builds can rely on its content.
+```bash
+#!/bin/bash -e
+echo Initializing workspace
+git clone git@example.com:company/project.git .
+```
+
+**CAUTION**: By default, laminar permits multiple simultaneous runs of the same job. If a job can **modify** the workspace, this might result in inconsistent builds when simultaneous runs access the same content. This is unlikely to be an issue for nightly builds, but for SCM-triggered builds it will be. To solve this, use [nodes](#Nodes-and-Tags) to restrict simultaneous execution of jobs, or consider [flock](https://linux.die.net/man/1/flock).
+
+The following example uses [flock](https://linux.die.net/man/1/flock) to efficiently share a git repository workspace between multiple simultaneous builds:
+
+```bash
+#!/bin/bash -xe
+
+# This script expects to be passed the parameter 'rev' which
+# should refer to a specific git commit in its source repository.
+# The commit ids could have been read from a server-side
+# post-commit git hook, where many commits could have been pushed
+# at once, but we want to check them all individually. This means
+# this job can be executed several times (with different values
+# for $rev) simultaneously.
+
+# Locked subshell for modifying the workspace
+(
+  flock 200
+  cd $WORKSPACE
+  # Download all the latest commits
+  git fetch
+  git checkout $rev
+  cd -
+  # Fast copy (hard-link) the source from the specific checkout
+  # to the build dir. This relies on the fact that git unlinks
+  # during checkout, effectively implementing copy-on-write.
+  cp -al $WORKSPACE/src src
+) 200>$WORKSPACE
+
+# run the (much longer) regular build process
+make -C src
+```
 
 ---
 
@@ -491,45 +528,6 @@ docker run --rm -ti -v $PWD:/root ubuntu /bin/bash -xe <<EOF
   git clone http://...
   ...
 EOF
-```
-
----
-
-# Locks
-
-*Locks* are a simple way to control access to shared resources. Any string may be used as a lock name. The command `laminarc lock mylock` locks `mylock`. Subsequent calls to `laminarc lock mylock` will block until `laminarc release mylock` is called a corresponding number of times.
-
-**CAUTION**: Locks are independent of any other job control mechanism in laminar, and will not be released automatically. Making sure calls to lock and release are symmetric is the administrator's responsibility.
-
-An example use builds on the situation described in [Data sharing and Workspaces](#Data-sharing-and-Workspaces), where a large git repository is stored in the workspace. Conisder this run script:
-
-```bash
-#!/bin/bash -x
-
-# This script expects to be passed the parameter `rev` which
-# should refer to a specific git commit in its source repository.
-# The commit ids could have been read from a server-side
-# post-commit git hook, where many commits could have been pushed
-# at once, but we want to check them all individually. This means
-# this job can be executed several times (with different commit ids)
-# at once.
-
-cd $WORKSPACE
-# Acquire a lock for modifying the workspace
-laminarc lock $JOB-workspace
-# Download all the latest commits
-git fetch
-git checkout $rev
-cd -
-# Fast copy (hard-link) the specific checkout to the build dir
-cp -al $WORKSPACE/src src
-# Release the lock to allow other jobs to do the same
-laminarc release $JOB-workspace
-
-# run the (much longer) build process
-set -e
-cmake src
-make
 ```
 
 ---
