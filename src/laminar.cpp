@@ -282,7 +282,7 @@ void Laminar::sendStatus(LaminarClient* client) {
 
     } else if(client->scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
-        db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds GROUP BY name ORDER BY number DESC")
+        db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b JOIN (SELECT name n,MAX(number) l FROM builds GROUP BY n) q ON b.name = q.n AND b.number = q.l")
         .fetch<str,uint,time_t,time_t,int>([&](str name,uint number, time_t started, time_t completed, int result){
             j.StartObject();
             j.set("name", name);
