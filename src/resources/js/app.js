@@ -15,6 +15,14 @@ Vue.filter('iecFileSize', function(bytes) {
     ['B', 'KiB', 'MiB', 'GiB', 'TiB'][exp];
 });
 
+const timeScale = function(max){
+  return max > 3600
+  ? { scale:function(v){return Math.round(v/360)/10}, label:'Hours' }
+  : max > 60
+  ? { scale:function(v){return Math.round(v/60)/10}, label:'Minutes' }
+  : { scale:function(v){return v;}, label:'Seconds' };
+}
+
 const wsp = function(path) {
   return new WebSocket((location.protocol === 'https:'?'wss://':'ws://')
                           + location.host + path);
@@ -269,9 +277,7 @@ const Home = function() {
             }}}]}
           }
         });
-        var tpjScale = function(max){
-          return max > 3600 ? 3600 : max > 60 ? 60 : 1;
-        }(Math.max(Object.values(msg.timePerJob)));
+        var tpjScale = timeScale(Math.max(Object.values(msg.timePerJob)));
         chtTimePerJob = new Chart(document.getElementById("chartTpj"), {
           type: 'horizontalBar',
           data: {
@@ -284,18 +290,14 @@ const Home = function() {
           },
           options:{
             scales:{xAxes:[{
-              ticks:{userCallback: (label, index, labels)=>{
-                return tpjScale == 1 ? label : Math.round(label/(tpjScale/10))/10;
-              }},
+              ticks:{userCallback: tpjScale.scale},
               scaleLabel: {
                 display: true,
-                labelString: function(){
-                  return tpjScale == 3600 ? 'Hours' : tpjScale == 60 ? 'Minutes' : 'Seconds';
-                }()
+                labelString: tpjScale.label
               }
             }]},
             tooltips:{callbacks:{label:(tip, data)=>{
-              return data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel + (tpjScale == 3600 ? ' hours' : tpjScale == 60 ? ' minutes' : ' seconds');
+              return data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel + ' ' + tpjScale.label.toLowerCase();
             }}}
           }
         });
@@ -345,9 +347,7 @@ const Home = function() {
             }
           }
         });
-        var btcScale = function(max){
-          return max > 3600 ? 3600 : max > 60 ? 60 : 1;
-        }(Math.max(msg.buildTimeChanges.map((e)=>{return Math.max(e.durations)})));
+        var btcScale = timeScale(Math.max(msg.buildTimeChanges.map((e)=>{return Math.max(e.durations)})));
         var chtBuildTimeChanges = new Chart(document.getElementById("chartBuildTimeChanges"), {
           type: 'line',
           data: {
@@ -364,14 +364,10 @@ const Home = function() {
             scales:{
               xAxes:[{ticks:{display: false}}],
               yAxes:[{
-                ticks:{userCallback: (label, index, labels)=>{
-                  return btcScale == 1 ? label : Math.round(label/(btcScale/10))/10;
-                }},
+                ticks:{userCallback: btcScale.scale},
                 scaleLabel: {
                   display: true,
-                  labelString: function(){
-                    return btcScale == 3600 ? 'Hours' : btcScale == 60 ? 'Minutes' : 'Seconds';
-                  }()
+                  labelString: btcScale.label
                 }
               }]
             },
@@ -562,6 +558,7 @@ var Job = function() {
         // old chart and recreate it to prevent flickering of old data
         if(chtBt)
           chtBt.destroy();
+        var btScale = timeScale(Math.max(msg.recent.map(v=>{v.completed-v.started})));
         chtBt = new Chart(document.getElementById("chartBt"), {
           type: 'bar',
           data: {
@@ -599,8 +596,15 @@ var Job = function() {
                   display: false,
                   drawBorder: false
                 }
+              }],
+              yAxes:[{
+                ticks:{userCallback: btScale.scale},
+                scaleLabel:{display: true, labelString: btScale.label}
               }]
-            }
+            },
+            tooltips:{callbacks:{label:(tip, data)=>{
+              return data.datasets[tip.datasetIndex].label + ': ' + tip.yLabel + ' ' + btScale.label.toLowerCase();
+            }}}
           }
         });
 
