@@ -178,20 +178,22 @@ void Laminar::sendStatus(LaminarClient* client) {
     j.set("time", time(nullptr));
     j.startObject("data");
     if(client->scope.type == MonitorScope::RUN) {
-        db->stmt("SELECT queuedAt,startedAt,completedAt, result, reason FROM builds WHERE name = ? AND number = ?")
+        db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,parentJob,parentBuild FROM builds WHERE name = ? AND number = ?")
         .bind(client->scope.job, client->scope.num)
-        .fetch<time_t, time_t, time_t, int, std::string>([&](time_t queued, time_t started, time_t completed, int result, std::string reason) {
+        .fetch<time_t, time_t, time_t, int, std::string, std::string, uint>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint parentBuild) {
             j.set("queued", started-queued);
             j.set("started", started);
             j.set("completed", completed);
             j.set("result", to_string(RunState(result)));
             j.set("reason", reason);
+            j.startObject("upstream").set("name", parentJob).set("num", parentBuild).EndObject(2);
         });
         if(const Run* run = activeRun(client->scope.job, client->scope.num)) {
             j.set("queued", run->startedAt - run->queuedAt);
             j.set("started", run->startedAt);
-            j.set("reason", run->reason());
             j.set("result", to_string(RunState::RUNNING));
+            j.set("reason", run->reason());
+            j.startObject("upstream").set("name", run->parentName).set("num", run->parentBuild).EndObject(2);
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
              .fetch<uint>([&](uint lastRuntime){

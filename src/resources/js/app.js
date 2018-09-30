@@ -655,14 +655,14 @@ var Job = function() {
 
 const Run = function() {
   var state = {
-    job: { artifacts: [] },
+    job: { artifacts: [], upstream: {} },
     latestNum: null,
     log: '',
     autoscroll: false
   };
   var firstLog = false;
   var logHandler = function(vm, d) {
-    state.log += ansi_up.ansi_to_html(d.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+    state.log += ansi_up.ansi_to_html(d.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="/jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="/jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
     vm.$forceUpdate();
     if (!firstLog) {
       firstLog = true;

@@ -159,9 +159,6 @@ bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory
 }
 
 std::string Run::reason() const {
-    if(!parentName.empty()) {
-        return std::string("Triggered by upstream ") + parentName + " #" + std::to_string(parentBuild);
-    }
     return reasonMsg;
 }
 

@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2018 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -36,20 +36,13 @@ static int setParams(int argc, char** argv, T& request) {
         n++;
     }
 
-    int argsConsumed = n;
-
     char* job = getenv("JOB");
     char* num = getenv("RUN");
     char* reason = getenv("LAMINAR_REASON");
 
-    if(job && num) n+=2;
-    else if(reason) n++;
+    auto params = request.initParams(n + (job&&num?2:0) + (reason?1:0));
 
-    if(n == 0) return argsConsumed;
-
-    auto params = request.initParams(n);
-
-    for(int i = 0; i < argsConsumed; ++i) {
+    for(int i = 0; i < n; ++i) {
         char* name = argv[i];
         char* val = strchr(name, '=');
         *val++ = '\0';
@@ -57,17 +50,26 @@ static int setParams(int argc, char** argv, T& request) {
         params[i].setValue(val);
     }
 
+    int argsConsumed = n;
+
     if(job && num) {
-        params[argsConsumed].setName("=parentJob");
-        params[argsConsumed].setValue(job);
-        params[argsConsumed+1].setName("=parentBuild");
-        params[argsConsumed+1].setValue(num);
-    } else if(reason) {
-        params[argsConsumed].setName("=reason");
-        params[argsConsumed].setValue(reason);
+        params[n].setName("=parentJob");
+        params[n++].setValue(job);
+        params[n].setName("=parentBuild");
+        params[n++].setValue(num);
+    }
+    if(reason) {
+        params[n].setName("=reason");
+        params[n].setValue(reason);
     }
 
     return argsConsumed;
+}
+
+static void printTriggerLink(const char* job, uint run) {
+    // use a private ANSI CSI sequence to mark the JOB:NUM so the
+    // frontend can recognise it and generate a hyperlink.
+    printf("\033[{%s:%d\033\\\n", job, run);
 }
 
 int main(int argc, char** argv) {
@@ -129,7 +131,7 @@ int main(int argc, char** argv) {
                     fprintf(stderr, "Failed to start job '%s'\n", argv[2]);
                     ret = ENOENT;
                 }
-                printf("%s:%d\n", argv[jobNameIndex], resp.getBuildNum());
+                printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
             }));
             jobNameIndex += n + 1;
         } while(jobNameIndex < argc);
@@ -150,7 +152,7 @@ int main(int argc, char** argv) {
             req.setJobName(argv[jobNameIndex]);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
             ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::RunResults> resp){
-                printf("%s:%d\n", argv[jobNameIndex], resp.getBuildNum());
+                printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
                 if(resp.getResult() != LaminarCi::JobResult::SUCCESS) {
                     ret = EFAILED;
                 }

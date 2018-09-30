@@ -294,6 +294,7 @@
      <div style="clear:both;"></div>
      <dl class="dl-horizontal">
       <dt>Reason</dt><dd>{{job.reason}}</dd>
+      <dt v-show="job.upstream.num > 0">Upstream</dt><dd v-show="job.upstream.num > 0"><router-link :to="'/jobs/'+job.upstream.name">{{job.upstream.name}}</router-link> <router-link :to="'/jobs/'+job.upstream.name+'/'+job.upstream.num">#{{job.upstream.num}}</router-link></li></dd>
       <dt>Queued for</dt><dd>{{job.queued}}s</dd>
       <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
       <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
