@@ -693,7 +693,7 @@ const Run = function() {
         this.$forceUpdate();
       },
       job_completed: function(data) {
-        state.job = data;
+        state.job = Object.assign(state.job, data);
         state.jobsRunning = [];
         this.$forceUpdate();
       },
