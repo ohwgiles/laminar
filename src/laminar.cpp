@@ -458,8 +458,8 @@ void Laminar::run() {
     const char* listen_http = getenv("LAMINAR_BIND_HTTP") ?: INTADDR_HTTP_DEFAULT;
 
     srv = new Server(*this, listen_rpc, listen_http);
-    srv->addWatchPath((homePath/"cfg"/"nodes").toString().cStr());
-    srv->addWatchPath((homePath/"cfg"/"jobs").toString().cStr());
+    srv->addWatchPath((homePath/"cfg"/"nodes").toString(true).cStr());
+    srv->addWatchPath((homePath/"cfg"/"jobs").toString(true).cStr());
     srv->start();
 }
 
@@ -478,9 +478,9 @@ bool Laminar::loadConfiguration() {
             if(entry.type != kj::FsNode::Type::FILE || !entry.name.endsWith(".conf"))
                 continue;
 
-            StringMap conf = parseConfFile((homePath/entry.name).toString().cStr());
+            StringMap conf = parseConfFile((homePath/"cfg"/"nodes"/entry.name).toString(true).cStr());
 
-            std::string nodeName(entry.name.cStr(), entry.name.findLast('.').orDefault(0)-1);
+            std::string nodeName(entry.name.cStr(), entry.name.findLast('.').orDefault(0));
             auto existingNode = nodes.find(nodeName);
             std::shared_ptr<Node> node = existingNode == nodes.end() ? nodes.emplace(nodeName, std::shared_ptr<Node>(new Node)).first->second : existingNode->second;
             node->name = nodeName;
@@ -511,6 +511,7 @@ bool Laminar::loadConfiguration() {
 
     // add a default node
     if(nodes.empty()) {
+        LLOG(INFO, "Creating a default node with 6 executors");
         std::shared_ptr<Node> node(new Node);
         node->name = "";
         node->numExecutors = 6;
@@ -521,9 +522,9 @@ bool Laminar::loadConfiguration() {
         for(kj::Directory::Entry& entry : (*jobsDir)->listEntries()) {
             if(entry.type != kj::FsNode::Type::FILE || !entry.name.endsWith(".conf"))
                 continue;
-            StringMap conf = parseConfFile((homePath/entry.name).toString().cStr());
+            StringMap conf = parseConfFile((homePath/"cfg"/"jobs"/entry.name).toString(true).cStr());
 
-            std::string jobName(entry.name.cStr(), entry.name.findLast('.').orDefault(0)-1);
+            std::string jobName(entry.name.cStr(), entry.name.findLast('.').orDefault(0));
 
             std::string tags = conf.get<std::string>("TAGS");
             if(!tags.empty()) {
@@ -568,6 +569,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 
 void Laminar::notifyConfigChanged()
 {
+    LLOG(INFO, "Reloading configuration");
     loadConfiguration();
     // config change may allow stuck jobs to dequeue
     assignNewJobs();
