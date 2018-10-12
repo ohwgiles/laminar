@@ -117,12 +117,58 @@ public:
 
     // Set a parameter on a running build
     kj::Promise<void> set(SetContext context) override {
-        std::string jobName = context.getParams().getJobName();
-        uint buildNum = context.getParams().getBuildNum();
+        std::string jobName = context.getParams().getRun().getJob();
+        uint buildNum = context.getParams().getRun().getBuildNum();
         LLOG(INFO, "RPC set", jobName, buildNum);
 
         LaminarCi::MethodResult result = laminar.setParam(jobName, buildNum,
             context.getParams().getParam().getName(), context.getParams().getParam().getValue())
+                ? LaminarCi::MethodResult::SUCCESS
+                : LaminarCi::MethodResult::FAILED;
+        context.getResults().setResult(result);
+        return kj::READY_NOW;
+    }
+
+    // List jobs in queue
+    kj::Promise<void> listQueued(ListQueuedContext context) override {
+        const std::list<std::shared_ptr<Run>>& queue = laminar.listQueuedJobs();
+        auto res = context.getResults().initResult(queue.size());
+        int i = 0;
+        for(auto it : queue) {
+            res.set(i++, it->name);
+        }
+        return kj::READY_NOW;
+    }
+
+    // List running jobs
+    kj::Promise<void> listRunning(ListRunningContext context) override {
+        const RunSet& active = laminar.listRunningJobs();
+        auto res = context.getResults().initResult(active.size());
+        int i = 0;
+        for(auto it : active) {
+            res[i].setJob(it->name);
+            res[i].setBuildNum(it->build);
+            i++;
+        }
+        return kj::READY_NOW;
+    }
+
+    // List known jobs
+    kj::Promise<void> listKnown(ListKnownContext context) override {
+        std::list<std::string> known = laminar.listKnownJobs();
+        auto res = context.getResults().initResult(known.size());
+        int i = 0;
+        for(auto it : known) {
+            res.set(i++, it);
+        }
+        return kj::READY_NOW;
+    }
+
+    kj::Promise<void> abort(AbortContext context) override {
+        std::string jobName = context.getParams().getRun().getJob();
+        uint buildNum = context.getParams().getRun().getBuildNum();
+        LLOG(INFO, "RPC abort", jobName, buildNum);
+        LaminarCi::MethodResult result = laminar.abort(jobName, buildNum)
                 ? LaminarCi::MethodResult::SUCCESS
                 : LaminarCi::MethodResult::FAILED;
         context.getResults().setResult(result);

@@ -56,9 +56,13 @@ public:
 
     void sendStatus(LaminarClient* client) override;
     bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
+    const std::list<std::shared_ptr<Run>>& listQueuedJobs() override;
+    const RunSet& listRunningJobs() override;
+    std::list<std::string> listKnownJobs() override;
     kj::Maybe<kj::Own<const kj::ReadableFile>> getArtefact(std::string path) override;
     bool handleBadgeRequest(std::string job, std::string& badge) override;
     std::string getCustomCss() override;
+    bool abort(std::string job, uint buildNum) override;
     void abortAll() override;
     void notifyConfigChanged() override;
 

@@ -173,14 +173,48 @@ int main(int argc, char** argv) {
             char* name = argv[2];
             *eq++ = '\0';
             char* val = eq;
-            req.setJobName(job);
-            req.setBuildNum(atoi(num));
+            req.getRun().setJob(job);
+            req.getRun().setBuildNum(atoi(num));
             req.getParam().setName(name);
             req.getParam().setValue(val);
             req.send().wait(waitScope);
         } else {
             fprintf(stderr, "Missing $JOB or $RUN or param is not in the format key=value\n");
             return EINVAL;
+        }
+    } else if(strcmp(argv[1], "abort") == 0) {
+        if(argc != 4) {
+            fprintf(stderr, "Usage %s abort <jobName> <jobNumber>\n", argv[0]);
+            return EINVAL;
+        }
+        auto req = laminar.abortRequest();
+        req.getRun().setJob(argv[2]);
+        req.getRun().setBuildNum(atoi(argv[3]));
+        if(req.send().wait(waitScope).getResult() != LaminarCi::MethodResult::SUCCESS)
+            ret = EFAILED;
+    } else if(strcmp(argv[1], "show-jobs") == 0) {
+        if(argc != 2) {
+            fprintf(stderr, "Usage: %s show-jobs\n", argv[0]);
+            return EINVAL;
+        }
+        for(auto it : laminar.listKnownRequest().send().wait(waitScope).getResult()) {
+            printf("%s\n", it.cStr());
+        }
+    } else if(strcmp(argv[1], "show-queued") == 0) {
+        if(argc != 2) {
+            fprintf(stderr, "Usage: %s show-queued\n", argv[0]);
+            return EINVAL;
+        }
+        for(auto it : laminar.listQueuedRequest().send().wait(waitScope).getResult()) {
+            printf("%s\n", it.cStr());
+        }
+    } else if(strcmp(argv[1], "show-running") == 0) {
+        if(argc != 2) {
+            fprintf(stderr, "Usage: %s show-running\n", argv[0]);
+            return EINVAL;
+        }
+        for(auto it : laminar.listRunningRequest().send().wait(waitScope).getResult()) {
+            printf("%s:%d\n", it.getJob().cStr(), it.getBuildNum());
         }
     } else {
         fprintf(stderr, "Unknown command %s\n", argv[1]);

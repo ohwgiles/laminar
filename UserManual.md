@@ -142,6 +142,14 @@ laminarc queue test-host test-target
 
 This is against the design principles of Laminar and was deliberately excluded. Laminar's web UI is strictly read-only, making it simple to deploy in mixed-permission or public environments without an authentication layer. Furthermore, Laminar tries to encourage ideal continuous integration, where manual triggering is an anti-pattern. Want to make a release? Push a git tag and implement a post-receive hook. Want to re-run a build due to sporadic failure/flaky tests? Fix the tests locally and push a patch. Experience shows that a manual trigger such as a "Build Now" button is often used as a crutch to avoid doing the correct thing, negatively impacting traceability and quality.
 
+## Listing jobs from the command line
+
+`laminarc` may be used to inspect the server state:
+
+- `laminarc show-jobs`: Lists all files matching `/var/lib/laminar/cfg/jobs/*.run` on the server side.
+- `laminarc show-running`: Lists all currently running jobs and their run numbers.
+- `laminarc show-queued`: Lists all jobs waiting in the queue.
+
 ## Triggering a job at a certain time
 
 This is what `cron` is for. To trigger a build of `hello` every day at 0300, add
@@ -433,13 +441,19 @@ make -C src
 
 ---
 
-# Abort on timeout
+# Aborting running jobs
+
+## After a timeout
 
 To configure a maximum execution time in seconds for a job, add a line to `/var/lib/laminar/cfg/jobs/JOBNAME.conf`:
 
 ```
 TIMEOUT=120
 ```
+
+## Manually
+
+`laminarc abort $JOBNAME $NUMBER`
 
 ---
 
@@ -607,5 +621,9 @@ Finally, variables supplied on the command-line call to `laminarc queue`, `lamin
 - `start [JOB [PARAMS...]]...` starts one or more jobs with optional parameters, returning when the jobs begin execution.
 - `run [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters and waits for the completion of all jobs. Returns a non-zero error code if any job failed.
 - `set [VARIABLE=VALUE]...` sets one or more variables to be exported in subsequent scripts for the run identified by the `$JOB` and `$RUN` environment variables
+- `show-jobs` shows the known jobs on the server (`$LAMINAR_HOME/cfg/jobs/*.run`).
+- `show-running` shows the currently running jobs with their numbers.
+- `show-queued` shows the names of the jobs waiting in the queue.
+- `abort JOB NUMBER` manually aborts a currently running job by name and number.
 
 `laminarc` connects to `laminard` using the address supplied by the `LAMINAR_HOST` environment variable. If it is not set, `laminarc` will first attempt to use `LAMINAR_BIND_RPC`, which will be available if `laminarc` is executed from a script within `laminard`. If neither `LAMINAR_HOST` nor `LAMINAR_BIND_RPC` is set, `laminarc` will assume a default host of `unix-abstract:laminar`.

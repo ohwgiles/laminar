@@ -128,6 +128,15 @@ struct LaminarInterface {
     // the environment of subsequent scripts.
     virtual bool setParam(std::string job, uint buildNum, std::string param, std::string value) = 0;
 
+    // Gets the list of jobs currently waiting in the execution queue
+    virtual const std::list<std::shared_ptr<Run>>& listQueuedJobs() = 0;
+
+    // Gets the list of currently executing jobs
+    virtual const RunSet& listRunningJobs() = 0;
+
+    // Gets the list of known jobs - scans cfg/jobs for *.run files
+    virtual std::list<std::string> listKnownJobs() = 0;
+
     // Fetches the content of an artifact given its filename relative to
     // $LAMINAR_HOME/archive. Ideally, this would instead be served by a
     // proper web server which handles this url.
@@ -142,6 +151,9 @@ struct LaminarInterface {
     // string. Ideally, this would instead be served by a proper web server
     // which handles this url.
     virtual std::string getCustomCss() = 0;
+
+    // Aborts a single job
+    virtual bool abort(std::string job, uint buildNum) = 0;
 
     // Abort all running jobs
     virtual void abortAll() = 0;

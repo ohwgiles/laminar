@@ -49,8 +49,13 @@ public:
     MOCK_METHOD1(deregisterWaiter, void(LaminarWaiter* waiter));
     MOCK_METHOD1(sendStatus, void(LaminarClient* client));
     MOCK_METHOD4(setParam, bool(std::string job, uint buildNum, std::string param, std::string value));
+    MOCK_METHOD0(listQueuedJobs, const std::list<std::shared_ptr<Run>>&());
+    MOCK_METHOD0(listRunningJobs, const RunSet&());
+    MOCK_METHOD0(listKnownJobs, std::list<std::string>());
+
     MOCK_METHOD0(getCustomCss, std::string());
     MOCK_METHOD2(handleBadgeRequest, bool(std::string, std::string&));
+    MOCK_METHOD2(abort, bool(std::string, uint));
     MOCK_METHOD0(abortAll, void());
     MOCK_METHOD0(notifyConfigChanged, void());
 };

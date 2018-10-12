@@ -130,6 +130,25 @@ bool Laminar::setParam(std::string job, uint buildNum, std::string param, std::s
     return false;
 }
 
+const std::list<std::shared_ptr<Run>>& Laminar::listQueuedJobs() {
+    return queuedJobs;
+}
+
+const RunSet& Laminar::listRunningJobs() {
+    return activeJobs;
+}
+
+std::list<std::string> Laminar::listKnownJobs() {
+    std::list<std::string> res;
+    KJ_IF_MAYBE(dir, fsHome->tryOpenSubdir(kj::Path{"cfg","jobs"})) {
+        for(kj::Directory::Entry& entry : (*dir)->listEntries()) {
+            if(entry.type == kj::FsNode::Type::FILE && entry.name.endsWith(".run")) {
+                res.emplace_back(entry.name.cStr(), entry.name.findLast('.').orDefault(0));
+            }
+        }
+    }
+    return res;
+}
 
 void Laminar::populateArtifacts(Json &j, std::string job, uint num) const {
     kj::Path runArchive{job,std::to_string(num)};
@@ -573,6 +592,14 @@ void Laminar::notifyConfigChanged()
     loadConfiguration();
     // config change may allow stuck jobs to dequeue
     assignNewJobs();
+}
+
+bool Laminar::abort(std::string job, uint buildNum) {
+    if(Run* run = activeRun(job, buildNum)) {
+        run->abort(true);
+        return true;
+    }
+    return false;
 }
 
 void Laminar::abortAll() {
