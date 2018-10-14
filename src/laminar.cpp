@@ -142,7 +142,7 @@ std::list<std::string> Laminar::listKnownJobs() {
     std::list<std::string> res;
     KJ_IF_MAYBE(dir, fsHome->tryOpenSubdir(kj::Path{"cfg","jobs"})) {
         for(kj::Directory::Entry& entry : (*dir)->listEntries()) {
-            if(entry.type == kj::FsNode::Type::FILE && entry.name.endsWith(".run")) {
+            if(entry.name.endsWith(".run")) {
                 res.emplace_back(entry.name.cStr(), entry.name.findLast('.').orDefault(0));
             }
         }
@@ -494,7 +494,7 @@ bool Laminar::loadConfiguration() {
 
     KJ_IF_MAYBE(nodeDir, fsHome->tryOpenSubdir(kj::Path{"cfg","nodes"})) {
         for(kj::Directory::Entry& entry : (*nodeDir)->listEntries()) {
-            if(entry.type != kj::FsNode::Type::FILE || !entry.name.endsWith(".conf"))
+            if(!entry.name.endsWith(".conf"))
                 continue;
 
             StringMap conf = parseConfFile((homePath/"cfg"/"nodes"/entry.name).toString(true).cStr());
@@ -505,15 +505,15 @@ bool Laminar::loadConfiguration() {
             node->name = nodeName;
             node->numExecutors = conf.get<int>("EXECUTORS", 6);
 
-            std::string tags = conf.get<std::string>("TAGS");
-            if(!tags.empty()) {
-                std::istringstream iss(tags);
-                std::set<std::string> tagList;
+            std::string tagString = conf.get<std::string>("TAGS");
+            std::set<std::string> tagList;
+            if(!tagString.empty()) {
+                std::istringstream iss(tagString);
                 std::string tag;
                 while(std::getline(iss, tag, ','))
                     tagList.insert(tag);
-                node->tags = tagList;
             }
+            std::swap(node->tags, tagList);
 
             knownNodes.insert(nodeName);
         }
@@ -539,7 +539,7 @@ bool Laminar::loadConfiguration() {
 
     KJ_IF_MAYBE(jobsDir, fsHome->tryOpenSubdir(kj::Path{"cfg","jobs"})) {
         for(kj::Directory::Entry& entry : (*jobsDir)->listEntries()) {
-            if(entry.type != kj::FsNode::Type::FILE || !entry.name.endsWith(".conf"))
+            if(!entry.name.endsWith(".conf"))
                 continue;
             StringMap conf = parseConfFile((homePath/"cfg"/"jobs"/entry.name).toString(true).cStr());
 

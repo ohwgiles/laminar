@@ -198,7 +198,7 @@ bool Run::step() {
 
         // conf file env vars
         for(kj::Path& file : env) {
-            StringMap vars = parseConfFile((rootPath/file).toString().cStr());
+            StringMap vars = parseConfFile((rootPath/file).toString(true).cStr());
             for(auto& it : vars) {
                 setenv(it.first.c_str(), it.second.c_str(), true);
             }
