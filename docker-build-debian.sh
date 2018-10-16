@@ -37,7 +37,7 @@ cmake -DRAPIDJSON_BUILD_EXAMPLES=off .
 make install
 
 cd /build
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ /laminar
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ -DZSH_COMPLETIONS_DIR=/usr/share/zsh/functions/Completion/Unix /laminar
 make -j4
 mkdir laminar
 make DESTDIR=laminar install/strip
