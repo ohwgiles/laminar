@@ -97,7 +97,7 @@ Laminar uses your script's exit code to determine whether to mark the run as suc
 Don't forget to mark the script executable:
 
 ```bash
-chmod +x /var/lib/laminar/cfg/hello.run
+chmod +x /var/lib/laminar/cfg/jobs/hello.run
 ```
 
 ---
@@ -128,7 +128,7 @@ To launch and run the `hello` job to completion, execute
 laminarc run hello
 ```
 
-In all cases, a started run means the `/var/lib/laminar/cfg/hello.run` script will be executed, with a working directory of `/var/lib/laminar/run/hello/1` (or current run number)
+In all cases, a started run means the `/var/lib/laminar/cfg/jobs/hello.run` script will be executed, with a working directory of `/var/lib/laminar/run/hello/1` (or current run number)
 
 The result and log output should be visible in the Web UI at http://localhost:8080/jobs/hello/1
 
