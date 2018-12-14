@@ -98,7 +98,7 @@ if(BUILD_TESTS)
     target_link_libraries(laminar-tests ${GTEST_BOTH_LIBRARIES} gmock capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 endif()
 
-set(SYSTEMD_UNITDIR /lib/systemd/system CACHE PATH "Path to systemd unit files")
+set(SYSTEMD_UNITDIR lib/systemd/system CACHE PATH "Path to systemd unit files")
 set(BASH_COMPLETIONS_DIR usr/share/bash-completion/completions CACHE PATH "Path to bash completions directory")
 set(ZSH_COMPLETIONS_DIR usr/share/zsh/site-functions CACHE PATH "Path to zsh completions directory")
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
