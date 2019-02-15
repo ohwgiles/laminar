@@ -645,8 +645,8 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
             });
 
             // Actually schedules the Run steps
-            kj::Promise<void> exec = handleRunStep(run.get()).then([this,r=run.get()]{
-                runFinished(r);
+            kj::Promise<void> exec = handleRunStep(run.get()).then([=]{
+                runFinished(run.get());
             });
             if(run->timeout > 0) {
                 exec = exec.attach(srv->addTimeout(run->timeout, [r=run.get()](){

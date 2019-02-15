@@ -83,7 +83,7 @@ public:
     kj::Maybe<pid_t> current_pid;
     int output_fd;
     std::unordered_map<std::string, std::string> params;
-    int timeout;
+    int timeout = 0;
 
     time_t queuedAt;
     time_t startedAt;
