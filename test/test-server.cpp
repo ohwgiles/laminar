@@ -47,6 +47,9 @@ public:
     MOCK_METHOD2(queueJob, std::shared_ptr<Run>(std::string name, ParamMap params));
     MOCK_METHOD1(registerWaiter, void(LaminarWaiter* waiter));
     MOCK_METHOD1(deregisterWaiter, void(LaminarWaiter* waiter));
+    MOCK_METHOD1(latestRun, uint(std::string));
+    MOCK_METHOD4(handleLogRequest, bool(std::string, uint, std::string&, bool&));
+
     MOCK_METHOD1(sendStatus, void(LaminarClient* client));
     MOCK_METHOD4(setParam, bool(std::string job, uint buildNum, std::string param, std::string value));
     MOCK_METHOD0(listQueuedJobs, const std::list<std::shared_ptr<Run>>&());

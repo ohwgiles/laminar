@@ -205,6 +205,12 @@ This can be securely and flexibly combined with remote triggering using `ssh`. T
 
 Consider using [webhook](https://github.com/adnanh/webhook) or a similar application to call `laminarc`.
 
+## Viewing job logs
+
+A job's console output can be viewed on the Web UI at http://localhost:8080/jobs/$NAME/$NUMBER.
+
+Additionally, the raw log output may be fetched over a plain HTTP request to http://localhost:8080/log/$NAME/$NUMBER. The response will be chunked, allowing this mechanism to also be used for in-progress jobs. Furthermore, the special endpoint http://localhost:8080/log/$NAME/latest will redirect to the most recent log output. Be aware that the use of this endpoint may be subject to races when new jobs start.
+
 ---
 
 # Job chains

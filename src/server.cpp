@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2018 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -210,6 +210,30 @@ public:
     virtual ~HttpImpl() {}
 
 private:
+    class HttpChunkedClient : public LaminarClient {
+    public:
+        HttpChunkedClient(LaminarInterface& laminar) :
+            laminar(laminar)
+        {}
+        ~HttpChunkedClient() override {
+            laminar.deregisterClient(this);
+        }
+        void sendMessage(std::string payload) override {
+            chunks.push_back(kj::mv(payload));
+            fulfiller->fulfill();
+        }
+        void notifyJobFinished() override {
+            done = true;
+            fulfiller->fulfill();
+        }
+        LaminarInterface& laminar;
+        std::list<std::string> chunks;
+        // cannot use chunks.empty() because multiple fulfill()s
+        // could be coalesced
+        bool done = false;
+        kj::Own<kj::PromiseFulfiller<void>> fulfiller;
+    };
+
     // Implements LaminarClient and holds the Websocket connection object.
     // Automatically destructed when the promise created in request() resolves
     // or is cancelled
@@ -223,7 +247,7 @@ private:
             laminar.deregisterClient(this);
         }
         virtual void sendMessage(std::string payload) override {
-            messages.push_back(kj::mv(payload));
+            messages.emplace_back(kj::mv(payload));
             // sendMessage might be called several times before the event loop
             // gets a chance to act on the fulfiller. So store the payload here
             // where it can be fetched later and don't pass the payload with the
@@ -322,39 +346,97 @@ private:
         return connection;
     }
 
+    // Parses the url of the form /log/NAME/NUMBER, filling in the passed
+    // references and returning true if successful. /log/NAME/latest is
+    // also allowed, in which case the num reference is set to 0
+    bool parseLogEndpoint(kj::StringPtr url, std::string& name, uint& num) {
+        if(url.startsWith("/log/")) {
+            kj::StringPtr path = url.slice(5);
+            KJ_IF_MAYBE(sep, path.findFirst('/')) {
+                name = path.slice(0, *sep).begin();
+                kj::StringPtr tail = path.slice(*sep+1);
+                num = static_cast<uint>(atoi(tail.begin()));
+                if(num > 0 || tail == "latest") {
+                    name.erase(*sep);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    kj::Promise<void> writeLogChunk(HttpChunkedClient* client, kj::AsyncOutputStream* stream) {
+        auto paf = kj::newPromiseAndFulfiller<void>();
+        client->fulfiller = kj::mv(paf.fulfiller);
+        return paf.promise.then([=]{
+            kj::Promise<void> p = kj::READY_NOW;
+            std::list<std::string> chunks = kj::mv(client->chunks);
+            for(std::string& s : chunks) {
+                p = p.then([=,&s]{
+                    return stream->write(s.data(), s.size());
+                });
+            }
+            return p.attach(kj::mv(chunks)).then([=]{
+                return client->done ? kj::Promise<void>(kj::READY_NOW) : writeLogChunk(client, stream);
+            });
+        });
+    }
+
     virtual kj::Promise<void> request(kj::HttpMethod method, kj::StringPtr url, const kj::HttpHeaders& headers,
             kj::AsyncInputStream& requestBody, Response& response) override
     {
-        std::string resource = url.cStr();
         if(headers.isWebSocket()) {
             responseHeaders.clear();
             kj::Own<WebsocketClient> lc = kj::heap<WebsocketClient>(laminar, response.acceptWebSocket(responseHeaders));
-            return websocketUpgraded(*lc, resource).attach(kj::mv(lc));
+            return websocketUpgraded(*lc, url.cStr()).attach(kj::mv(lc));
         } else {
             // handle regular HTTP request
             const char* start, *end, *content_type;
             std::string badge;
+            // for log requests
+            std::string name;
+            uint num;
             responseHeaders.clear();
-            if(resource.compare(0, strlen("/archive/"), "/archive/") == 0) {
-                KJ_IF_MAYBE(file, laminar.getArtefact(resource.substr(strlen("/archive/")))) {
+            if(url.startsWith("/archive/")) {
+                KJ_IF_MAYBE(file, laminar.getArtefact(url.slice(strlen("/archive/")))) {
                     auto array = (*file)->mmap(0, (*file)->stat().size);
                     responseHeaders.add("Content-Transfer-Encoding", "binary");
                     auto stream = response.send(200, "OK", responseHeaders, array.size());
                     return stream->write(array.begin(), array.size()).attach(kj::mv(array)).attach(kj::mv(file)).attach(kj::mv(stream));
                 }
-            } else if(resource.compare("/custom/style.css") == 0) {
+            } else if(parseLogEndpoint(url, name, num)) {
+                kj::Own<HttpChunkedClient> cc = kj::heap<HttpChunkedClient>(laminar);
+                cc->scope.job = name;
+                if(num == 0)
+                    num = laminar.latestRun(name);
+                cc->scope.num = num;
+                bool complete;
+                std::string output;
+                cc->scope.type = MonitorScope::LOG;
+                if(laminar.handleLogRequest(name, num, output, complete)) {
+                    responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/plain; charset=utf-8");
+                    responseHeaders.add("Content-Transfer-Encoding", "binary");
+                    auto stream = response.send(200, "OK", responseHeaders, nullptr);
+                    laminar.registerClient(cc.get());
+                    return stream->write(output.data(), output.size()).then([=,s=stream.get(),c=cc.get()]{
+                        if(complete)
+                            return kj::Promise<void>(kj::READY_NOW);
+                        return writeLogChunk(c, s);
+                    }).attach(kj::mv(output)).attach(kj::mv(stream)).attach(kj::mv(cc));
+                }
+            } else if(url == "/custom/style.css") {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/css; charset=utf-8");
                 responseHeaders.add("Content-Transfer-Encoding", "binary");
                 std::string css = laminar.getCustomCss();
                 auto stream = response.send(200, "OK", responseHeaders, css.size());
                 return stream->write(css.data(), css.size()).attach(kj::mv(css)).attach(kj::mv(stream));
-            } else if(resources.handleRequest(resource, &start, &end, &content_type)) {
+            } else if(resources.handleRequest(url.cStr(), &start, &end, &content_type)) {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, content_type);
                 responseHeaders.add("Content-Encoding", "gzip");
                 responseHeaders.add("Content-Transfer-Encoding", "binary");
                 auto stream = response.send(200, "OK", responseHeaders, end-start);
                 return stream->write(start, end-start).attach(kj::mv(stream));
-            } else if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(resource.substr(7,resource.length()-11), badge)) {
+            } else if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(url.slice(7, url.size()-11).begin(), badge)) {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "image/svg+xml");
                 responseHeaders.add("Cache-Control", "no-cache");
                 auto stream = response.send(200, "OK", responseHeaders, badge.size());

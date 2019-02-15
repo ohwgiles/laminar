@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2018 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -122,6 +122,53 @@ void Laminar::deregisterWaiter(LaminarWaiter *waiter) {
     waiters.erase(waiter);
 }
 
+uint Laminar::latestRun(std::string job) {
+    auto it = activeJobs.byJobName().equal_range(job);
+    if(it.first == it.second) {
+        uint result = 0;
+        db->stmt("SELECT MAX(buildNum) FROM builds WHERE name = ?")
+                .bind(job)
+                .fetch<uint>([&](uint x){
+            result = x;
+        });
+        return result;
+    } else {
+        return (*--it.second)->build;
+    }
+}
+
+// TODO: reunify with sendStatus. The difference is that this method is capable of
+// returning "not found" to the caller, and sendStatus isn't
+bool Laminar::handleLogRequest(std::string name, uint num, std::string& output, bool& complete) {
+    if(Run* run = activeRun(name, num)) {
+        output = run->log;
+        complete = false;
+        return true;
+    } else { // it must be finished, fetch it from the database
+        const char* stmt = num == 0 ? "SELECT output, outputLen FROM builds WHERE name = ? ORDER BY number DESC LIMIT 1" : "SELECT output, outputLen FROM builds WHERE name = ? AND number = ?" ;
+        db->stmt(stmt)
+                .bind(name, num)
+                .fetch<str,int>([&](str maybeZipped, unsigned long sz) {
+            str log(sz,'\0');
+            if(sz >= COMPRESS_LOG_MIN_SIZE) {
+                int res = ::uncompress((uint8_t*) log.data(), &sz,
+                                       (const uint8_t*) maybeZipped.data(), maybeZipped.size());
+                if(res == Z_OK)
+                    std::swap(output, log);
+                else
+                    LLOG(ERROR, "Failed to uncompress log", res);
+            } else {
+                std::swap(output, maybeZipped);
+            }
+        });
+        if(output.size()) {
+            complete = true;
+            return true;
+        }
+    }
+    return false;
+}
+
 bool Laminar::setParam(std::string job, uint buildNum, std::string param, std::string value) {
     if(Run* run = activeRun(job, buildNum)) {
         run->params[param] = value;
@@ -187,6 +234,7 @@ void Laminar::sendStatus(LaminarClient* client) {
                     client->sendMessage(maybeZipped);
                 }
             });
+            client->notifyJobFinished();
         }
         return;
     }
@@ -785,6 +833,7 @@ void Laminar::runFinished(Run * r) {
     for(LaminarClient* c : clients) {
         if(c->scope.wantsStatus(r->name, r->build))
             c->sendMessage(msg);
+        c->notifyJobFinished();
     }
 
     // notify the waiters

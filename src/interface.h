@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -73,6 +73,8 @@ struct MonitorScope {
 struct LaminarClient {
     virtual ~LaminarClient() noexcept(false) {}
     virtual void sendMessage(std::string payload) = 0;
+    // TODO: redesign
+    virtual void notifyJobFinished() {}
     MonitorScope scope;
 };
 
@@ -117,6 +119,13 @@ struct LaminarInterface {
     // Call this before destroying a waiter so that Laminar doesn't try
     // to call LaminarWaiter::complete on invalid data
     virtual void deregisterWaiter(LaminarWaiter* waiter) = 0;
+
+    // Return the latest known number of the named job
+    virtual uint latestRun(std::string job) = 0;
+
+    // Given a job name and number, return existence and (via reference params)
+    // its current log output and whether the job is ongoing
+    virtual bool handleLogRequest(std::string name, uint num, std::string& output, bool& complete) = 0;
 
     // Synchronously send a snapshot of the current status to the given
     // client (as governed by the client's MonitorScope). This is called on

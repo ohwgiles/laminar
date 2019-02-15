@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2018 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -53,6 +53,8 @@ public:
     void deregisterClient(LaminarClient* client) override;
     void registerWaiter(LaminarWaiter* waiter) override;
     void deregisterWaiter(LaminarWaiter* waiter) override;
+    uint latestRun(std::string job) override;
+    bool handleLogRequest(std::string name, uint num, std::string& output, bool& complete) override;
 
     void sendStatus(LaminarClient* client) override;
     bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;

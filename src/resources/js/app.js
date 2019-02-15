@@ -665,15 +665,29 @@ const Run = function() {
     autoscroll: false
   };
   var firstLog = false;
-  var logHandler = function(vm, d) {
-    state.log += ansi_up.ansi_to_html(d.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="/jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="/jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
-    vm.$forceUpdate();
-    if (!firstLog) {
-      firstLog = true;
-    } else if (state.autoscroll) {
-      window.scrollTo(0, document.body.scrollHeight);
-    }
-  };
+  const logFetcher = (vm, name, num) => {
+    const abort = new AbortController();
+    fetch('/log/'+name+'/'+num, {signal:abort.signal}).then(res => {
+      const reader = res.body.pipeThrough(new TextDecoderStream).getReader();
+      let total = 0;
+      return function pump() {
+        return reader.read().then(({done, value}) => {
+          if (done)
+            return;
+          state.log += ansi_up.ansi_to_html(value.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="/jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="/jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
+          vm.$forceUpdate();
+          if (!firstLog) {
+            firstLog = true;
+          } else if (state.autoscroll) {
+            window.scrollTo(0, document.body.scrollHeight);
+          }
+          return pump();
+        });
+      }
+    }).catch(e => {});
+    return abort;
+  }
+
 
   return {
     template: '#run',
@@ -704,24 +718,18 @@ const Run = function() {
     beforeRouteEnter(to, from, next) {
       next(vm => {
         state.log = '';
-        vm.logws = wsp(to.path + '/log');
-        vm.logws.onmessage = function(msg) {
-          logHandler(vm, msg.data);
-        }
+        vm.logstream = logFetcher(vm, to.params.name, to.params.number);
       });
     },
     beforeRouteUpdate(to, from, next) {
       var vm = this;
-      vm.logws.close();
+      vm.logstream.abort();
       state.log = '';
-      vm.logws = wsp(to.path + '/log');
-      vm.logws.onmessage = function(msg) {
-        logHandler(vm, msg.data);
-      }
+      vm.logstream = logFetcher(vm, to.params.name, to.params.number);
       next();
     },
     beforeRouteLeave(to, from, next) {
-      this.logws.close();
+      this.logstream.close();
       next();
     }
   };
