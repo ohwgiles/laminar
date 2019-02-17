@@ -126,7 +126,7 @@ uint Laminar::latestRun(std::string job) {
     auto it = activeJobs.byJobName().equal_range(job);
     if(it.first == it.second) {
         uint result = 0;
-        db->stmt("SELECT MAX(buildNum) FROM builds WHERE name = ?")
+        db->stmt("SELECT MAX(number) FROM builds WHERE name = ?")
                 .bind(job)
                 .fetch<uint>([&](uint x){
             result = x;
@@ -145,8 +145,7 @@ bool Laminar::handleLogRequest(std::string name, uint num, std::string& output, 
         complete = false;
         return true;
     } else { // it must be finished, fetch it from the database
-        const char* stmt = num == 0 ? "SELECT output, outputLen FROM builds WHERE name = ? ORDER BY number DESC LIMIT 1" : "SELECT output, outputLen FROM builds WHERE name = ? AND number = ?" ;
-        db->stmt(stmt)
+        db->stmt("SELECT output, outputLen FROM builds WHERE name = ? AND number = ?")
                 .bind(name, num)
                 .fetch<str,int>([&](str maybeZipped, unsigned long sz) {
             str log(sz,'\0');

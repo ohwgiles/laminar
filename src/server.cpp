@@ -356,10 +356,11 @@ private:
                 name = path.slice(0, *sep).begin();
                 kj::StringPtr tail = path.slice(*sep+1);
                 num = static_cast<uint>(atoi(tail.begin()));
-                if(num > 0 || tail == "latest") {
-                    name.erase(*sep);
+                name.erase(*sep);
+                if(tail == "latest")
+                    num = laminar.latestRun(name);
+                if(num > 0)
                     return true;
-                }
             }
         }
         return false;
@@ -407,8 +408,6 @@ private:
             } else if(parseLogEndpoint(url, name, num)) {
                 kj::Own<HttpChunkedClient> cc = kj::heap<HttpChunkedClient>(laminar);
                 cc->scope.job = name;
-                if(num == 0)
-                    num = laminar.latestRun(name);
                 cc->scope.num = num;
                 bool complete;
                 std::string output;
