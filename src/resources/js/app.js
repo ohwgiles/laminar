@@ -700,6 +700,14 @@ const Run = function() {
     },
     methods: {
       status: function(data) {
+        // Check for the /latest endpoint. An intuitive check might be
+        //  if(this.$route.params.number == 'latest'), but unfortunately
+        // after calling $router.replace, we re-enter status() before
+        // $route.params is updated. Instead, assume that if there is
+        // no 'started' field, we should redirect to the latest number
+        if(!('started' in data) && 'latestNum' in data)
+          return this.$router.replace('/jobs/' + this.$route.params.name + '/' + data.latestNum);
+
         state.jobsRunning = [];
         state.job = data;
         state.latestNum = data.latestNum;

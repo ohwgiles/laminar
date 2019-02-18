@@ -865,6 +865,8 @@ void Laminar::runFinished(Run * r) {
         fsHome->remove(d);
     }
 
+    fsHome->symlink(kj::Path{"archive", r->name, "latest"}, std::to_string(r->build), kj::WriteMode::CREATE|kj::WriteMode::MODIFY);
+
     // in case we freed up an executor, check the queue
     assignNewJobs();
 }
