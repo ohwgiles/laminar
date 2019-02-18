@@ -658,6 +658,7 @@ var Job = function() {
 }();
 
 const Run = function() {
+  const utf8decoder = new TextDecoder('utf-8');
   var state = {
     job: { artifacts: [], upstream: {} },
     latestNum: null,
@@ -668,10 +669,13 @@ const Run = function() {
   const logFetcher = (vm, name, num) => {
     const abort = new AbortController();
     fetch('/log/'+name+'/'+num, {signal:abort.signal}).then(res => {
-      const reader = res.body.pipeThrough(new TextDecoderStream).getReader();
+      // ATOW pipeThrough not supported in Firefox
+      //const reader = res.body.pipeThrough(new TextDecoderStream).getReader();
+      const reader = res.body.getReader();
       let total = 0;
       return function pump() {
         return reader.read().then(({done, value}) => {
+          value = utf8decoder.decode(value);
           if (done)
             return;
           state.log += ansi_up.ansi_to_html(value.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="/jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="/jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
@@ -683,11 +687,10 @@ const Run = function() {
           }
           return pump();
         });
-      }
+      }();
     }).catch(e => {});
     return abort;
   }
-
 
   return {
     template: '#run',
@@ -729,7 +732,7 @@ const Run = function() {
       next();
     },
     beforeRouteLeave(to, from, next) {
-      this.logstream.close();
+      this.logstream.abort();
       next();
     }
   };
