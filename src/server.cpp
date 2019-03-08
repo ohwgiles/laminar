@@ -435,7 +435,7 @@ private:
                 responseHeaders.add("Content-Transfer-Encoding", "binary");
                 auto stream = response.send(200, "OK", responseHeaders, end-start);
                 return stream->write(start, end-start).attach(kj::mv(stream));
-            } else if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(url.slice(7, url.size()-11).begin(), badge)) {
+            } else if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(std::string(url.begin()+7, url.size()-11), badge)) {
                 responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "image/svg+xml");
                 responseHeaders.add("Cache-Control", "no-cache");
                 auto stream = response.send(200, "OK", responseHeaders, badge.size());
