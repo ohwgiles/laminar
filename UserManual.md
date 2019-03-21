@@ -63,7 +63,7 @@ Do not attempt to run laminar on port 80. This requires running as `root`, and L
 
 Laminar relies on WebSockets to provide a responsive, auto-updating display without polling. This may require extra support from your frontend webserver.
 
-For nginx, see [NGINX Reverse Proxy](https://www.nginx.com/resources/admin-guide/reverse-proxy/) and [WebSocket proxying](http://nginx.org/en/docs/http/websocket.html).
+For nginx, see [NGINX Reverse Proxy](https://www.nginx.com/resources/admin-guide/reverse-proxy/) and [WebSocket proxying](http://nginx.org/en/docs/http/websocket.html). For live build logs, It is mandatory to enable chunks support and disable proxy caching for `/log` ([example config](https://gist.github.com/Valicek1/b6026821b8ceec6e4adff5031f28fbf0)).
 
 For Apache, see [Apache Reverse Proxy](https://httpd.apache.org/docs/2.4/howto/reverse_proxy.html) and [mod_proxy_wstunnel](https://httpd.apache.org/docs/2.4/mod/mod_proxy_wstunnel.html).
 
