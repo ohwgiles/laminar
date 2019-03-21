@@ -80,6 +80,9 @@ Laminar::Laminar(const char *home) :
     archiveUrl = ARCHIVE_URL_DEFAULT;
     if(char* envArchive = getenv("LAMINAR_ARCHIVE_URL"))
         archiveUrl = envArchive;
+	if(archiveUrl.back() != '/')
+		archiveUrl.append("/");
+
     numKeepRunDirs = 0;
 
     db = new Database((homePath/"laminar.sqlite").toString(true).cStr());
