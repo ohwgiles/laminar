@@ -1,5 +1,5 @@
 ###
-### Copyright 2015-2018 Oliver Giles
+### Copyright 2015-2019 Oliver Giles
 ###
 ### This file is part of Laminar
 ###
@@ -64,6 +64,11 @@ add_custom_command(OUTPUT laminar.capnp.c++ laminar.capnp.h
 generate_compressed_bins(${CMAKE_SOURCE_DIR}/src/resources index.html js/app.js
     favicon.ico favicon-152.png icon.png)
 
+# The code that allows dynamic modifying of index.html requires knowing its original size
+add_custom_command(OUTPUT index_html_size.h
+    COMMAND sh -c '( echo -n "\\#define INDEX_HTML_UNCOMPRESSED_SIZE " && wc -c < "${CMAKE_SOURCE_DIR}/src/resources/index.html" ) > index_html_size.h'
+    DEPENDS src/resources/index.html)
+
 # Download 3rd-party frontend JS libs...
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue/2.3.4/vue.min.js
         js/vue.min.js EXPECTED_MD5 ae2fca1cfa0e31377819b1b0ffef704c)
@@ -82,7 +87,7 @@ generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
 
 ## Server
 add_executable(laminard src/database.cpp src/main.cpp src/server.cpp src/laminar.cpp
-    src/conf.cpp src/resources.cpp src/run.cpp laminar.capnp.c++ ${COMPRESSED_BINS})
+    src/conf.cpp src/resources.cpp src/run.cpp laminar.capnp.c++ ${COMPRESSED_BINS} index_html_size.h)
 target_link_libraries(laminard capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 
 ## Client

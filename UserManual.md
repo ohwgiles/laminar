@@ -69,6 +69,8 @@ For Apache, see [Apache Reverse Proxy](https://httpd.apache.org/docs/2.4/howto/r
 
 If you use [artefacts](#Archiving-artefacts), note that Laminar is not designed as a file server, and better performance will be achieved by allowing the frontend web server to directly serve the archive directory directly (e.g. using a `Location` directive).
 
+If you use a reverse proxy to host Laminar at a subfolder instead of a subdomain root, the `<base href>` needs to be updated to ensure all links point to their proper targets. This can be done by setting `LAMINAR_BASE_URL` in `/etc/laminar.conf`.
+
 ## Set the page title
 
 Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title. For further WebUI customization, consider using a [custom style sheet](#Customizing-the-WebUI).

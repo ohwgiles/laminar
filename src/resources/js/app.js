@@ -23,13 +23,9 @@ const timeScale = function(max){
   : { scale:function(v){return v;}, label:'Seconds' };
 }
 
-const wsp = function(path) {
-  return new WebSocket((location.protocol === 'https:'?'wss://':'ws://')
-                          + location.host + path);
-}
 const WebsocketHandler = function() {
   function setupWebsocket(path, next) {
-    var ws = wsp(path);
+    let ws = new WebSocket(document.head.baseURI.replace(/^http/,'ws') + path.substr(1));
     ws.onmessage = function(msg) {
       msg = JSON.parse(msg.data);
       // "status" is the first message the websocket always delivers.
@@ -668,7 +664,7 @@ const Run = function() {
   var firstLog = false;
   const logFetcher = (vm, name, num) => {
     const abort = new AbortController();
-    fetch('/log/'+name+'/'+num, {signal:abort.signal}).then(res => {
+    fetch('log/'+name+'/'+num, {signal:abort.signal}).then(res => {
       // ATOW pipeThrough not supported in Firefox
       //const reader = res.body.pipeThrough(new TextDecoderStream).getReader();
       const reader = res.body.getReader();
@@ -678,7 +674,7 @@ const Run = function() {
           value = utf8decoder.decode(value);
           if (done)
             return;
-          state.log += ansi_up.ansi_to_html(value.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="/jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="/jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
+          state.log += ansi_up.ansi_to_html(value.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
           vm.$forceUpdate();
           if (!firstLog) {
             firstLog = true;
@@ -799,6 +795,7 @@ new Vue({
   },
   router: new VueRouter({
     mode: 'history',
+    base: document.head.baseURI.substr(location.origin.length),
     routes: [
       { path: '/',                   component: Home },
       { path: '/jobs',               component: Jobs },

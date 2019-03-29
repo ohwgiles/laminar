@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -40,7 +40,8 @@ private:
         const char* end;
         const char* content_type;
     };
-    std::unordered_map<std::string, const Resource> resources;
+    std::unordered_map<std::string, Resource> resources;
+    std::string index_html;
 };
 
 #endif // LAMINAR_RESOURCES_H_

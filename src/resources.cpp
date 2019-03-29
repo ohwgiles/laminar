@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2017 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -17,7 +17,10 @@
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
 #include "resources.h"
+#include "log.h"
+#include "index_html_size.h"
 #include <string.h>
+#include <zlib.h>
 
 #define INIT_RESOURCE(route, name, content_type) \
     extern const char _binary_##name##_z_start[];\
@@ -29,6 +32,8 @@
 #define CONTENT_TYPE_PNG  "image/png"
 #define CONTENT_TYPE_JS   "application/javascript; charset=utf-8"
 #define CONTENT_TYPE_CSS  "text/css; charset=utf-8"
+
+#define GZIP_FORMAT 16
 
 Resources::Resources()
 {
@@ -43,6 +48,46 @@ Resources::Resources()
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/Chart.min.js", js_Chart_min_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/css/bootstrap.min.css", css_bootstrap_min_css, CONTENT_TYPE_CSS);
+
+    if(const char* baseUrl = getenv("LAMINAR_BASE_URL")) {
+        // The administrator needs to customize the <base href>. Unfortunately this seems
+        // to be the only thing that needs to be customizable but cannot be done via dynamic
+        // DOM manipulation without heavy compromises. So replace the static char array with
+        // a modified buffer accordingly.
+        z_stream strm;
+        memset(&strm, 0, sizeof(z_stream));
+        std::string tmp;
+        tmp.resize(INDEX_HTML_UNCOMPRESSED_SIZE);
+        // inflate
+        inflateInit2(&strm, MAX_WBITS|GZIP_FORMAT);
+        strm.next_in = (unsigned char*) _binary_index_html_z_start;
+        strm.avail_in = _binary_index_html_z_end - _binary_index_html_z_start;
+        strm.next_out = (unsigned char*) tmp.data();
+        strm.avail_out = INDEX_HTML_UNCOMPRESSED_SIZE;
+        if(inflate(&strm, Z_FINISH) != Z_STREAM_END) {
+            LLOG(FATAL, "Failed to uncompress index_html");
+        }
+        // replace
+        // There's no validation on the replacement string, so you can completely mangle
+        // the html if you like. This isn't really an issue because if you can modify laminar's
+        // environment you already have elevated permissions
+        if(auto it = tmp.find("base href=\"/"))
+            tmp.replace(it+11, 1, baseUrl);
+        // deflate
+        index_html.resize(tmp.size());
+        deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, MAX_WBITS|GZIP_FORMAT, 8, Z_DEFAULT_STRATEGY);
+        strm.next_in = (unsigned char*) tmp.data();
+        strm.avail_in = tmp.size();
+        strm.next_out = (unsigned char*) index_html.data();
+        strm.avail_out = tmp.size();
+        if(deflate(&strm, Z_FINISH) != Z_STREAM_END) {
+            LLOG(FATAL, "Failed to compress index.html");
+        }
+        index_html.resize(strm.total_out);
+        // update resource map
+        resources["/"].start = index_html.data();
+        resources["/"].end = index_html.data() + index_html.size();
+    }
 }
 
 inline bool beginsWith(std::string haystack, const char* needle) {
