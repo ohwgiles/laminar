@@ -415,6 +415,8 @@ private:
                 if(laminar.handleLogRequest(name, num, output, complete)) {
                     responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/plain; charset=utf-8");
                     responseHeaders.add("Content-Transfer-Encoding", "binary");
+                    // Disables nginx reverse-proxy's buffering. Necessary for dynamic log output.
+                    responseHeaders.add("X-Accel-Buffering", "no");
                     auto stream = response.send(200, "OK", responseHeaders, nullptr);
                     laminar.registerClient(cc.get());
                     return stream->write(output.data(), output.size()).then([=,s=stream.get(),c=cc.get()]{
