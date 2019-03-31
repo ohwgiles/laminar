@@ -1,5 +1,6 @@
 [Unit]
 Description=Laminar continuous integration service
+After=network.target
 
 [Service]
 User=laminar
