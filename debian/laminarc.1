@@ -1,0 +1,64 @@
+.Dd Apr 04, 2019
+.Dt LAMINARC 1
+.Sh NAME
+.Nm laminarc
+client to laminar continous integration server
+.Sh SYNOPSIS
+.Nm laminarc Li queue Ar job Op Ar params ...
+.Nm laminarc Li start Ar job Op Ar params ...
+.Nm laminarc Li run   Ar job Op Ar params ...
+.Nm laminarc Li set Op var=value ...
+.Nm laminarc Li show-jobs
+.Nm laminarc Li show-running
+.Nm laminarc Li show-queued
+.Nm laminarc Li abort Ar job Ar number
+.Sh DESCRIPTION
+The
+.Nm laminarc
+program connects to server and perform one of following operations.
+.Bl -tag
+.It Sy queue
+add job to the queue with optional parameters, return immediately.
+.It Sy start
+add job to the queue with optional parameters, return when the jobs
+begin execution.
+.It Sy set
+set one or more variables to be exported in subsequent scripts
+for the run identified by the `$JOB` and `$RUN` environment variables.
+.It Sy show-jobs
+show jobs, known to the server.
+.It Sy show-running
+show the currently running jobs with their numbers.
+.It Sy show-queued
+show the names of the jobs waiting in the queue.
+.It Sy abort
+manually abort a currently running job by name and number.
+.El
+.Pp
+If neither
+.Ev LAMINAR_HOST
+nor
+.Ev LAMINAR_BIND_RPC
+variables are set,
+.Nm laminarc
+assumes default host of
+.Ad unix-abstract:laminar.
+.Sh ENVIRONMENT
+.Bl -tag
+.It Ev LAMINAR_HOST
+address of server to connect. May be of the form
+.Ad IP:PORT,
+.Ad unix:PATH/TO/SOCKET or
+.Ad unix-abstract:NAME
+.It Ev LAMINAR_BIND_RPC
+fallback server address variable. It is set by
+.Nm laminard
+during execution of scripts.
+.Sh SEE ALSO
+.Xr laminard 8
+.Sh AUTHORS
+.An Oliver Giles
+created Laminar continous integration system.
+.An Dmitry Bogatov
+created this manual page for Debian project (but it can be used
+by others).
