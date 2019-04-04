@@ -1,0 +1,56 @@
+.Dd Apr 03, 2019
+.Dt LAMINARD 1
+.Sh NAME
+.Nm laminard
+\-
+continuous integration server
+.Sh SYNOPSIS
+.Nm laminard Op Fl v
+.Sh DESCRIPTION
+Start laminar continuous integration server in foreground. If option
+.Fl v
+is specified, verbose logging is enabled. Other aspects of
+operation are configured with environment variables.
+.Sh ENVIRONMENT
+.Bl -tag
+.It Ev LAMINAR_HOME
+Root location containing laminar configuration, database, build
+workspaces and archive.
+.Pp
+Default: /var/lib/laminar
+.It Ev LAMINAR_BIND_HTTP
+Interface on which laminard will bind to serve the Web UI.
+May be of the form IP:PORT, unix:PATH/TO/SOCKET or unix-abstract:NAME
+.Pp
+Default: *:8080
+.It Ev LAMINAR_BIND_HRPC
+Interface on which laminard will bind to accept RPC from laminarc.
+May be of the form IP:PORT, unix:PATH/TO/SOCKET or unix-abstract:NAME
+.Pp
+Default: unix-abstract:laminar
+.It Ev LAMINAR_TITLE
+Page title to show in web frontend
+.It Ev LAMINAR_KEEP_RUNDIRS
+Setting this prevents the immediate deletion of job rundirs
+$LAMINAR_HOME/run/$JOB/$RUN. Value should be an integer represeting
+the number of rundirs to keep.
+.Pp
+Default: 0
+.It Ev LAMINAR_ARCHIVE_URL
+Base url used to request artifacts. Laminar can serve build artifacts
+(and it will if you leave this unset), but it uses a very naive and
+inefficient method. Best to let a real webserver handle serving those
+requests.
+.El
+.Sh FILES
+.Bl -tag
+.It Pa /etc/laminar.conf
+On Debian systems, variable assignments in this file are used by
+system-wide installation of Laminar.
+.El
+.Sh AUTHORS
+.An Oliver Giles
+created Laminar continuous integration system.
+.An Dmitry Bogatov
+created this manual page for Debian project (but it can be used
+by others).
