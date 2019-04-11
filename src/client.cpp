@@ -23,9 +23,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 
-#define EFAILED 55
+#define EXIT_BAD_ARGUMENT     1
+#define EXIT_OPERATION_FAILED 2
+#define EXIT_RUN_FAILED       3
 
 template<typename T>
 static int setParams(int argc, char** argv, T& request) {
@@ -75,7 +76,7 @@ static void printTriggerLink(const char* job, uint run) {
 int main(int argc, char** argv) {
     if(argc < 2) {
         fprintf(stderr, "Usage: %s <command> [parameters...]\n", argv[0]);
-        return EINVAL;
+        return EXIT_BAD_ARGUMENT;
     }
 
     int ret = 0;
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
     if(strcmp(argv[1], "queue") == 0) {
         if(argc < 3) {
             fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         kj::Vector<capnp::RemotePromise<LaminarCi::QueueResults>> promises;
         int jobNameIndex = 2;
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
         for(auto& p : promises) {
             if(p.wait(waitScope).getResult() != LaminarCi::MethodResult::SUCCESS) {
                 fprintf(stderr, "Failed to queue job '%s'\n", argv[2]);
-                return ENOENT;
+                return EXIT_OPERATION_FAILED;
             }
         }
     } else if(strcmp(argv[1], "start") == 0 || strcmp(argv[1], "trigger") == 0) {
@@ -113,7 +114,7 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Warning: 'trigger' is deprecated, use 'queue' for the old behavior\n");
         if(argc < 3) {
             fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         kj::Vector<capnp::RemotePromise<LaminarCi::StartResults>> promises;
         struct: public kj::TaskSet::ErrorHandler {
@@ -129,7 +130,7 @@ int main(int argc, char** argv) {
             ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::StartResults> resp){
                 if(resp.getResult() != LaminarCi::MethodResult::SUCCESS) {
                     fprintf(stderr, "Failed to start job '%s'\n", argv[2]);
-                    ret = ENOENT;
+                    ret = EXIT_OPERATION_FAILED;
                 }
                 printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
             }));
@@ -139,7 +140,7 @@ int main(int argc, char** argv) {
     } else if(strcmp(argv[1], "run") == 0) {
         if(argc < 3) {
             fprintf(stderr, "Usage %s run <jobName>\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         struct: public kj::TaskSet::ErrorHandler {
             void taskFailed(kj::Exception&&) override {}
@@ -154,7 +155,7 @@ int main(int argc, char** argv) {
             ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::RunResults> resp){
                 printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
                 if(resp.getResult() != LaminarCi::JobResult::SUCCESS) {
-                    ret = EFAILED;
+                    ret = EXIT_RUN_FAILED;
                 }
             }));
             jobNameIndex += n + 1;
@@ -163,7 +164,7 @@ int main(int argc, char** argv) {
     } else if(strcmp(argv[1], "set") == 0) {
         if(argc < 3) {
             fprintf(stderr, "Usage %s set param=value\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         auto req = laminar.setRequest();
         char* eq = strchr(argv[2], '=');
@@ -180,22 +181,22 @@ int main(int argc, char** argv) {
             req.send().wait(waitScope);
         } else {
             fprintf(stderr, "Missing $JOB or $RUN or param is not in the format key=value\n");
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
     } else if(strcmp(argv[1], "abort") == 0) {
         if(argc != 4) {
             fprintf(stderr, "Usage %s abort <jobName> <jobNumber>\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         auto req = laminar.abortRequest();
         req.getRun().setJob(argv[2]);
         req.getRun().setBuildNum(atoi(argv[3]));
         if(req.send().wait(waitScope).getResult() != LaminarCi::MethodResult::SUCCESS)
-            ret = EFAILED;
+            ret = EXIT_OPERATION_FAILED;
     } else if(strcmp(argv[1], "show-jobs") == 0) {
         if(argc != 2) {
             fprintf(stderr, "Usage: %s show-jobs\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         for(auto it : laminar.listKnownRequest().send().wait(waitScope).getResult()) {
             printf("%s\n", it.cStr());
@@ -203,7 +204,7 @@ int main(int argc, char** argv) {
     } else if(strcmp(argv[1], "show-queued") == 0) {
         if(argc != 2) {
             fprintf(stderr, "Usage: %s show-queued\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         for(auto it : laminar.listQueuedRequest().send().wait(waitScope).getResult()) {
             printf("%s\n", it.cStr());
@@ -211,14 +212,14 @@ int main(int argc, char** argv) {
     } else if(strcmp(argv[1], "show-running") == 0) {
         if(argc != 2) {
             fprintf(stderr, "Usage: %s show-running\n", argv[0]);
-            return EINVAL;
+            return EXIT_BAD_ARGUMENT;
         }
         for(auto it : laminar.listRunningRequest().send().wait(waitScope).getResult()) {
             printf("%s:%d\n", it.getJob().cStr(), it.getBuildNum());
         }
     } else {
         fprintf(stderr, "Unknown command %s\n", argv[1]);
-        return EINVAL;
+        return EXIT_BAD_ARGUMENT;
     }
 
     return ret;
