@@ -75,7 +75,7 @@ Laminar::Laminar(const char *home) :
     homePath(kj::Path::parse(&home[1])),
     fsHome(kj::newDiskFilesystem()->getRoot().openSubdir(homePath, kj::WriteMode::MODIFY))
 {
-    KJ_ASSERT(home[0] == '/');
+    LASSERT(home[0] == '/');
 
     archiveUrl = ARCHIVE_URL_DEFAULT;
     if(char* envArchive = getenv("LAMINAR_ARCHIVE_URL")) {

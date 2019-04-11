@@ -82,7 +82,7 @@ bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory
     kj::Path rd{"run",name,std::to_string(buildNum)};
     bool createWorkdir = true;
     KJ_IF_MAYBE(ls, fsHome.tryLstat(rd)) {
-        KJ_ASSERT(ls->type == kj::FsNode::Type::DIRECTORY);
+        LASSERT(ls->type == kj::FsNode::Type::DIRECTORY);
         LLOG(WARNING, "Working directory already exists, removing", rd.toString());
         if(fsHome.tryRemove(rd) == false) {
             LLOG(WARNING, "Failed to remove working directory");
@@ -194,7 +194,7 @@ bool Run::step() {
             PATH.append(p);
         }
 
-        KJ_SYSCALL(chdir((rootPath/currentScript.cwd).toString(true).cStr()));
+        LSYSCALL(chdir((rootPath/currentScript.cwd).toString(true).cStr()));
 
         // conf file env vars
         for(kj::Path& file : env) {

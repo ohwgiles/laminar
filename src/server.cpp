@@ -286,7 +286,7 @@ private:
         }, [](kj::Exception&& e){
             // server logs suggest early catching here avoids fatal exception later
             // TODO: reproduce in unit test
-            KJ_LOG(WARNING, e.getDescription());
+            LLOG(WARNING, e.getDescription());
             return kj::READY_NOW;
         });
     }
