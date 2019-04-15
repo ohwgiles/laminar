@@ -398,6 +398,18 @@ private:
             std::string name;
             uint num;
             responseHeaders.clear();
+            // Clients usually expect that http servers will ignore unknown query parameters,
+            // and expect to use this feature to work around browser limitations like there
+            // being no way to programatically force a resource to be reloaded from the server
+            // (without "Cache-Control: no-store", which is overkill). See issue #89.
+            // Since we currently don't handle any query parameters at all, the easiest way
+            // to achieve this is unconditionally remove all query parameters from the request.
+            // This will need to be redone if we ever accept query parameters, which probably
+            // will happen as part of issue #90.
+            KJ_IF_MAYBE(queryIdx, url.findFirst('?')) {
+                const_cast<char*>(url.begin())[*queryIdx] = '\0';
+                url = url.begin();
+            }
             if(url.startsWith("/archive/")) {
                 KJ_IF_MAYBE(file, laminar.getArtefact(url.slice(strlen("/archive/")))) {
                     auto array = (*file)->mmap(0, (*file)->stat().size);
