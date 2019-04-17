@@ -38,7 +38,7 @@ namespace _ {
 	}
 	template<int N, int...I>
 	static constexpr decltype(auto) static_alloc_str_impl(const char* str, std::integer_sequence<int, I...>) { 
-		return (struct {char buf[N];}) {str[I]...};
+		return (struct {char buf[N+1];}) {str[I]..., 0};
 	}
 	template<int N>
 	static constexpr decltype(auto) static_alloc_str(const char* str) {
