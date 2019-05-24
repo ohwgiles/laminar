@@ -68,13 +68,16 @@ protected:
     TempDir tmp;
     class Run run;
 
-    void setRunLink(const char* path) {
-        tmp.fs->symlink(kj::Path{"cfg","jobs",run.name+".run"}, path, kj::WriteMode::CREATE|kj::WriteMode::CREATE_PARENT|kj::WriteMode::EXECUTABLE);
+    void setRunLink(const char * path) {
+        KJ_IF_MAYBE(f, tmp.fs->tryOpenFile(kj::Path{"cfg", "jobs", run.name + ".run"},
+                kj::WriteMode::CREATE | kj::WriteMode::CREATE_PARENT | kj::WriteMode::EXECUTABLE)) {
+            (f->get())->writeAll(std::string("#!/bin/sh\nexec ") + path + "\n");
+        }
     }
 };
 
 TEST_F(RunTest, WorkingDirectory) {
-    setRunLink("/bin/pwd");
+    setRunLink("pwd");
     run.configure(1, node, *tmp.fs);
     runAll();
     std::string cwd{tmp.path.append(kj::Path{"run","foo","1"}).toString(true).cStr()};
@@ -82,21 +85,21 @@ TEST_F(RunTest, WorkingDirectory) {
 }
 
 TEST_F(RunTest, SuccessStatus) {
-    setRunLink("/bin/true");
+    setRunLink("true");
     run.configure(1, node, *tmp.fs);
     runAll();
     EXPECT_EQ(RunState::SUCCESS, run.result);
 }
 
 TEST_F(RunTest, FailedStatus) {
-    setRunLink("/bin/false");
+    setRunLink("false");
     run.configure(1, node, *tmp.fs);
     runAll();
     EXPECT_EQ(RunState::FAILED, run.result);
 }
 
 TEST_F(RunTest, Environment) {
-    setRunLink("/usr/bin/env");
+    setRunLink("env");
     run.configure(1234, node, *tmp.fs);
     runAll();
 
@@ -113,7 +116,7 @@ TEST_F(RunTest, Environment) {
 }
 
 TEST_F(RunTest, ParamsToEnv) {
-    setRunLink("/usr/bin/env");
+    setRunLink("env");
     run.params["foo"] = "bar";
     run.configure(1, node, *tmp.fs);
     runAll();
@@ -122,7 +125,7 @@ TEST_F(RunTest, ParamsToEnv) {
 }
 
 TEST_F(RunTest, Abort) {
-    setRunLink("/usr/bin/yes");
+    setRunLink("yes");
     run.configure(1, node, *tmp.fs);
     run.step();
     usleep(200); // TODO fix
