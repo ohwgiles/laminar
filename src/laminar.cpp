@@ -99,7 +99,7 @@ Laminar::Laminar(const char *home) :
 
     // retrieve the last build numbers
     db->stmt("SELECT name, MAX(number) FROM builds GROUP BY name")
-    .fetch<str,uint>([this](str name, uint build){
+    .fetch<str,uint32_t>([this](str name, uint32_t build){
         buildNums[name] = build;
     });
 
@@ -126,13 +126,13 @@ void Laminar::deregisterWaiter(LaminarWaiter *waiter) {
     waiters.erase(waiter);
 }
 
-uint Laminar::latestRun(std::string job) {
+uint32_t Laminar::latestRun(std::string job) {
     auto it = activeJobs.byJobName().equal_range(job);
     if(it.first == it.second) {
-        uint result = 0;
+        uint32_t result = 0;
         db->stmt("SELECT MAX(number) FROM builds WHERE name = ?")
                 .bind(job)
-                .fetch<uint>([&](uint x){
+                .fetch<uint32_t>([&](uint32_t x){
             result = x;
         });
         return result;
@@ -143,7 +143,7 @@ uint Laminar::latestRun(std::string job) {
 
 // TODO: reunify with sendStatus. The difference is that this method is capable of
 // returning "not found" to the caller, and sendStatus isn't
-bool Laminar::handleLogRequest(std::string name, uint num, std::string& output, bool& complete) {
+bool Laminar::handleLogRequest(std::string name, uint32_t num, std::string& output, bool& complete) {
     if(Run* run = activeRun(name, num)) {
         output = run->log;
         complete = false;
@@ -172,7 +172,7 @@ bool Laminar::handleLogRequest(std::string name, uint num, std::string& output, 
     return false;
 }
 
-bool Laminar::setParam(std::string job, uint buildNum, std::string param, std::string value) {
+bool Laminar::setParam(std::string job, uint32_t buildNum, std::string param, std::string value) {
     if(Run* run = activeRun(job, buildNum)) {
         run->params[param] = value;
         return true;
@@ -200,7 +200,7 @@ std::list<std::string> Laminar::listKnownJobs() {
     return res;
 }
 
-void Laminar::populateArtifacts(Json &j, std::string job, uint num) const {
+void Laminar::populateArtifacts(Json &j, std::string job, uint32_t num) const {
     kj::Path runArchive{job,std::to_string(num)};
     KJ_IF_MAYBE(dir, fsHome->tryOpenSubdir("archive"/runArchive)) {
         for(kj::StringPtr file : (*dir)->listNames()) {
@@ -250,7 +250,7 @@ void Laminar::sendStatus(LaminarClient* client) {
     if(client->scope.type == MonitorScope::RUN) {
         db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,parentJob,parentBuild FROM builds WHERE name = ? AND number = ?")
         .bind(client->scope.job, client->scope.num)
-        .fetch<time_t, time_t, time_t, int, std::string, std::string, uint>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint parentBuild) {
+        .fetch<time_t, time_t, time_t, int, std::string, std::string, uint32_t>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint32_t parentBuild) {
             j.set("queued", started-queued);
             j.set("started", started);
             j.set("completed", completed);
@@ -266,7 +266,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.startObject("upstream").set("name", run->parentName).set("num", run->parentBuild).EndObject(2);
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<uint>([&](uint lastRuntime){
+             .fetch<uint32_t>([&](uint32_t lastRuntime){
                 j.set("etc", run->startedAt + lastRuntime);
             });
         }
@@ -275,7 +275,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         populateArtifacts(j, client->scope.job, client->scope.num);
         j.EndArray();
     } else if(client->scope.type == MonitorScope::JOB) {
-        const uint runsPerPage = 10;
+        const uint32_t runsPerPage = 10;
         j.startArray("recent");
         // ORDER BY param cannot be bound
         std::string order_by;
@@ -294,7 +294,7 @@ void Laminar::sendStatus(LaminarClient* client) {
                 + order_by + " LIMIT ?,?";
         db->stmt(stmt.c_str())
         .bind(client->scope.job, client->scope.page * runsPerPage, runsPerPage)
-        .fetch<uint,time_t,time_t,int,str>([&](uint build,time_t started,time_t completed,int result,str reason){
+        .fetch<uint32_t,time_t,time_t,int,str>([&](uint32_t build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
             j.set("number", build)
              .set("completed", completed)
@@ -306,7 +306,7 @@ void Laminar::sendStatus(LaminarClient* client) {
         j.EndArray();
         db->stmt("SELECT COUNT(*),AVG(completedAt-startedAt) FROM builds WHERE name = ?")
         .bind(client->scope.job)
-        .fetch<uint,uint>([&](uint nRuns, uint averageRuntime){
+        .fetch<uint32_t,uint32_t>([&](uint32_t nRuns, uint32_t averageRuntime){
             j.set("averageRuntime", averageRuntime);
             j.set("pages", (nRuns-1) / runsPerPage + 1);
             j.startObject("sort");
@@ -353,7 +353,7 @@ void Laminar::sendStatus(LaminarClient* client) {
     } else if(client->scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
         db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b JOIN (SELECT name n,MAX(number) l FROM builds GROUP BY n) q ON b.name = q.n AND b.number = q.l")
-        .fetch<str,uint,time_t,time_t,int>([&](str name,uint number, time_t started, time_t completed, int result){
+        .fetch<str,uint32_t,time_t,time_t,int>([&](str name,uint32_t number, time_t started, time_t completed, int result){
             j.StartObject();
             j.set("name", name);
             j.set("number", number);
@@ -386,7 +386,7 @@ void Laminar::sendStatus(LaminarClient* client) {
     } else { // Home page
         j.startArray("recent");
         db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 15")
-        .fetch<str,uint,str,time_t,time_t,time_t,int>([&](str name,uint build,str node,time_t,time_t started,time_t completed,int result){
+        .fetch<str,uint32_t,str,time_t,time_t,time_t,int>([&](str name,uint32_t build,str node,time_t,time_t started,time_t completed,int result){
             j.StartObject();
             j.set("name", name)
              .set("number", build)
@@ -406,7 +406,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("started", run->startedAt);
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<uint>([&](uint lastRuntime){
+             .fetch<uint32_t>([&](uint32_t lastRuntime){
                 j.set("etc", run->startedAt + lastRuntime);
             });
             j.EndObject();
@@ -449,14 +449,14 @@ void Laminar::sendStatus(LaminarClient* client) {
         j.startObject("timePerJob");
         db->stmt("SELECT name, AVG(completedAt-startedAt) av FROM builds WHERE completedAt > ? GROUP BY name ORDER BY av DESC LIMIT 8")
                 .bind(time(nullptr) - 7 * 86400)
-                .fetch<str, uint>([&](str job, uint time){
+                .fetch<str, uint32_t>([&](str job, uint32_t time){
             j.set(job.c_str(), time);
         });
         j.EndObject();
         j.startArray("resultChanged");
         db->stmt("SELECT b.name,MAX(b.number) as lastSuccess,lastFailure FROM builds AS b JOIN (SELECT name,MAX(number) AS lastFailure FROM builds WHERE result<>? GROUP BY name) AS t ON t.name=b.name WHERE b.result=? GROUP BY b.name ORDER BY lastSuccess>lastFailure, lastFailure-lastSuccess DESC LIMIT 8")
                 .bind(int(RunState::SUCCESS), int(RunState::SUCCESS))
-                .fetch<str, uint, uint>([&](str job, uint lastSuccess, uint lastFailure){
+                .fetch<str, uint32_t, uint32_t>([&](str job, uint32_t lastSuccess, uint32_t lastFailure){
             j.StartObject();
             j.set("name", job)
              .set("lastSuccess", lastSuccess)
@@ -498,7 +498,7 @@ void Laminar::sendStatus(LaminarClient* client) {
                  "COUNT(CASE WHEN a >= 1200 AND a <  2400 THEN 1 END),"
                  "COUNT(CASE WHEN a >= 2400 AND a <  3600 THEN 1 END),"
                  "COUNT(CASE WHEN a >= 3600               THEN 1 END) FROM ba")
-                .fetch<uint,uint,uint,uint,uint,uint,uint,uint>([&](uint c1, uint c2, uint c3, uint c4, uint c5, uint c6, uint c7, uint c8){
+                .fetch<uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t>([&](uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4, uint32_t c5, uint32_t c6, uint32_t c7, uint32_t c8){
             j.Int(c1);
             j.Int(c2);
             j.Int(c3);
@@ -539,7 +539,7 @@ void Laminar::stop() {
 
 bool Laminar::loadConfiguration() {
     if(const char* ndirs = getenv("LAMINAR_KEEP_RUNDIRS"))
-        numKeepRunDirs = static_cast<uint>(atoi(ndirs));
+        numKeepRunDirs = static_cast<uint32_t>(atoi(ndirs));
 
     std::set<std::string> knownNodes;
 
@@ -645,7 +645,7 @@ void Laminar::notifyConfigChanged()
     assignNewJobs();
 }
 
-bool Laminar::abort(std::string job, uint buildNum) {
+bool Laminar::abort(std::string job, uint32_t buildNum) {
     if(Run* run = activeRun(job, buildNum)) {
         run->abort(true);
         return true;
@@ -722,7 +722,7 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
              .set("reason", run->reason());
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<uint>([&](uint etc){
+             .fetch<uint32_t>([&](uint32_t etc){
                 j.set("etc", time(nullptr) + etc);
             });
             j.startArray("tags");
@@ -858,7 +858,7 @@ void Laminar::runFinished(Run * r) {
     // known build number of this job, which may not be that of the run that
     // finished here.
     auto it = activeJobs.byJobName().equal_range(r->name);
-    uint oldestActive = (it.first == it.second)? buildNums[r->name] : (*it.first)->build - 1;
+    uint32_t oldestActive = (it.first == it.second)? buildNums[r->name] : (*it.first)->build - 1;
     for(int i = static_cast<int>(oldestActive - numKeepRunDirs); i > 0; i--) {
         kj::Path d{"run",r->name,std::to_string(i)};
         // Once the directory does not exist, it's probably not worth checking

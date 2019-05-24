@@ -47,18 +47,18 @@ public:
     MOCK_METHOD2(queueJob, std::shared_ptr<Run>(std::string name, ParamMap params));
     MOCK_METHOD1(registerWaiter, void(LaminarWaiter* waiter));
     MOCK_METHOD1(deregisterWaiter, void(LaminarWaiter* waiter));
-    MOCK_METHOD1(latestRun, uint(std::string));
-    MOCK_METHOD4(handleLogRequest, bool(std::string, uint, std::string&, bool&));
+    MOCK_METHOD1(latestRun, uint32_t(std::string));
+    MOCK_METHOD4(handleLogRequest, bool(std::string, uint32_t, std::string&, bool&));
 
     MOCK_METHOD1(sendStatus, void(LaminarClient* client));
-    MOCK_METHOD4(setParam, bool(std::string job, uint buildNum, std::string param, std::string value));
+    MOCK_METHOD4(setParam, bool(std::string job, uint32_t buildNum, std::string param, std::string value));
     MOCK_METHOD0(listQueuedJobs, const std::list<std::shared_ptr<Run>>&());
     MOCK_METHOD0(listRunningJobs, const RunSet&());
     MOCK_METHOD0(listKnownJobs, std::list<std::string>());
 
     MOCK_METHOD0(getCustomCss, std::string());
     MOCK_METHOD2(handleBadgeRequest, bool(std::string, std::string&));
-    MOCK_METHOD2(abort, bool(std::string, uint));
+    MOCK_METHOD2(abort, bool(std::string, uint32_t));
     MOCK_METHOD0(abortAll, void());
     MOCK_METHOD0(notifyConfigChanged, void());
 };

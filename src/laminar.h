@@ -53,18 +53,18 @@ public:
     void deregisterClient(LaminarClient* client) override;
     void registerWaiter(LaminarWaiter* waiter) override;
     void deregisterWaiter(LaminarWaiter* waiter) override;
-    uint latestRun(std::string job) override;
-    bool handleLogRequest(std::string name, uint num, std::string& output, bool& complete) override;
+    uint32_t latestRun(std::string job) override;
+    bool handleLogRequest(std::string name, uint32_t num, std::string& output, bool& complete) override;
 
     void sendStatus(LaminarClient* client) override;
-    bool setParam(std::string job, uint buildNum, std::string param, std::string value) override;
+    bool setParam(std::string job, uint32_t buildNum, std::string param, std::string value) override;
     const std::list<std::shared_ptr<Run>>& listQueuedJobs() override;
     const RunSet& listRunningJobs() override;
     std::list<std::string> listKnownJobs() override;
     kj::Maybe<kj::Own<const kj::ReadableFile>> getArtefact(std::string path) override;
     bool handleBadgeRequest(std::string job, std::string& badge) override;
     std::string getCustomCss() override;
-    bool abort(std::string job, uint buildNum) override;
+    bool abort(std::string job, uint32_t buildNum) override;
     void abortAll() override;
     void notifyConfigChanged() override;
 
@@ -76,16 +76,16 @@ private:
     void runFinished(Run*);
     bool nodeCanQueue(const Node&, std::string jobName) const;
     // expects that Json has started an array
-    void populateArtifacts(Json& out, std::string job, uint num) const;
+    void populateArtifacts(Json& out, std::string job, uint32_t num) const;
 
-    Run* activeRun(const std::string name, uint num) {
+    Run* activeRun(const std::string name, uint32_t num) {
         auto it = activeJobs.byNameNumber().find(boost::make_tuple(name, num));
         return it == activeJobs.byNameNumber().end() ? nullptr : it->get();
     }
 
     std::list<std::shared_ptr<Run>> queuedJobs;
 
-    std::unordered_map<std::string, uint> buildNums;
+    std::unordered_map<std::string, uint32_t> buildNums;
 
     std::unordered_map<std::string, std::set<std::string>> jobTags;
 
@@ -97,7 +97,7 @@ private:
     kj::Own<const kj::Directory> fsHome;
     std::set<LaminarClient*> clients;
     std::set<LaminarWaiter*> waiters;
-    uint numKeepRunDirs;
+    uint32_t numKeepRunDirs;
     std::string archiveUrl;
 };
 

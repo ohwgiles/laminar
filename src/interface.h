@@ -37,7 +37,7 @@ struct MonitorScope {
         LOG   // a run's log page
     };
 
-    MonitorScope(Type type = HOME, std::string job = std::string(), uint num = 0) :
+    MonitorScope(Type type = HOME, std::string job = std::string(), uint32_t num = 0) :
         type(type),
         job(job),
         num(num),
@@ -47,22 +47,22 @@ struct MonitorScope {
     {}
 
     // whether this scope wants status information about the given job or run
-    bool wantsStatus(std::string ajob, uint anum = 0) const {
+    bool wantsStatus(std::string ajob, uint32_t anum = 0) const {
         if(type == HOME || type == ALL) return true;
         if(type == JOB) return ajob == job;
         if(type == RUN) return ajob == job && anum == num;
         return false;
     }
 
-    bool wantsLog(std::string ajob, uint anum) const {
+    bool wantsLog(std::string ajob, uint32_t anum) const {
         return type == LOG && ajob == job && anum == num;
     }
 
     Type type;
     std::string job;
-    uint num = 0;
+    uint32_t num = 0;
     // sorting
-    uint page = 0;
+    uint32_t page = 0;
     std::string field;
     bool order_desc;
 };
@@ -121,11 +121,11 @@ struct LaminarInterface {
     virtual void deregisterWaiter(LaminarWaiter* waiter) = 0;
 
     // Return the latest known number of the named job
-    virtual uint latestRun(std::string job) = 0;
+    virtual uint32_t latestRun(std::string job) = 0;
 
     // Given a job name and number, return existence and (via reference params)
     // its current log output and whether the job is ongoing
-    virtual bool handleLogRequest(std::string name, uint num, std::string& output, bool& complete) = 0;
+    virtual bool handleLogRequest(std::string name, uint32_t num, std::string& output, bool& complete) = 0;
 
     // Synchronously send a snapshot of the current status to the given
     // client (as governed by the client's MonitorScope). This is called on
@@ -135,7 +135,7 @@ struct LaminarInterface {
     // Implements the laminar client interface allowing the setting of
     // arbitrary parameters on a run (usually itself) to be available in
     // the environment of subsequent scripts.
-    virtual bool setParam(std::string job, uint buildNum, std::string param, std::string value) = 0;
+    virtual bool setParam(std::string job, uint32_t buildNum, std::string param, std::string value) = 0;
 
     // Gets the list of jobs currently waiting in the execution queue
     virtual const std::list<std::shared_ptr<Run>>& listQueuedJobs() = 0;
@@ -162,7 +162,7 @@ struct LaminarInterface {
     virtual std::string getCustomCss() = 0;
 
     // Aborts a single job
-    virtual bool abort(std::string job, uint buildNum) = 0;
+    virtual bool abort(std::string job, uint32_t buildNum) = 0;
 
     // Abort all running jobs
     virtual void abortAll() = 0;

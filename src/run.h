@@ -55,7 +55,7 @@ public:
     Run& operator=(const Run&) = delete;
 
     // Call this to "start" the run with a specific number and node
-    bool configure(uint buildNum, std::shared_ptr<Node> node, const kj::Directory &fsHome);
+    bool configure(uint32_t buildNum, std::shared_ptr<Node> node, const kj::Directory &fsHome);
 
     // executes the next script (if any), returning true if there is nothing
     // more to be done.
@@ -78,7 +78,7 @@ public:
     std::string name;
     std::string parentName;
     int parentBuild = 0;
-    uint build = 0;
+    uint32_t build = 0;
     std::string log;
     kj::Maybe<pid_t> current_pid;
     int output_fd;
@@ -135,7 +135,7 @@ struct _run_index : bmi::indexed_by<
             std::shared_ptr<Run>,
         // a combination of their job name and build number
             bmi::member<Run, std::string, &Run::name>,
-            bmi::member<Run, uint, &Run::build>
+            bmi::member<Run, uint32_t, &Run::build>
         >>,
         // or a pointer to a Run object.
         bmi::hashed_unique<_run_same>,

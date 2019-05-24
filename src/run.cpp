@@ -74,7 +74,7 @@ Run::~Run() {
     LLOG(INFO, "Run destroyed");
 }
 
-bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory& fsHome)
+bool Run::configure(uint32_t buildNum, std::shared_ptr<Node> nd, const kj::Directory& fsHome)
 {
     kj::Path cfgDir{"cfg"};
 

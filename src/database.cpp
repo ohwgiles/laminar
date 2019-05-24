@@ -81,7 +81,7 @@ void Database::Statement::bindValue(int i, int e) {
     sqlite3_bind_int(stmt, i, e);
 }
 
-void Database::Statement::bindValue(int i, uint e) {
+void Database::Statement::bindValue(int i, uint32_t e) {
     sqlite3_bind_int(stmt, i, static_cast<int32_t>(e));
 }
 
@@ -89,7 +89,7 @@ void Database::Statement::bindValue(int i, long e) {
     sqlite3_bind_int64(stmt, i, e);
 }
 
-void Database::Statement::bindValue(int i, ulong e) {
+void Database::Statement::bindValue(int i, unsigned long e) {
     sqlite3_bind_int64(stmt, i, static_cast<int64_t>(e));
 }
 
@@ -102,7 +102,7 @@ void Database::Statement::bindValue(int i, const std::string& e) {
 }
 
 template<> std::string Database::Statement::fetchColumn(int col) {
-    uint sz = static_cast<uint>(sqlite3_column_bytes(stmt, col)); // according to documentation will never be negative
+    uint32_t sz = static_cast<uint32_t>(sqlite3_column_bytes(stmt, col)); // according to documentation will never be negative
     std::string res(sz, '\0');
     memcpy(&res[0], sqlite3_column_text(stmt, col), sz);
     return res;
@@ -117,16 +117,16 @@ template<> int Database::Statement::fetchColumn(int col) {
     return sqlite3_column_int(stmt, col);
 }
 
-template<> uint Database::Statement::fetchColumn(int col) {
-    return static_cast<uint>(sqlite3_column_int(stmt, col));
+template<> uint32_t Database::Statement::fetchColumn(int col) {
+    return static_cast<uint32_t>(sqlite3_column_int(stmt, col));
 }
 
 template<> long Database::Statement::fetchColumn(int col) {
     return static_cast<long>(sqlite3_column_int64(stmt, col));
 }
 
-template<> ulong Database::Statement::fetchColumn(int col) {
-    return static_cast<ulong>(sqlite3_column_int64(stmt, col));
+template<> unsigned long Database::Statement::fetchColumn(int col) {
+    return static_cast<unsigned long>(sqlite3_column_int64(stmt, col));
 }
 
 template<> double Database::Statement::fetchColumn(int col) {

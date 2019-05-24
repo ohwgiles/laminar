@@ -67,7 +67,7 @@ static int setParams(int argc, char** argv, T& request) {
     return argsConsumed;
 }
 
-static void printTriggerLink(const char* job, uint run) {
+static void printTriggerLink(const char* job, uint32_t run) {
     // use a private ANSI CSI sequence to mark the JOB:NUM so the
     // frontend can recognise it and generate a hyperlink.
     printf("\033[{%s:%d\033\\\n", job, run);

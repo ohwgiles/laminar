@@ -118,7 +118,7 @@ public:
     // Set a parameter on a running build
     kj::Promise<void> set(SetContext context) override {
         std::string jobName = context.getParams().getRun().getJob();
-        uint buildNum = context.getParams().getRun().getBuildNum();
+        uint32_t buildNum = context.getParams().getRun().getBuildNum();
         LLOG(INFO, "RPC set", jobName, buildNum);
 
         LaminarCi::MethodResult result = laminar.setParam(jobName, buildNum,
@@ -166,7 +166,7 @@ public:
 
     kj::Promise<void> abort(AbortContext context) override {
         std::string jobName = context.getParams().getRun().getJob();
-        uint buildNum = context.getParams().getRun().getBuildNum();
+        uint32_t buildNum = context.getParams().getRun().getBuildNum();
         LLOG(INFO, "RPC abort", jobName, buildNum);
         LaminarCi::MethodResult result = laminar.abort(jobName, buildNum)
                 ? LaminarCi::MethodResult::SUCCESS
@@ -327,7 +327,7 @@ private:
                     size_t split2 = resource.find('/', split+1);
                     std::string run = resource.substr(split+1, split2-split);
                     if(!run.empty()) {
-                        lc.scope.num = static_cast<uint>(atoi(run.c_str()));
+                        lc.scope.num = static_cast<uint32_t>(atoi(run.c_str()));
                         lc.scope.type = MonitorScope::RUN;
                     }
                     if(split2 != std::string::npos && resource.compare(split2, 4, "/log") == 0) {
@@ -349,13 +349,13 @@ private:
     // Parses the url of the form /log/NAME/NUMBER, filling in the passed
     // references and returning true if successful. /log/NAME/latest is
     // also allowed, in which case the num reference is set to 0
-    bool parseLogEndpoint(kj::StringPtr url, std::string& name, uint& num) {
+    bool parseLogEndpoint(kj::StringPtr url, std::string& name, uint32_t& num) {
         if(url.startsWith("/log/")) {
             kj::StringPtr path = url.slice(5);
             KJ_IF_MAYBE(sep, path.findFirst('/')) {
                 name = path.slice(0, *sep).begin();
                 kj::StringPtr tail = path.slice(*sep+1);
-                num = static_cast<uint>(atoi(tail.begin()));
+                num = static_cast<uint32_t>(atoi(tail.begin()));
                 name.erase(*sep);
                 if(tail == "latest")
                     num = laminar.latestRun(name);
@@ -396,7 +396,7 @@ private:
             std::string badge;
             // for log requests
             std::string name;
-            uint num;
+            uint32_t num;
             responseHeaders.clear();
             // Clients usually expect that http servers will ignore unknown query parameters,
             // and expect to use this feature to work around browser limitations like there
