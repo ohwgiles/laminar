@@ -123,21 +123,12 @@ install(FILES etc/laminarc-completion.zsh DESTINATION ${ZSH_COMPLETIONS_DIR} REN
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
 install(FILES etc/laminar.service DESTINATION ${SYSTEMD_UNITDIR})
 
-# An initial attempt at solving https://github.com/ohwgiles/laminar/issues/92
+# Don't overwrite the config file if it already exists at the target location
+# @todo - migration/override script if the defaults change or the options get pruned?
 if(NOT EXISTS "${CMAKE_INSTALL_PREFIX}etc/laminar.conf")
     install(
-        FILES ${CMAKE_INSTALL_PREFIX}etc/laminar.conf
-        DESTINATION etc
-    )
-else(NOT EXISTS "${CMAKE_INSTALL_PREFIX}etc/laminar.conf")
-    # hardcoded values are examples of technical debt, and in an ideal world, are eliminated.
-    MESSAGE("-- A ${CMAKE_INSTALL_PREFIX}etc/laminar.conf file exists, will create ${CMAKE_INSTALL_PREFIX}etc/laminar.conf.example instead of overwriting.")
-    # This also displays at config time, rather than install time.
-    # In an ideal world, the user gets offered the option to overwrite, compare, or keep/copy the file
-    install(
-        FILES ${CMAKE_INSTALL_PREFIX}etc/laminar.conf
-        DESTINATION etc
-        RENAME "laminar.conf.example"
+        FILES etc/laminar.conf
+        DESTINATION ${CMAKE_INSTALL_PREFIX}etc
     )
 endif(NOT EXISTS "${CMAKE_INSTALL_PREFIX}etc/laminar.conf")
 
