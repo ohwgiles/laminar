@@ -104,8 +104,12 @@ if(BUILD_TESTS)
 endif()
 
 set(SYSTEMD_UNITDIR lib/systemd/system CACHE PATH "Path to systemd unit files")
+
 set(BASH_COMPLETIONS_DIR usr/share/bash-completion/completions CACHE PATH "Path to bash completions directory")
 set(ZSH_COMPLETIONS_DIR usr/share/zsh/site-functions CACHE PATH "Path to zsh completions directory")
+install(FILES etc/laminarc-completion.bash DESTINATION ${BASH_COMPLETIONS_DIR} RENAME laminarc)
+install(FILES etc/laminarc-completion.zsh DESTINATION ${ZSH_COMPLETIONS_DIR} RENAME _laminarc)
+
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
 install(FILES etc/laminar.service DESTINATION ${SYSTEMD_UNITDIR})
 
@@ -127,5 +131,3 @@ else()
     )
 endif()
 
-install(FILES etc/laminarc-completion.bash DESTINATION ${BASH_COMPLETIONS_DIR} RENAME laminarc)
-install(FILES etc/laminarc-completion.zsh DESTINATION ${ZSH_COMPLETIONS_DIR} RENAME _laminarc)
