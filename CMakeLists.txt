@@ -22,6 +22,12 @@ cmake_policy(SET CMP0058 NEW)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+if(NOT CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX /)
+endif(NOT CMAKE_INSTALL_PREFIX)
+
+message("-- Install prefix set to ${CMAKE_INSTALL_PREFIX}")
+
 add_definitions("-std=c++14 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -DDEBUG")
 
