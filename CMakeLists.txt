@@ -108,6 +108,24 @@ set(BASH_COMPLETIONS_DIR usr/share/bash-completion/completions CACHE PATH "Path 
 set(ZSH_COMPLETIONS_DIR usr/share/zsh/site-functions CACHE PATH "Path to zsh completions directory")
 install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
 install(FILES etc/laminar.service DESTINATION ${SYSTEMD_UNITDIR})
-install(FILES etc/laminar.conf DESTINATION etc)
+
+# An initial attempt at solving https://github.com/ohwgiles/laminar/issues/92
+if(NOT EXISTS "/etc/laminar.conf")
+    install(
+        FILES etc/laminar.conf
+        DESTINATION etc
+    )
+else()
+    # hardcoded values are examples of technical debt, and in an ideal world, are eliminated.
+    MESSAGE("-- An /etc/laminar.conf file exists, will create /etc/laminar.conf.example instead of overwriting.")
+    # This also displays at config time, rather than install time.
+    # In an ideal world, the user gets offered the option to overwrite, compare, or keep/copy the file
+    install(
+        FILES etc/laminar.conf
+        DESTINATION etc
+        RENAME "laminar.conf.example"
+    )
+endif()
+
 install(FILES etc/laminarc-completion.bash DESTINATION ${BASH_COMPLETIONS_DIR} RENAME laminarc)
 install(FILES etc/laminarc-completion.zsh DESTINATION ${ZSH_COMPLETIONS_DIR} RENAME _laminarc)
