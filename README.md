@@ -16,7 +16,7 @@ First install development packages for `capnproto (version 0.7.0 or newer)`, `ra
 git clone https://github.com/ohwgiles/laminar.git
 cd laminar
 cmake .
-make -j4
+make -j$(nproc)
 sudo make install
 ```
 Note that by default, installing with `(c)make` will overwrite your existing configuration, binary, and unit files. Make backups!
