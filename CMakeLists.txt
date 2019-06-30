@@ -25,8 +25,12 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 if(NOT CMAKE_INSTALL_PREFIX)
     set(CMAKE_INSTALL_PREFIX /)
 endif(NOT CMAKE_INSTALL_PREFIX)
+message("-- Install prefix set to '${CMAKE_INSTALL_PREFIX}'")
 
-message("-- Install prefix set to ${CMAKE_INSTALL_PREFIX}")
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release )
+endif(NOT CMAKE_BUILD_TYPE)
+message("-- Install type set to '${CMAKE_BUILD_TYPE}'")
 
 add_definitions("-std=c++14 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -DDEBUG")
@@ -120,20 +124,20 @@ install(TARGETS laminard laminarc RUNTIME DESTINATION usr/bin)
 install(FILES etc/laminar.service DESTINATION ${SYSTEMD_UNITDIR})
 
 # An initial attempt at solving https://github.com/ohwgiles/laminar/issues/92
-if(NOT EXISTS "/etc/laminar.conf")
+if(NOT EXISTS "${CMAKE_INSTALL_PREFIX}etc/laminar.conf")
     install(
-        FILES etc/laminar.conf
+        FILES ${CMAKE_INSTALL_PREFIX}etc/laminar.conf
         DESTINATION etc
     )
-else()
+else(NOT EXISTS "${CMAKE_INSTALL_PREFIX}etc/laminar.conf")
     # hardcoded values are examples of technical debt, and in an ideal world, are eliminated.
-    MESSAGE("-- An /etc/laminar.conf file exists, will create /etc/laminar.conf.example instead of overwriting.")
+    MESSAGE("-- A ${CMAKE_INSTALL_PREFIX}etc/laminar.conf file exists, will create ${CMAKE_INSTALL_PREFIX}etc/laminar.conf.example instead of overwriting.")
     # This also displays at config time, rather than install time.
     # In an ideal world, the user gets offered the option to overwrite, compare, or keep/copy the file
     install(
-        FILES etc/laminar.conf
+        FILES ${CMAKE_INSTALL_PREFIX}etc/laminar.conf
         DESTINATION etc
         RENAME "laminar.conf.example"
     )
-endif()
+endif(NOT EXISTS "${CMAKE_INSTALL_PREFIX}etc/laminar.conf")
 

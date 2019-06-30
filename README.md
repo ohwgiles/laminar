@@ -15,10 +15,13 @@ First install development packages for `capnproto (version 0.7.0 or newer)`, `ra
 ```bash
 git clone https://github.com/ohwgiles/laminar.git
 cd laminar
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/
+cmake .
 make -j4
 sudo make install
 ```
+Note that by default, installing with `(c)make` will overwrite your existing configuration, binary, and unit files. Make backups!
+
+The CMakeLists.txt file sets `cmake` defaults to `CMAKE_INSTALL_PREFIX=/` and `CMAKE_BUILD_TYPE=Release`, which can be overridden with the `-DCMAKE_INSTALL_PREFIX=<path>` and `-DCMAKE_BUILD_TYPE=<type>` flags, respectively.
 
 `make install` includes a systemd unit file. If you intend to use it, consider creating a new user `laminar` or modifying the user specified in the unit file.
 
