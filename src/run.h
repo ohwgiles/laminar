@@ -29,6 +29,9 @@
 #include <kj/async.h>
 #include <kj/filesystem.h>
 
+// Definition needed for musl
+typedef unsigned int uint;
+
 enum class RunState {
     UNKNOWN,
     PENDING,

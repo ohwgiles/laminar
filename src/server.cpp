@@ -29,9 +29,9 @@
 #include <kj/async-unix.h>
 #include <kj/threadlocal.h>
 
+#include <signal.h>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
-#include <sys/signal.h>
 #include <sys/signalfd.h>
 
 #include <rapidjson/document.h>

@@ -28,6 +28,9 @@
 #define EXIT_OPERATION_FAILED 2
 #define EXIT_RUN_FAILED       3
 
+// Definition needed for musl
+typedef unsigned int uint;
+
 template<typename T>
 static int setParams(int argc, char** argv, T& request) {
     int n = 0;

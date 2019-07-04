@@ -22,6 +22,10 @@
 #include <string>
 #include <functional>
 
+// Definition needed for musl
+typedef unsigned int uint;
+typedef unsigned long ulong;
+
 struct sqlite3;
 struct sqlite3_stmt;
 
