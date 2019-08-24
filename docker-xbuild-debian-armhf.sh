@@ -65,7 +65,7 @@ make DESTDIR=laminar install/strip
 mkdir laminar/DEBIAN
 cat <<EOF > laminar/DEBIAN/control
 Package: laminar
-Version: $VERSION
+Version: $VERSION-1
 Section: 
 Priority: optional
 Architecture: armhf
@@ -83,5 +83,5 @@ EOF
 chmod +x laminar/DEBIAN/postinst
 
 dpkg-deb --build laminar
-mv laminar.deb /output/laminar-$VERSION-1-armhf.deb
+mv laminar.deb /output/laminar_$VERSION-1_armhf.deb
 EOS
