@@ -4,7 +4,7 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian9
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM debian:9-slim
@@ -83,5 +83,5 @@ EOF
 chmod +x laminar/DEBIAN/postinst
 
 dpkg-deb --build laminar
-mv laminar.deb /output/laminar-$VERSION-1-armhf.deb
+mv laminar.deb /output/laminar_${VERSION}_armhf.deb
 EOS
