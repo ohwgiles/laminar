@@ -4,7 +4,7 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian9
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM debian:9-slim
@@ -45,7 +45,7 @@ make DESTDIR=laminar install/strip
 mkdir laminar/DEBIAN
 cat <<EOF > laminar/DEBIAN/control
 Package: laminar
-Version: $VERSION-1
+Version: $VERSION
 Section: 
 Priority: optional
 Architecture: amd64
@@ -63,5 +63,5 @@ EOF
 chmod +x laminar/DEBIAN/postinst
 
 dpkg-deb --build laminar
-mv laminar.deb /output/laminar_$VERSION-1_amd64.deb
+mv laminar.deb /output/laminar_$VERSION_amd64.deb
 EOS
