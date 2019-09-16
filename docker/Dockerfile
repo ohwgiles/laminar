@@ -34,13 +34,11 @@ RUN apk add --no-cache --virtual .build -X http://dl-3.alpinelinux.org/alpine/ed
     apk del .build && \
     rm -rf /build
 
+# Create laminar system user in "users" group
 RUN adduser -SDh /var/lib/laminar -g 'Laminar' -G users laminar
-
+# Set the working directory to the laminar user's home
 WORKDIR /var/lib/laminar
-
-RUN mkdir .ssh && \
-    chown -R laminar:users .
-
+# Run the preceeding as the user laminar
 USER laminar
 
 ENTRYPOINT [ "/sbin/tini", "--" ]
