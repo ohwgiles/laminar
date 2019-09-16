@@ -59,8 +59,12 @@
   span.failed { color: firebrick; }
   span.aborted { color: indigo; }
   span.spin {
+    backface-visibility: hidden;
+    perspective: 1000;
     color: steelblue;
+    transform: translateZ(0);
     animation: 2s linear infinite spin;
+    will-change: transform;
   }
   @keyframes spin {
     to { transform: rotate(360deg); }
