@@ -54,8 +54,6 @@ docker build [-t image:tag] -f docker/Dockerfile .
 
 Keep in mind that this is meant to be used as a base image to build from, so it contains only the minimum packages required to run laminar. The only shell available by default is sh and it does not even have ssh or git. You can use this image to run a basic build server, but it is recommended that you build a custom image from this base to better suit your needs.
 
-### laminard
-
 The container will execute `laminard` by default. To start a laminar server with docker you can simply run the image as a daemon.
 
 ```bash
@@ -64,13 +62,13 @@ docker run -d --name laminar_server -p 8080:8080 [-v laminardir|laminar.conf] la
 
 You can customize laminar and persist your data by mounting your laminar directory to `/var/lib/laminar` and/or mounting a custom configuration file to `/etc/laminar.conf`.
 
-### laminarc
-
-You can execute `laminarc` either standalone, by running the image, or by executing `laminarc` on a running instance of the image.
+Executing `laminarc` may be done in any of the usual ways, for example:
 
 ```bash
 docker exec -i laminar_server laminarc queue example_task
 ```
+
+Alternatively, you might [use an external `laminarc`](#Triggering-on-a-remote-laminar-instance).
 
 ---
 
