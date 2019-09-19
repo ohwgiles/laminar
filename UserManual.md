@@ -43,6 +43,33 @@ Both install packages will create a new `laminar` user and install (but not acti
 
 See the [development README](https://github.com/ohwgiles/laminar) for instructions for installing from source.
 
+## Building for Docker
+
+You can build an image that runs `laminard` by default, and contains `laminarc` for use based on `alpine:edge` using the `Dockerfile` in the `docker/` directory.
+
+```bash
+# from the repository root:
+docker build [-t image:tag] -f docker/Dockerfile .
+```
+
+Keep in mind that this is meant to be used as a base image to build from, so it contains only the minimum packages required to run laminar. The only shell available by default is sh and it does not even have ssh or git. You can use this image to run a basic build server, but it is recommended that you build a custom image from this base to better suit your needs.
+
+The container will execute `laminard` by default. To start a laminar server with docker you can simply run the image as a daemon.
+
+```bash
+docker run -d --name laminar_server -p 8080:8080 [-v laminardir|laminar.conf] laminar:latest
+```
+
+You can customize laminar and persist your data by mounting your laminar directory to `/var/lib/laminar` and/or mounting a custom configuration file to `/etc/laminar.conf`.
+
+Executing `laminarc` may be done in any of the usual ways, for example:
+
+```bash
+docker exec -i laminar_server laminarc queue example_task
+```
+
+Alternatively, you might [use an external `laminarc`](#Triggering-on-a-remote-laminar-instance).
+
 ---
 
 # Service configuration
