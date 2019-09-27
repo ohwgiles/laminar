@@ -26,6 +26,8 @@
 #include <functional>
 
 struct LaminarInterface;
+struct Http;
+struct Rpc;
 
 // This class abstracts the HTTP/Websockets and Cap'n Proto RPC interfaces
 // and manages the program's asynchronous event loop
@@ -61,15 +63,10 @@ private:
 
 private:
     int efd_quit;
-    capnp::Capability::Client rpcInterface;
     LaminarInterface& laminarInterface;
     kj::AsyncIoContext ioContext;
-    kj::HttpHeaderTable headerTable;
-    kj::Own<kj::HttpService> httpService;
-    kj::Own<kj::HttpServer> httpServer;
     kj::Own<kj::TaskSet> listeners;
     kj::TaskSet childTasks;
-    kj::TaskSet httpConnections;
     kj::Maybe<kj::Promise<void>> reapWatch;
     int inotify_fd;
     kj::Maybe<kj::Promise<void>> pathWatch;
@@ -77,6 +74,10 @@ private:
     // TODO: restructure so this isn't necessary
     friend class ServerTest;
     kj::PromiseFulfillerPair<void> httpReady;
+
+    // TODO: WIP
+    kj::Own<Http> http;
+    kj::Own<Rpc> rpc;
 };
 
 #endif // LAMINAR_SERVER_H_

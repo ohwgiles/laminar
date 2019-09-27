@@ -25,6 +25,7 @@
 #include "interface.h"
 #include "laminar.capnp.h"
 #include "tempdir.h"
+#include "rpc.h"
 
 class MockLaminar : public LaminarInterface {
 public:
@@ -75,7 +76,7 @@ protected:
     }
 
     LaminarCi::Client client() const {
-        return server->rpcInterface.castAs<LaminarCi>();
+        return server->rpc->rpcInterface.castAs<LaminarCi>();
     }
     kj::WaitScope& ws() const {
         return server->ioContext.waitScope;
