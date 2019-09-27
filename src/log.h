@@ -46,8 +46,8 @@ namespace _ {
         return static_alloc_str_impl<N>(str, std::make_integer_sequence<int, N>());
     }
 }
-#define __FILE_BASE__ (_::static_alloc_str<_::static_strlen(_::static_basename(__FILE__))>(_::static_basename(__FILE__)).buf)
-
+#define __FILE_BASE__ (::_::static_alloc_str<::_::static_strlen(::_::static_basename(__FILE__))>\
+                        (::_::static_basename(__FILE__)).buf)
 
 // Provide alternative implementations to those from kj/debug.h which
 // use __FILE__ directly and thus cause the full path to be encoded in
