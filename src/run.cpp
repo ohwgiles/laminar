@@ -51,7 +51,8 @@ Run::Run(std::string name, ParamMap pm, kj::Path&& rootPath) :
     params(kj::mv(pm)),
     queuedAt(time(nullptr)),
     rootPath(kj::mv(rootPath)),
-    started(kj::newPromiseAndFulfiller<void>())
+    started(kj::newPromiseAndFulfiller<void>()),
+    finished(kj::newPromiseAndFulfiller<RunState>())
 {
     for(auto it = params.begin(); it != params.end();) {
         if(it->first[0] == '=') {
@@ -261,4 +262,6 @@ void Run::reaped(int status) {
     else if(status != 0)
         result = RunState::FAILED;
     // otherwise preserve earlier status
+
+    finished.fulfiller->fulfill(RunState(result));
 }

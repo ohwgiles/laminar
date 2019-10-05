@@ -74,6 +74,7 @@ public:
     std::string reason() const;
 
     kj::Promise<void>&& whenStarted() { return kj::mv(started.promise); }
+    kj::Promise<RunState>&& whenFinished() { return kj::mv(finished.promise); }
 
     std::shared_ptr<Node> node;
     RunState result;
@@ -108,6 +109,7 @@ private:
     std::list<kj::Path> env;
     std::string reasonMsg;
     kj::PromiseFulfillerPair<void> started;
+    kj::PromiseFulfillerPair<RunState> finished;
 };
 
 

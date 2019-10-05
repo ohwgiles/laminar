@@ -16,21 +16,13 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef LAMINAR_RPC_H_
-#define LAMINAR_RPC_H_
+#include <kj/async-unix.h>
+#include <gtest/gtest.h>
 
-#include <capnp/ez-rpc.h>
-#include <capnp/rpc-twoparty.h>
-#include <capnp/rpc.capnp.h>
+// gtest main supplied in order to call captureChildExit
+int main(int argc, char **argv) {
+    kj::UnixEventPort::captureChildExit();
 
-struct Laminar;
-
-class Rpc {
-public:
-    Rpc(Laminar&li);
-    kj::Promise<void> accept(kj::Own<kj::AsyncIoStream>&& connection);
-
-    capnp::Capability::Client rpcInterface;
-};
-
-#endif //LAMINAR_RPC_H_
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}

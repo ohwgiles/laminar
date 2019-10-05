@@ -25,19 +25,14 @@
 #include <capnp/capability.h>
 #include <functional>
 
-struct LaminarInterface;
+struct Laminar;
 struct Http;
 struct Rpc;
 
-// This class abstracts the HTTP/Websockets and Cap'n Proto RPC interfaces
-// and manages the program's asynchronous event loop
+// This class manages the program's asynchronous event loop
 class Server final : public kj::TaskSet::ErrorHandler {
 public:
-    // Initializes the server with a LaminarInterface to handle requests from
-    // HTTP/Websocket or RPC clients and bind addresses for each of those
-    // interfaces. See the documentation for kj::AsyncIoProvider::getNetwork
-    // for a description of the address format
-    Server(LaminarInterface& li, kj::StringPtr rpcBindAddress, kj::StringPtr httpBindAddress);
+    Server(kj::AsyncIoContext& ioContext);
     ~Server();
     void start();
     void stop();
@@ -52,32 +47,28 @@ public:
 
     // get a promise which resolves when a child process exits
     kj::Promise<int> onChildExit(kj::Maybe<pid_t>& pid);
-    // add a path to be watched for changes
-    void addWatchPath(const char* dpath);
+
+    struct PathWatcher {
+        virtual PathWatcher& addPath(const char* path) = 0;
+    };
+
+    PathWatcher& watchPaths(std::function<void()>);
+
+    void listenRpc(Rpc& rpc, kj::StringPtr rpcBindAddress);
+    void listenHttp(Http& http, kj::StringPtr httpBindAddress);
 
 private:
-    kj::Promise<void> acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener);
+    kj::Promise<void> acceptRpcClient(Rpc& rpc, kj::Own<kj::ConnectionReceiver>&& listener);
     kj::Promise<void> handleFdRead(kj::AsyncInputStream* stream, char* buffer, std::function<void(const char*,size_t)> cb);
 
     void taskFailed(kj::Exception&& exception) override;
 
 private:
     int efd_quit;
-    LaminarInterface& laminarInterface;
-    kj::AsyncIoContext ioContext;
+    kj::AsyncIoContext& ioContext;
     kj::Own<kj::TaskSet> listeners;
     kj::TaskSet childTasks;
     kj::Maybe<kj::Promise<void>> reapWatch;
-    int inotify_fd;
-    kj::Maybe<kj::Promise<void>> pathWatch;
-
-    // TODO: restructure so this isn't necessary
-    friend class ServerTest;
-    kj::PromiseFulfillerPair<void> httpReady;
-
-    // TODO: WIP
-    kj::Own<Http> http;
-    kj::Own<Rpc> rpc;
 };
 
 #endif // LAMINAR_SERVER_H_

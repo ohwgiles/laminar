@@ -85,7 +85,7 @@ generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
     js/ansi_up.js js/Chart.min.js css/bootstrap.min.css)
 # (see resources.cpp where these are fetched)
 
-set(LAMINARD_SOURCES
+set(LAMINARD_CORE_SOURCES
     src/database.cpp
     src/server.cpp
     src/laminar.cpp
@@ -94,10 +94,12 @@ set(LAMINARD_SOURCES
     src/resources.cpp
     src/rpc.cpp
     src/run.cpp
+    laminar.capnp.c++
+    index_html_size.h
 )
 
 ## Server
-add_executable(laminard ${LAMINARD_SOURCES} src/main.cpp laminar.capnp.c++ ${COMPRESSED_BINS} index_html_size.h)
+add_executable(laminard ${LAMINARD_CORE_SOURCES} src/main.cpp ${COMPRESSED_BINS})
 target_link_libraries(laminard capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 
 ## Client
@@ -109,8 +111,8 @@ set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     include_directories(${GTEST_INCLUDE_DIRS} src)
-    add_executable(laminar-tests ${LAMINARD_SOURCES} laminar.capnp.c++ src/resources.cpp ${COMPRESSED_BINS} test/test-conf.cpp test/test-database.cpp test/test-laminar.cpp test/test-run.cpp test/test-server.cpp)
-    target_link_libraries(laminar-tests ${GTEST_BOTH_LIBRARIES} gmock capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
+    add_executable(laminar-tests ${LAMINARD_CORE_SOURCES} ${COMPRESSED_BINS} test/main.cpp test/laminar-functional.cpp test/unit-conf.cpp test/unit-database.cpp test/unit-run.cpp)
+    target_link_libraries(laminar-tests ${GTEST_LIBRARY} capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 endif()
 
 set(SYSTEMD_UNITDIR lib/systemd/system CACHE PATH "Path to systemd unit files")

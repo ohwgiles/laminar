@@ -20,6 +20,8 @@
 #include "server.h"
 #include "conf.h"
 #include "log.h"
+#include "http.h"
+#include "rpc.h"
 
 #include <sys/wait.h>
 #include <sys/mman.h>
@@ -35,7 +37,7 @@
 #include <rapidjson/writer.h>
 
 // rapidjson::Writer with a StringBuffer is used a lot in Laminar for
-// preparing JSON messages to send to Websocket clients. A small wrapper
+// preparing JSON messages to send to HTTP clients. A small wrapper
 // class here reduces verbosity later for this common use case.
 class Json : public rapidjson::Writer<rapidjson::StringBuffer> {
 public:
@@ -52,13 +54,6 @@ template<> Json& Json::set(const char* key, double value) { String(key); Double(
 template<> Json& Json::set(const char* key, const char* value) { String(key); String(value); return *this; }
 template<> Json& Json::set(const char* key, std::string value) { String(key); String(value.c_str()); return *this; }
 
-namespace {
-// Default values when none were supplied in $LAMINAR_CONF_FILE (/etc/laminar.conf)
-constexpr const char* INTADDR_RPC_DEFAULT = "unix-abstract:laminar";
-constexpr const char* INTADDR_HTTP_DEFAULT = "*:8080";
-constexpr const char* ARCHIVE_URL_DEFAULT = "/archive/";
-}
-
 // short syntax helpers for kj::Path
 template<typename T>
 inline kj::Path operator/(const kj::Path& p, const T& ext) {
@@ -71,18 +66,19 @@ inline kj::Path operator/(const std::string& p, const T& ext) {
 
 typedef std::string str;
 
-Laminar::Laminar(const char *home) :
-    homePath(kj::Path::parse(&home[1])),
-    fsHome(kj::newDiskFilesystem()->getRoot().openSubdir(homePath, kj::WriteMode::MODIFY))
+Laminar::Laminar(Server &server, Settings settings) :
+    settings(settings),
+    srv(server),
+    homePath(kj::Path::parse(&settings.home[1])),
+    fsHome(kj::newDiskFilesystem()->getRoot().openSubdir(homePath, kj::WriteMode::MODIFY)),
+    http(kj::heap<Http>(*this)),
+    rpc(kj::heap<Rpc>(*this))
 {
-    LASSERT(home[0] == '/');
+    LASSERT(settings.home[0] == '/');
 
-    archiveUrl = ARCHIVE_URL_DEFAULT;
-    if(char* envArchive = getenv("LAMINAR_ARCHIVE_URL")) {
-        archiveUrl = envArchive;
-        if(archiveUrl.back() != '/')
-            archiveUrl.append("/");
-    }
+    archiveUrl = settings.archive_url;
+    if(archiveUrl.back() != '/')
+        archiveUrl.append("/");
 
     numKeepRunDirs = 0;
 
@@ -103,27 +99,20 @@ Laminar::Laminar(const char *home) :
         buildNums[name] = build;
     });
 
-    srv = nullptr;
+    srv.watchPaths([this]{
+        LLOG(INFO, "Reloading configuration");
+        loadConfiguration();
+        // config change may allow stuck jobs to dequeue
+        assignNewJobs();
+    }).addPath((homePath/"cfg"/"nodes").toString(true).cStr())
+      .addPath((homePath/"cfg"/"jobs").toString(true).cStr());
+
+    srv.listenRpc(*rpc, settings.bind_rpc);
+    srv.listenHttp(*http, settings.bind_http);
 
     // Load configuration, may be called again in response to an inotify event
     // that the configuration files have been modified
     loadConfiguration();
-}
-
-void Laminar::registerClient(LaminarClient* client) {
-    clients.insert(client);
-}
-
-void Laminar::deregisterClient(LaminarClient* client) {
-    clients.erase(client);
-}
-
-void Laminar::registerWaiter(LaminarWaiter *waiter) {
-    waiters.insert(waiter);
-}
-
-void Laminar::deregisterWaiter(LaminarWaiter *waiter) {
-    waiters.erase(waiter);
 }
 
 uint Laminar::latestRun(std::string job) {
@@ -141,8 +130,6 @@ uint Laminar::latestRun(std::string job) {
     }
 }
 
-// TODO: reunify with sendStatus. The difference is that this method is capable of
-// returning "not found" to the caller, and sendStatus isn't
 bool Laminar::handleLogRequest(std::string name, uint num, std::string& output, bool& complete) {
     if(Run* run = activeRun(name, num)) {
         output = run->log;
@@ -216,40 +203,15 @@ void Laminar::populateArtifacts(Json &j, std::string job, uint num) const {
     }
 }
 
-void Laminar::sendStatus(LaminarClient* client) {
-    if(client->scope.type == MonitorScope::LOG) {
-        // If the requested job is currently in progress
-        if(const Run* run = activeRun(client->scope.job, client->scope.num)) {
-            client->sendMessage(run->log.c_str());
-        } else { // it must be finished, fetch it from the database
-            db->stmt("SELECT output, outputLen FROM builds WHERE name = ? AND number = ?")
-              .bind(client->scope.job, client->scope.num)
-              .fetch<str,int>([=](str maybeZipped, unsigned long sz) {
-                str log(sz+1,'\0');
-                if(sz >= COMPRESS_LOG_MIN_SIZE) {
-                    int res = ::uncompress((uint8_t*) log.data(), &sz,
-                         (const uint8_t*) maybeZipped.data(), maybeZipped.size());
-                    if(res == Z_OK)
-                        client->sendMessage(log);
-                    else
-                        LLOG(ERROR, "Failed to uncompress log");
-                } else {
-                    client->sendMessage(maybeZipped);
-                }
-            });
-            client->notifyJobFinished();
-        }
-        return;
-    }
-
+std::string Laminar::getStatus(MonitorScope scope) {
     Json j;
     j.set("type", "status");
     j.set("title", getenv("LAMINAR_TITLE") ?: "Laminar");
     j.set("time", time(nullptr));
     j.startObject("data");
-    if(client->scope.type == MonitorScope::RUN) {
+    if(scope.type == MonitorScope::RUN) {
         db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,parentJob,parentBuild FROM builds WHERE name = ? AND number = ?")
-        .bind(client->scope.job, client->scope.num)
+        .bind(scope.job, scope.num)
         .fetch<time_t, time_t, time_t, int, std::string, std::string, uint>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint parentBuild) {
             j.set("queued", started-queued);
             j.set("started", started);
@@ -258,7 +220,7 @@ void Laminar::sendStatus(LaminarClient* client) {
             j.set("reason", reason);
             j.startObject("upstream").set("name", parentJob).set("num", parentBuild).EndObject(2);
         });
-        if(const Run* run = activeRun(client->scope.job, client->scope.num)) {
+        if(const Run* run = activeRun(scope.job, scope.num)) {
             j.set("queued", run->startedAt - run->queuedAt);
             j.set("started", run->startedAt);
             j.set("result", to_string(RunState::RUNNING));
@@ -270,30 +232,30 @@ void Laminar::sendStatus(LaminarClient* client) {
                 j.set("etc", run->startedAt + lastRuntime);
             });
         }
-        j.set("latestNum", int(buildNums[client->scope.job]));
+        j.set("latestNum", int(buildNums[scope.job]));
         j.startArray("artifacts");
-        populateArtifacts(j, client->scope.job, client->scope.num);
+        populateArtifacts(j, scope.job, scope.num);
         j.EndArray();
-    } else if(client->scope.type == MonitorScope::JOB) {
+    } else if(scope.type == MonitorScope::JOB) {
         const uint runsPerPage = 10;
         j.startArray("recent");
         // ORDER BY param cannot be bound
         std::string order_by;
-        std::string direction = client->scope.order_desc ? "DESC" : "ASC";
-        if(client->scope.field == "number")
+        std::string direction = scope.order_desc ? "DESC" : "ASC";
+        if(scope.field == "number")
             order_by = "number " + direction;
-        else if(client->scope.field == "result")
+        else if(scope.field == "result")
             order_by = "result " + direction + ", number DESC";
-        else if(client->scope.field == "started")
+        else if(scope.field == "started")
             order_by = "startedAt " + direction + ", number DESC";
-        else if(client->scope.field == "duration")
+        else if(scope.field == "duration")
             order_by = "(completedAt-startedAt) " + direction + ", number DESC";
         else
             order_by = "number DESC";
         std::string stmt = "SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY "
                 + order_by + " LIMIT ?,?";
         db->stmt(stmt.c_str())
-        .bind(client->scope.job, client->scope.page * runsPerPage, runsPerPage)
+        .bind(scope.job, scope.page * runsPerPage, runsPerPage)
         .fetch<uint,time_t,time_t,int,str>([&](uint build,time_t started,time_t completed,int result,str reason){
             j.StartObject();
             j.set("number", build)
@@ -305,18 +267,18 @@ void Laminar::sendStatus(LaminarClient* client) {
         });
         j.EndArray();
         db->stmt("SELECT COUNT(*),AVG(completedAt-startedAt) FROM builds WHERE name = ?")
-        .bind(client->scope.job)
+        .bind(scope.job)
         .fetch<uint,uint>([&](uint nRuns, uint averageRuntime){
             j.set("averageRuntime", averageRuntime);
             j.set("pages", (nRuns-1) / runsPerPage + 1);
             j.startObject("sort");
-            j.set("page", client->scope.page)
-             .set("field", client->scope.field)
-             .set("order", client->scope.order_desc ? "dsc" : "asc")
+            j.set("page", scope.page)
+             .set("field", scope.field)
+             .set("order", scope.order_desc ? "dsc" : "asc")
              .EndObject();
         });
         j.startArray("running");
-        auto p = activeJobs.byJobName().equal_range(client->scope.job);
+        auto p = activeJobs.byJobName().equal_range(scope.job);
         for(auto it = p.first; it != p.second; ++it) {
             const std::shared_ptr<Run> run = *it;
             j.StartObject();
@@ -330,27 +292,27 @@ void Laminar::sendStatus(LaminarClient* client) {
         j.EndArray();
         int nQueued = 0;
         for(const auto& run : queuedJobs) {
-            if (run->name == client->scope.job) {
+            if (run->name == scope.job) {
                 nQueued++;
             }
         }
         j.set("nQueued", nQueued);
         db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result = ? ORDER BY completedAt DESC LIMIT 1")
-        .bind(client->scope.job, int(RunState::SUCCESS))
+        .bind(scope.job, int(RunState::SUCCESS))
         .fetch<int,time_t>([&](int build, time_t started){
             j.startObject("lastSuccess");
             j.set("number", build).set("started", started);
             j.EndObject();
         });
         db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result <> ? ORDER BY completedAt DESC LIMIT 1")
-        .bind(client->scope.job, int(RunState::SUCCESS))
+        .bind(scope.job, int(RunState::SUCCESS))
         .fetch<int,time_t>([&](int build, time_t started){
             j.startObject("lastFailed");
             j.set("number", build).set("started", started);
             j.EndObject();
         });
 
-    } else if(client->scope.type == MonitorScope::ALL) {
+    } else if(scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
         db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b JOIN (SELECT name n,MAX(number) l FROM builds GROUP BY n) q ON b.name = q.n AND b.number = q.l")
         .fetch<str,uint,time_t,time_t,int>([&](str name,uint number, time_t started, time_t completed, int result){
@@ -512,29 +474,14 @@ void Laminar::sendStatus(LaminarClient* client) {
 
     }
     j.EndObject();
-    client->sendMessage(j.str());
+    return j.str();
 }
 
 Laminar::~Laminar() noexcept try {
     delete db;
-    delete srv;
 } catch (std::exception& e) {
     LLOG(ERROR, e.what());
     return;
-}
-
-void Laminar::run() {
-    const char* listen_rpc = getenv("LAMINAR_BIND_RPC") ?: INTADDR_RPC_DEFAULT;
-    const char* listen_http = getenv("LAMINAR_BIND_HTTP") ?: INTADDR_HTTP_DEFAULT;
-
-    srv = new Server(*this, listen_rpc, listen_http);
-    srv->addWatchPath((homePath/"cfg"/"nodes").toString(true).cStr());
-    srv->addWatchPath((homePath/"cfg"/"jobs").toString(true).cStr());
-    srv->start();
-}
-
-void Laminar::stop() {
-    srv->stop();
 }
 
 bool Laminar::loadConfiguration() {
@@ -627,22 +574,10 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         .startObject("data")
         .set("name", name)
         .EndObject();
-    const char* msg = j.str();
-    for(LaminarClient* c : clients) {
-        if(c->scope.wantsStatus(name))
-            c->sendMessage(msg);
-    }
+    http->notifyEvent("job_queued", j.str(), name.c_str());
 
     assignNewJobs();
     return run;
-}
-
-void Laminar::notifyConfigChanged()
-{
-    LLOG(INFO, "Reloading configuration");
-    loadConfiguration();
-    // config change may allow stuck jobs to dequeue
-    assignNewJobs();
 }
 
 bool Laminar::abort(std::string job, uint buildNum) {
@@ -700,11 +635,11 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
                 runFinished(run.get());
             });
             if(run->timeout > 0) {
-                exec = exec.attach(srv->addTimeout(run->timeout, [r=run.get()](){
+                exec = exec.attach(srv.addTimeout(run->timeout, [r=run.get()](){
                     r->abort(true);
                 }));
             }
-            srv->addTask(kj::mv(exec));
+            srv.addTask(kj::mv(exec));
             LLOG(INFO, "Started job on node", run->name, run->build, node->name);
 
             // update next build number
@@ -731,16 +666,7 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
             }
             j.EndArray();
             j.EndObject();
-            const char* msg = j.str();
-            for(LaminarClient* c : clients) {
-                if(c->scope.wantsStatus(run->name, run->build)
-                    // The run page also should know that another job has started
-                    // (so maybe it can show a previously hidden "next" button).
-                    // Hence this small hack:
-                        || (c->scope.type == MonitorScope::Type::RUN && c->scope.job == run->name))
-                    c->sendMessage(msg);
-            }
-
+            http->notifyEvent("job_started", j.str(), run->name.c_str(), run->build);
             return true;
         }
     }
@@ -765,17 +691,14 @@ kj::Promise<void> Laminar::handleRunStep(Run* run) {
         return kj::READY_NOW;
     }
 
-    kj::Promise<int> exited = srv->onChildExit(run->current_pid);
+    kj::Promise<int> exited = srv.onChildExit(run->current_pid);
     // promise is fulfilled when the process is reaped. But first we wait for all
     // output from the pipe (Run::output_fd) to be consumed.
-    return srv->readDescriptor(run->output_fd, [this,run](const char*b,size_t n){
+    return srv.readDescriptor(run->output_fd, [this,run](const char*b,size_t n){
         // handle log output
         std::string s(b, n);
         run->log += s;
-        for(LaminarClient* c : clients) {
-            if(c->scope.wantsLog(run->name, run->build))
-                c->sendMessage(s);
-        }
+        http->notifyLog(run->name, run->build, s, false);
     }).then([p = std::move(exited)]() mutable {
         // wait until the process is reaped
         return kj::mv(p);
@@ -832,18 +755,8 @@ void Laminar::runFinished(Run * r) {
     populateArtifacts(j, r->name, r->build);
     j.EndArray();
     j.EndObject();
-    const char* msg = j.str();
-    for(LaminarClient* c : clients) {
-        if(c->scope.wantsStatus(r->name, r->build))
-            c->sendMessage(msg);
-        c->notifyJobFinished();
-    }
-
-    // notify the waiters
-    for(LaminarWaiter* w : waiters) {
-        w->complete(r);
-    }
-
+    http->notifyEvent("job_completed", j.str(), r->name, r->build);
+    http->notifyLog(r->name, r->build, "", true);
     // erase reference to run from activeJobs. Since runFinished is called in a
     // lambda whose context contains a shared_ptr<Run>, the run won't be deleted
     // until the context is destroyed at the end of the lambda execution.

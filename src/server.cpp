@@ -17,10 +17,10 @@
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
 #include "server.h"
-#include "interface.h"
 #include "log.h"
 #include "rpc.h"
 #include "http.h"
+#include "laminar.h"
 
 #include <kj/async-io.h>
 #include <kj/async-unix.h>
@@ -35,41 +35,11 @@
 // a multiple of sizeof(struct signalfd_siginfo) == 128
 #define PROC_IO_BUFSIZE 4096
 
-Server::Server(LaminarInterface& li, kj::StringPtr rpcBindAddress,
-               kj::StringPtr httpBindAddress) :
-    laminarInterface(li),
-    ioContext(kj::setupAsyncIo()),
+Server::Server(kj::AsyncIoContext& io) :
+    ioContext(io),
     listeners(kj::heap<kj::TaskSet>(*this)),
-    childTasks(*this),
-    httpReady(kj::newPromiseAndFulfiller<void>()),
-    http(kj::heap<Http>(li)),
-    rpc(kj::heap<Rpc>(li))
+    childTasks(*this)
 {
-    // RPC task
-    if(rpcBindAddress.startsWith("unix:"))
-        unlink(rpcBindAddress.slice(strlen("unix:")).cStr());
-    listeners->add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress)
-              .then([this](kj::Own<kj::NetworkAddress>&& addr) {
-        return acceptRpcClient(addr->listen());
-    }));
-
-    // HTTP task
-    if(httpBindAddress.startsWith("unix:"))
-        unlink(httpBindAddress.slice(strlen("unix:")).cStr());
-    listeners->add(ioContext.provider->getNetwork().parseAddress(httpBindAddress)
-              .then([this](kj::Own<kj::NetworkAddress>&& addr) {
-        // TODO: a better way? Currently used only for testing
-        httpReady.fulfiller->fulfill();
-        return http->startServer(ioContext.lowLevelProvider->getTimer(), addr->listen());
-    }));
-
-    // handle watched paths
-    {
-        inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-        pathWatch = readDescriptor(inotify_fd, [this](const char*, size_t){
-            laminarInterface.notifyConfigChanged();
-        });
-    }
 }
 
 Server::~Server() {
@@ -89,15 +59,12 @@ void Server::start() {
     // Shutdown sequence:
     // 1. stop accepting new connections
     listeners = nullptr;
-    // 2. abort current jobs. Most of the time this isn't necessary since
-    // systemd stop or other kill mechanism will send SIGTERM to the whole
-    // process group.
-    laminarInterface.abortAll();
-    // 3. wait for all children to close
+    // 2. wait for all children to close
     childTasks.onEmpty().wait(ioContext.waitScope);
-    // 4. run the loop once more to send any pending output to websocket clients
+    // TODO not sure the comments below are true
+    // 3. run the loop once more to send any pending output to http clients
     ioContext.waitScope.poll();
-    // 5. return: websockets will be destructed when class is deleted
+    // 4. return: http connections will be destructed when class is deleted
 }
 
 void Server::stop() {
@@ -126,16 +93,52 @@ kj::Promise<int> Server::onChildExit(kj::Maybe<pid_t> &pid) {
     return ioContext.unixEventPort.onChildExit(pid);
 }
 
-void Server::addWatchPath(const char* dpath) {
-    inotify_add_watch(inotify_fd, dpath, IN_ONLYDIR | IN_CLOSE_WRITE | IN_CREATE | IN_DELETE);
+Server::PathWatcher& Server::watchPaths(std::function<void()> fn)
+{
+    struct PathWatcherImpl : public PathWatcher {
+        PathWatcher& addPath(const char* path) override {
+            inotify_add_watch(fd, path, IN_ONLYDIR | IN_CLOSE_WRITE | IN_CREATE | IN_DELETE);
+            return *this;
+        }
+        int fd;
+    };
+    auto pwi = kj::heap<PathWatcherImpl>();
+    PathWatcher* pw = pwi.get();
+
+    pwi->fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+    listeners->add(readDescriptor(pwi->fd, [fn](const char*, size_t){
+        fn();
+    }).attach(kj::mv(pwi)));
+    return *pw;
 }
 
-kj::Promise<void> Server::acceptRpcClient(kj::Own<kj::ConnectionReceiver>&& listener) {
+void Server::listenRpc(Rpc &rpc, kj::StringPtr rpcBindAddress)
+{
+    if(rpcBindAddress.startsWith("unix:"))
+        unlink(rpcBindAddress.slice(strlen("unix:")).cStr());
+    listeners->add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress)
+              .then([this,&rpc](kj::Own<kj::NetworkAddress>&& addr) {
+        return acceptRpcClient(rpc, addr->listen());
+    }));
+
+}
+
+void Server::listenHttp(Http &http, kj::StringPtr httpBindAddress)
+{
+    if(httpBindAddress.startsWith("unix:"))
+        unlink(httpBindAddress.slice(strlen("unix:")).cStr());
+    listeners->add(ioContext.provider->getNetwork().parseAddress(httpBindAddress)
+              .then([this,&http](kj::Own<kj::NetworkAddress>&& addr) {
+        return http.startServer(ioContext.lowLevelProvider->getTimer(), addr->listen());
+    }));
+}
+
+kj::Promise<void> Server::acceptRpcClient(Rpc& rpc, kj::Own<kj::ConnectionReceiver>&& listener) {
     kj::ConnectionReceiver& cr = *listener.get();
     return cr.accept().then(kj::mvCapture(kj::mv(listener),
-        [this](kj::Own<kj::ConnectionReceiver>&& listener, kj::Own<kj::AsyncIoStream>&& connection) {
-            childTasks.add(rpc->accept(kj::mv(connection)));
-            return acceptRpcClient(kj::mv(listener));
+        [this, &rpc](kj::Own<kj::ConnectionReceiver>&& listener, kj::Own<kj::AsyncIoStream>&& connection) {
+            addTask(rpc.accept(kj::mv(connection)));
+            return acceptRpcClient(rpc, kj::mv(listener));
         }));
 }
 

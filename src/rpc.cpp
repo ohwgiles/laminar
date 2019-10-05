@@ -18,8 +18,7 @@
 ///
 #include "rpc.h"
 #include "laminar.capnp.h"
-
-#include "interface.h"
+#include "laminar.h"
 #include "log.h"
 
 namespace {
@@ -38,16 +37,16 @@ LaminarCi::JobResult fromRunState(RunState state) {
 }
 // This is the implementation of the Laminar Cap'n Proto RPC interface.
 // As such, it implements the pure virtual interface generated from
-// laminar.capnp with calls to the LaminarInterface
-class RpcImpl : public LaminarCi::Server, public LaminarWaiter {
+// laminar.capnp with calls to the primary Laminar class
+class RpcImpl : public LaminarCi::Server {
 public:
-    RpcImpl(LaminarInterface& l) :
+    RpcImpl(Laminar& l) :
         LaminarCi::Server(),
         laminar(l)
     {
     }
 
-    ~RpcImpl() override {
+    virtual ~RpcImpl() {
     }
 
     // Queue a job, without waiting for it to start
@@ -83,10 +82,9 @@ public:
         LLOG(INFO, "RPC run", jobName);
         std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
         if(Run* r = run.get()) {
-            runWaiters[r].emplace_back(kj::newPromiseAndFulfiller<RunState>());
-            return runWaiters[r].back().promise.then([context,run](RunState state) mutable {
+            return r->whenFinished().then([context,r](RunState state) mutable {
                 context.getResults().setResult(fromRunState(state));
-                context.getResults().setBuildNum(run->build);
+                context.getResults().setBuildNum(r->build);
             });
         } else {
             context.getResults().setResult(LaminarCi::JobResult::UNKNOWN);
@@ -164,18 +162,11 @@ private:
         return res;
     }
 
-    // Implements LaminarWaiter::complete
-    void complete(const Run* r) override {
-        for(kj::PromiseFulfillerPair<RunState>& w : runWaiters[r])
-            w.fulfiller->fulfill(RunState(r->result));
-        runWaiters.erase(r);
-    }
-private:
-    LaminarInterface& laminar;
+    Laminar& laminar;
     std::unordered_map<const Run*, std::list<kj::PromiseFulfillerPair<RunState>>> runWaiters;
 };
 
-Rpc::Rpc(LaminarInterface& li) :
+Rpc::Rpc(Laminar& li) :
     rpcInterface(kj::heap<RpcImpl>(li))
 {}
 
