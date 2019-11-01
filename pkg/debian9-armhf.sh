@@ -73,6 +73,7 @@ Maintainer: Oliver Giles <web ohwg net>
 Depends: libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
+echo /etc/laminar.conf > laminar/DEBIAN/conffiles
 cat <<EOF > laminar/DEBIAN/postinst
 #!/bin/bash
 echo Creating laminar user with home in /var/lib/laminar
