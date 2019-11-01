@@ -278,16 +278,10 @@ kj::Promise<void> Http::startServer(kj::Timer& timer, kj::Own<kj::ConnectionRece
     return server->listenHttp(*listener).attach(cleanupPeers(timer)).attach(kj::mv(listener)).attach(kj::mv(server));
 }
 
-void Http::notifyEvent(const char *type, const char *data, std::string job, uint run)
+void Http::notifyEvent(const char *data, std::string job)
 {
     for(EventPeer* c : eventPeers) {
-        if(c->scope.wantsStatus(job, run)
-            // The run page also should know that another job has started
-            // (so maybe it can show a previously hidden "next" button).
-            // Hence this small hack:
-                // TODO obviate
-            || (std::string(type)=="job_started" && c->scope.type == MonitorScope::Type::RUN && c->scope.job == job))
-        {
+        if(c->scope.wantsStatus(job)) {
             c->pendingOutput.push_back("data: " + std::string(data) + "\n\n");
             c->fulfiller->fulfill();
         }

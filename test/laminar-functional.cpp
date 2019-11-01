@@ -73,3 +73,31 @@ TEST_F(LaminarFixture, JobNotifyHomePage) {
     EXPECT_STREQ("foo", job_completed["data"]["name"].GetString());
 }
 
+TEST_F(LaminarFixture, OnlyRelevantNotifications) {
+    defineJob("job1", "true");
+    defineJob("job2", "true");
+
+    auto esHome = eventSource("/");
+    auto esJobs = eventSource("/jobs");
+    auto es1Job = eventSource("/jobs/job1");
+    auto es2Job = eventSource("/jobs/job2");
+    auto es1Run = eventSource("/jobs/job1/1");
+    auto es2Run = eventSource("/jobs/job2/1");
+
+    auto req1 = client().runRequest();
+    req1.setJobName("job1");
+    ASSERT_EQ(LaminarCi::JobResult::SUCCESS, req1.send().wait(ioContext.waitScope).getResult());
+    auto req2 = client().runRequest();
+    req2.setJobName("job2");
+    ASSERT_EQ(LaminarCi::JobResult::SUCCESS, req2.send().wait(ioContext.waitScope).getResult());
+    ioContext.waitScope.poll();
+
+    EXPECT_EQ(7, esHome->messages().size());
+    EXPECT_EQ(7, esJobs->messages().size());
+
+    EXPECT_EQ(4, es1Job->messages().size());
+    EXPECT_EQ(4, es2Job->messages().size());
+
+    EXPECT_EQ(4, es1Run->messages().size());
+    EXPECT_EQ(4, es2Run->messages().size());
+}

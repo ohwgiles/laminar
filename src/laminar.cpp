@@ -574,7 +574,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         .startObject("data")
         .set("name", name)
         .EndObject();
-    http->notifyEvent("job_queued", j.str(), name.c_str());
+    http->notifyEvent(j.str(), name.c_str());
 
     assignNewJobs();
     return run;
@@ -666,7 +666,7 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
             }
             j.EndArray();
             j.EndObject();
-            http->notifyEvent("job_started", j.str(), run->name.c_str(), run->build);
+            http->notifyEvent(j.str(), run->name.c_str());
             return true;
         }
     }
@@ -755,7 +755,7 @@ void Laminar::runFinished(Run * r) {
     populateArtifacts(j, r->name, r->build);
     j.EndArray();
     j.EndObject();
-    http->notifyEvent("job_completed", j.str(), r->name, r->build);
+    http->notifyEvent(j.str(), r->name);
     http->notifyLog(r->name, r->build, "", true);
     // erase reference to run from activeJobs. Since runFinished is called in a
     // lambda whose context contains a shared_ptr<Run>, the run won't be deleted
@@ -797,7 +797,7 @@ bool Laminar::handleBadgeRequest(std::string job, std::string &badge) {
     db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY number DESC LIMIT 1")
             .bind(job)
             .fetch<int>([&](int result){
-        rs = (RunState) result;
+        rs = RunState(result);
     });
     if(rs == RunState::UNKNOWN)
         return false;

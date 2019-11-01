@@ -40,7 +40,7 @@ public:
 
     kj::Promise<void> startServer(kj::Timer &timer, kj::Own<kj::ConnectionReceiver> &&listener);
 
-    void notifyEvent(const char* type, const char* data, std::string job = nullptr, uint run = 0);
+    void notifyEvent(const char* data, std::string job = nullptr);
     void notifyLog(std::string job, uint run, std::string log_chunk, bool eot);
 
 private:

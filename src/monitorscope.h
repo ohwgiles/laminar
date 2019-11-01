@@ -41,19 +41,20 @@ struct MonitorScope {
         order_desc(true)
     {}
 
-    // whether this scope wants status information about the given job or run
+    // whether this scope wants status information for the specified job
     bool wantsStatus(std::string ajob, uint anum = 0) const {
         if(type == HOME || type == ALL) return true;
-        if(type == JOB) return ajob == job;
-        if(type == RUN) return ajob == job && anum == num;
-        return false;
+        else return ajob == job;
+        // we could have checked that the run number matches, but actually the
+        // run page needs to know about a non-matching run number in order to
+        // know whether to display the "next" arrow.
     }
 
     Type type;
     std::string job;
-    uint num = 0;
+    uint num ;
     // sorting
-    uint page = 0;
+    uint page;
     std::string field;
     bool order_desc;
 };
