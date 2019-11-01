@@ -30,7 +30,7 @@ Section:
 Priority: optional
 Architecture: amd64
 Maintainer: Oliver Giles <web ohwg net>
-Depends: libsqlite3-0, zlib1g
+Depends: libcapnp-0.7.0, libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 cat <<EOF > laminar/DEBIAN/postinst
