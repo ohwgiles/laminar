@@ -31,3 +31,6 @@ sudo make install
 
 `make install` includes a systemd unit file. If you intend to use it, consider creating a new user `laminar` or modifying the user specified in the unit file.
 
+## Packaging for distributions
+
+The `pkg` directory contains shell scripts which use docker to build native packages (deb,rpm) for common Linux distributions. Note that these are very simple packages which may not completely conform to the distribution's packaging guidelines, however they may serve as a starting point for creating an official package, or may be useful if the official package lags.

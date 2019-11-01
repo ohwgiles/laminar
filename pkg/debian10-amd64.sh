@@ -2,7 +2,7 @@
 
 OUTPUT_DIR=$PWD
 
-SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
+SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 
 VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian10
 

@@ -2,13 +2,13 @@
 
 OUTPUT_DIR=$PWD
 
-SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
+SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian10
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian9
 
 DOCKER_TAG=$(docker build -q - <<EOS
-FROM debian:10-slim
-RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y wget cmake crossbuild-essential-armhf capnproto libcapnp-dev:armhf rapidjson-dev libsqlite3-dev:armhf libboost-dev:armhf zlib1g-dev:armhf
+FROM debian:9-slim
+RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y wget cmake crossbuild-essential-armhf libsqlite3-dev:armhf libboost-dev:armhf zlib1g-dev:armhf
 EOS
 )
 
@@ -22,6 +22,31 @@ SET(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
 SET(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
 set(CMAKE_LIBRARY_ARCHITECTURE arm-linux-gnueabihf)
 EOF
+
+wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/v0.7.0.tar.gz
+wget -O rapidjson.tar.gz https://github.com/miloyip/rapidjson/archive/v1.1.0.tar.gz
+md5sum -c <<EOF
+a9de5f042f4cf05515c2d7dfc7f5df21  capnproto.tar.gz
+badd12c511e081fec6c89c43a7027bce  rapidjson.tar.gz
+EOF
+
+tar xzf capnproto.tar.gz
+tar xzf rapidjson.tar.gz
+
+mkdir capnproto-host
+cd capnproto-host
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off /build/capnproto-0.7.0/c++/
+make -j4
+make install
+
+cd /build/capnproto-0.7.0/c++/
+cmake -DCMAKE_TOOLCHAIN_FILE=../../toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr/arm-linux-gnueabihf/ .
+make -j4
+make install
+
+cd /build/rapidjson-1.1.0/
+cmake -DRAPIDJSON_BUILD_EXAMPLES=off -DCMAKE_INSTALL_PREFIX=/usr/arm-linux-gnueabihf/ .
+make install
 
 cd /build
 cmake \
