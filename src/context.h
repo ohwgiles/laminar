@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015 Oliver Giles
+/// Copyright 2015-2019 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -16,28 +16,36 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#ifndef LAMINAR_NODE_H_
-#define LAMINAR_NODE_H_
+#ifndef LAMINAR_CONTEXT_H_
+#define LAMINAR_CONTEXT_H_
 
+#include <fnmatch.h>
 #include <string>
 #include <set>
-
 class Run;
 
-// Represents a group of executors. Currently almost unnecessary POD
-// abstraction, but may be enhanced in the future to support e.g. tags
-class Node {
+// Represents a context within which a Run will be executed. Allows applying
+// a certain environment to a set of Jobs, or setting a limit on the number
+// of parallel Runs
+class Context {
 public:
-    Node() {}
+    Context() {}
 
     std::string name;
     int numExecutors;
     int busyExecutors = 0;
-    std::set<std::string> tags;
 
-    // Attempts to queue the given run to this node. Returns true if succeeded.
-    bool queue(const Run& run);
+    bool canQueue(std::set<std::string>& patterns) {
+        if(busyExecutors >= numExecutors)
+            return false;
+
+        for(std::string pattern : patterns) {
+            if(fnmatch(pattern.c_str(), name.c_str(), FNM_EXTMATCH) == 0)
+                return true;
+        }
+        return false;
+    }
 };
 
 
-#endif // LAMINAR_NODE_H_
+#endif // LAMINAR_CONTEXT_H_

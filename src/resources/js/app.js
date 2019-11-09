@@ -415,8 +415,9 @@ const Jobs = function() {
   var state = {
     jobs: [],
     search: '',
-    tags: [],
-    tag: null
+    groups: {},
+    group: null,
+    ungrouped: []
   };
   return {
     template: '#jobs',
@@ -437,13 +438,10 @@ const Jobs = function() {
             state.jobs.sort(function(a, b){return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;});
           }
         }
-        var tags = {};
-        for (var i in state.jobs) {
-          for (var j in state.jobs[i].tags) {
-            tags[state.jobs[i].tags[j]] = true;
-          }
-        }
-        state.tags = Object.keys(tags);
+        state.groups = {};
+        Object.keys(msg.groups).map(k => state.groups[k] = new RegExp(msg.groups[k]));
+        state.ungrouped = state.jobs.filter(j => !Object.values(state.groups).some(r => r.test(j.name))).map(j => j.name);
+        state.group = state.ungrouped.length ? null : Object.keys(state.groups)[0];
       },
       job_started: function(data) {
         var updAt = null;
@@ -470,6 +468,8 @@ const Jobs = function() {
           // first execution of new job. TODO insert without resort
           state.jobs.unshift(data);
           state.jobs.sort(function(a, b){return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;});
+          if(!Object.values(state.groups).some(r => r.test(data.name)))
+              state.ungrouped.push(data.name);
         } else {
           state.jobs[updAt] = data;
         }
@@ -492,19 +492,13 @@ const Jobs = function() {
         }
       },
       filteredJobs: function() {
-        var ret = state.jobs;
-        var tag = state.tag;
-        if (tag) {
-          ret = ret.filter(function(job) {
-            return job.tags.indexOf(tag) >= 0;
-          });
-        }
-        var search = this.search;
-        if (search) {
-          ret = ret.filter(function(job) {
-            return job.name.indexOf(search) > -1;
-          });
-        }
+        let ret = [];
+        if (state.group)
+          ret = state.jobs.filter(job => state.groups[state.group].test(job.name));
+        else
+          ret = state.jobs.filter(job => state.ungrouped.includes(job.name));
+        if (this.search)
+          ret = ret.filter(job => job.name.indexOf(this.search) > -1);
         return ret;
       },
     }

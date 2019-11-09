@@ -96,10 +96,6 @@ Laminar uses Sever Sent Events to provide a responsive, auto-updating display wi
 
 If you use a reverse proxy to host Laminar at a subfolder instead of a subdomain root, the `<base href>` needs to be updated to ensure all links point to their proper targets. This can be done by setting `LAMINAR_BASE_URL` in `/etc/laminar.conf`.
 
-## Set the page title
-
-Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title. For further WebUI customization, consider using a [custom style sheet](#Customizing-the-WebUI).
-
 ## More configuration options
 
 See the [reference section](#Service-configuration-file)
@@ -439,7 +435,7 @@ echo Initializing workspace
 git clone git@example.com:company/project.git .
 ```
 
-**CAUTION**: By default, laminar permits multiple simultaneous runs of the same job. If a job can **modify** the workspace, this might result in inconsistent builds when simultaneous runs access the same content. This is unlikely to be an issue for nightly builds, but for SCM-triggered builds it will be. To solve this, use [nodes](#Nodes-and-Tags) to restrict simultaneous execution of jobs, or consider [flock](https://linux.die.net/man/1/flock).
+**CAUTION**: By default, laminar permits multiple simultaneous runs of the same job. If a job can **modify** the workspace, this might result in inconsistent builds when simultaneous runs access the same content. This is unlikely to be an issue for nightly builds, but for SCM-triggered builds it will be. To solve this, use [contexts](#Contexts) to restrict simultaneous execution of jobs, or consider [flock](https://linux.die.net/man/1/flock).
 
 The following example uses [flock](https://linux.die.net/man/1/flock) to efficiently share a git repository workspace between multiple simultaneous builds:
 
@@ -490,62 +486,71 @@ TIMEOUT=120
 
 ---
 
-# Nodes and Tags
+# Contexts
 
-In Laminar, a *node* is an abstract concept allowing more fine-grained control over job execution scheduling. Each node can be defined to support an integer number of *executors*, which defines how many runs can be executed simultaneously.
+In Laminar, each run of a job is associated with a context. The context defines an integer number of *executors*, which is the amount of runs which the context will accept simultaneously. A context may also provide additional environment variables.
 
-A typical example would be to allow only a few concurrent CPU-intensive jobs (such as compilation), while simultaneously allowing many more less-intensive jobs (such as monitoring or remote jobs). To create a node named `build` with 3 executors, create the file `/var/lib/laminar/cfg/nodes/build.conf` with the following content:
+Uses for this feature include limiting the amount of concurrent CPU-intensive jobs (such as compilation); and controlling access to jobs [executed remotely](#Remote-jobs).
 
-```
-EXECUTORS=3
-```
+If no contexts are defined, Laminar will behave as if there is a single context named "default", with `6` executors. This is a reasonable default that allows simple setups to work without any consideration of contexts.
 
-To associate jobs with nodes, laminar uses *tags*. Tags may be applied to nodes and jobs. If a node has tags, only jobs with a matching tag will be executed on it. If a node has no tags, it will accept any job. To tag a node, add them to `/var/lib/laminar/cfg/nodes/NODENAME.conf`:
+## Defining a context
 
-```
-EXECUTORS=3
-TAGS=tag1,tag2
-```
-
-To add a tag to a job, add the following to `/var/lib/laminar/cfg/jobs/JOBNAME.conf`:
+To create a context named "my-env" which only allows a single run at once, create `/var/lib/laminar/cfg/contexts/my-env.conf` with the content:
 
 ```
-TAGS=tag2
+EXECUTORS=1
 ```
 
-If Laminar cannot find any node configuration, it will assume a single node with 6 executors and no tags.
+## Associating a job with a context
+
+When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. You can define which contexts the job will associate with by setting, for example,
+
+```
+CONTEXTS=my-env-*,special_context
+```
+
+in `/var/lib/laminar/cfg/jobs/JOB.conf`. For each of the patterns in the comma-separated list `CONTEXTS`, Laminar will iterate over the known contexts and associate the run with the first context with free executors. Patterns are [glob expressions](http://man7.org/linux/man-pages/man7/glob.7.html).
+
+If `CONTEXTS` is empty or absent (or if `JOB.conf` doesn't exist), laminar will behave as if `CONTEXTS=default` were defined.
+
+## Adding environment to a context
+
+Add desired environment variables to `/var/lib/laminar/cfg/contexts/CONTEXT.conf`:
+
+```
+DUT_IP=192.168.3.2
+FOO=bar
+```
+
+This environment will then be available the run script of jobs associated with this context.
+
+
+
 
 ## Grouping jobs with tags
 
 Tags are also used to group jobs in the web UI. Each tag will presented as a tab in the "Jobs" page.
 
-## Node scripts
-
-If `/var/lib/laminar/cfg/nodes/NODENAME.before` exists, it will be executed before the run script of a job scheduled to that node. Similarly, if `/var/lib/laminar/cfg/nodes/NODENAME.after` exists, it will be executed after the run script of a job scheduled to that node.
-
-## Node environment
-
-If `/var/lib/laminar/cfg/nodes/NODENAME.env` exists and can be parsed as a list of `KEY=VALUE` pairs, these variables will be exposed as part of the run's environment.
 
 # Remote jobs
 
-Laminar provides no specific support, `bash`, `ssh` and possibly NFS are all you need. For example, consider two identical target devices on which test jobs can be run in parallel. You might create a [node](#Nodes-and-Tags) for each, `/var/lib/laminar/cfg/nodes/target{1,2}.conf` with a common tag:
+Laminar provides no specific support, `bash`, `ssh` and possibly NFS are all you need. For example, consider two identical target devices on which test jobs can be run in parallel. You might create a [context](#Contexts) for each, `/var/lib/laminar/cfg/contexts/target{1,2}.conf`:
 
 ```
 EXECUTORS=1
-TAGS=remote-target
 ```
 
-In each node's `.env` file, set the individual device's IP address:
+In each context's `.env` file, set the individual device's IP address:
 
 ```
 TARGET_IP=192.168.0.123
 ```
 
-And tag the job accordingly in `/var/lib/laminar/cfg/jobs/myproject-test.conf`:
+And mark the job accordingly in `/var/lib/laminar/cfg/jobs/myproject-test.conf`:
 
 ```
-TAGS=remote-target
+CONTEXTS=target*
 ```
 
 This means the job script `/var/lib/laminar/cfg/jobs/myproject-test.run` can be generic:
@@ -581,6 +586,24 @@ EOF
 
 # Customizing the WebUI
 
+## Organising jobs into groups
+
+*Groups* may be used to organise the "Jobs" page into tabs. Edit `/var/lib/laminar/cfg/groups.conf` and define the matched jobs as a [javascript regular expression](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions), for example:
+
+```
+Builds=compile-\w+
+My Fav Jobs=^(target-foo-(build|deploy)|run-benchmarks)$
+All=.*
+```
+
+Changes to this file are detected immediately and will be visible on next page refresh.
+
+## Setting the page title
+
+Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title. Laminar must be restarted for this change to take effect.
+
+## Custom stylesheet
+
 If it exists, the file `/var/lib/laminar/custom/style.css` will be served by laminar and may be used to change the appearance of Laminar's WebUI.
 
 This directory is also a good place to add any extra assets needed for this customization, but note that in this case you will need to serve this directory directly from your [HTTP reverse proxy](#Service-configuration) (highly recommended).
@@ -614,15 +637,13 @@ Laminar will serve a job's current status as a pretty badge at the url `/badge/J
 
 ## Script execution order
 
-When `$JOB` is triggered on `$NODE`, the following scripts (relative to `$LAMINAR_HOME/cfg`) may be executed:
+When `$JOB` is triggered, the following scripts (relative to `$LAMINAR_HOME/cfg`) may be executed:
 
 - `jobs/$JOB.init` if the [workspace](#Data-sharing-and-Workspaces) did not exist
 - `before`
-- `nodes/$NODE.before`
 - `jobs/$JOB.before`
 - `jobs/$JOB.run`
 - `jobs/$JOB.after`
-- `nodes/$NODE.after`
 - `after`
 
 ## Environment variables
@@ -635,13 +656,14 @@ The following variables are available in run scripts:
 - `LAST_RESULT` string previous run status
 - `WORKSPACE` path to this job's workspace
 - `ARCHIVE` path to this run's archive
+- `CONTEXT` the context of this run
 
 In addition, `$LAMINAR_HOME/cfg/scripts` is prepended to `$PATH`. See [helper scripts](#Helper-scripts).
 
 Laminar will also export variables in the form `KEY=VALUE` found in these files:
 
 - `env`
-- `nodes/$NODE.env`
+- `contexts/$CONTEXT.env`
 - `jobs/$JOB.env`
 
 Finally, variables supplied on the command-line call to `laminarc queue`, `laminarc start` or `laminarc run` will be available. See [parameterized runs](#Parameterized-runs)

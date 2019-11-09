@@ -58,7 +58,7 @@ cat <<EOF > laminar/DEBIAN/postinst
 #!/bin/bash
 echo Creating laminar user with home in /var/lib/laminar
 useradd -r -d /var/lib/laminar -s /usr/sbin/nologin laminar
-mkdir -p /var/lib/laminar/cfg/{jobs,nodes,scripts}
+mkdir -p /var/lib/laminar/cfg/{jobs,contexts,scripts}
 chown -R laminar: /var/lib/laminar
 EOF
 chmod +x laminar/DEBIAN/postinst
