@@ -516,7 +516,7 @@ If `CONTEXTS` is empty or absent (or if `JOB.conf` doesn't exist), laminar will 
 
 ## Adding environment to a context
 
-Add desired environment variables to `/var/lib/laminar/cfg/contexts/CONTEXT.conf`:
+Append desired environment variables to `/var/lib/laminar/cfg/contexts/CONTEXT_NAME.conf`:
 
 ```
 DUT_IP=192.168.3.2
