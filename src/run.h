@@ -43,7 +43,7 @@ enum class RunState {
 
 std::string to_string(const RunState& rs);
 
-class Node;
+class Context;
 
 typedef std::unordered_map<std::string, std::string> ParamMap;
 
@@ -57,8 +57,8 @@ public:
     Run(const Run&) = delete;
     Run& operator=(const Run&) = delete;
 
-    // Call this to "start" the run with a specific number and node
-    bool configure(uint buildNum, std::shared_ptr<Node> node, const kj::Directory &fsHome);
+    // Call this to "start" the run with a specific number and context
+    bool configure(uint buildNum, std::shared_ptr<Context> context, const kj::Directory &fsHome);
 
     // executes the next script (if any), returning true if there is nothing
     // more to be done.
@@ -76,7 +76,7 @@ public:
     kj::Promise<void>&& whenStarted() { return kj::mv(started.promise); }
     kj::Promise<RunState>&& whenFinished() { return kj::mv(finished.promise); }
 
-    std::shared_ptr<Node> node;
+    std::shared_ptr<Context> context;
     RunState result;
     RunState lastResult;
     std::string name;

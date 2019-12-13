@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include "run.h"
 #include "log.h"
-#include "node.h"
+#include "context.h"
 #include "conf.h"
 #include "tempdir.h"
 
@@ -27,7 +27,7 @@ class RunTest : public testing::Test {
 protected:
     RunTest() :
         testing::Test(),
-        node(std::make_shared<Node>()),
+        context(std::make_shared<Context>()),
         tmp(),
         run("foo", ParamMap{}, tmp.path.clone())
     {
@@ -64,7 +64,7 @@ protected:
         return map;
     }
 
-    std::shared_ptr<Node> node;
+    std::shared_ptr<Context> context;
     TempDir tmp;
     class Run run;
 
@@ -78,7 +78,7 @@ protected:
 
 TEST_F(RunTest, WorkingDirectory) {
     setRunLink("pwd");
-    run.configure(1, node, *tmp.fs);
+    run.configure(1, context, *tmp.fs);
     runAll();
     std::string cwd{tmp.path.append(kj::Path{"run","foo","1"}).toString(true).cStr()};
     EXPECT_EQ(cwd + "\n", readAllOutput());
@@ -86,21 +86,21 @@ TEST_F(RunTest, WorkingDirectory) {
 
 TEST_F(RunTest, SuccessStatus) {
     setRunLink("true");
-    run.configure(1, node, *tmp.fs);
+    run.configure(1, context, *tmp.fs);
     runAll();
     EXPECT_EQ(RunState::SUCCESS, run.result);
 }
 
 TEST_F(RunTest, FailedStatus) {
     setRunLink("false");
-    run.configure(1, node, *tmp.fs);
+    run.configure(1, context, *tmp.fs);
     runAll();
     EXPECT_EQ(RunState::FAILED, run.result);
 }
 
 TEST_F(RunTest, Environment) {
     setRunLink("env");
-    run.configure(1234, node, *tmp.fs);
+    run.configure(1234, context, *tmp.fs);
     runAll();
 
     std::string ws{tmp.path.append(kj::Path{"run","foo","workspace"}).toString(true).cStr()};
@@ -118,7 +118,7 @@ TEST_F(RunTest, Environment) {
 TEST_F(RunTest, ParamsToEnv) {
     setRunLink("env");
     run.params["foo"] = "bar";
-    run.configure(1, node, *tmp.fs);
+    run.configure(1, context, *tmp.fs);
     runAll();
     StringMap map = parseFromString(readAllOutput());
     EXPECT_EQ("bar", map["foo"]);
@@ -126,7 +126,7 @@ TEST_F(RunTest, ParamsToEnv) {
 
 TEST_F(RunTest, Abort) {
     setRunLink("yes");
-    run.configure(1, node, *tmp.fs);
+    run.configure(1, context, *tmp.fs);
     run.step();
     usleep(200); // TODO fix
     run.abort(false);

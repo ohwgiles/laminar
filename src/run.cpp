@@ -17,7 +17,7 @@
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
 #include "run.h"
-#include "node.h"
+#include "context.h"
 #include "conf.h"
 #include "log.h"
 
@@ -75,7 +75,7 @@ Run::~Run() {
     LLOG(INFO, "Run destroyed");
 }
 
-bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory& fsHome)
+bool Run::configure(uint buildNum, std::shared_ptr<Context> nd, const kj::Directory& fsHome)
 {
     kj::Path cfgDir{"cfg"};
 
@@ -117,9 +117,6 @@ bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory
     // global before-run script
     if(fsHome.exists(cfgDir/"before"))
         addScript(cfgDir/"before", rd.clone());
-    // per-node before-run script
-    if(fsHome.exists(cfgDir/"nodes"/(nd->name+".before")))
-        addScript(cfgDir/"nodes"/(nd->name+".before"), rd.clone());
     // job before-run script
     if(fsHome.exists(cfgDir/"jobs"/(name+".before")))
         addScript(cfgDir/"jobs"/(name+".before"), rd.clone());
@@ -128,9 +125,6 @@ bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory
     // job after-run script
     if(fsHome.exists(cfgDir/"jobs"/(name+".after")))
         addScript(cfgDir/"jobs"/(name+".after"), rd.clone(), true);
-    // per-node after-run script
-    if(fsHome.exists(cfgDir/"nodes"/(nd->name+".after")))
-        addScript(cfgDir/"nodes"/(nd->name+".after"), rd.clone(), true);
     // global after-run script
     if(fsHome.exists(cfgDir/"after"))
         addScript(cfgDir/"after", rd.clone(), true);
@@ -138,8 +132,8 @@ bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory
     // add environment files
     if(fsHome.exists(cfgDir/"env"))
         addEnv(cfgDir/"env");
-    if(fsHome.exists(cfgDir/"nodes"/(nd->name+".env")))
-        addEnv(cfgDir/"nodes"/(nd->name+".env"));
+    if(fsHome.exists(cfgDir/"contexts"/(nd->name+".env")))
+        addEnv(cfgDir/"contexts"/(nd->name+".env"));
     if(fsHome.exists(cfgDir/"jobs"/(name+".env")))
         addEnv(cfgDir/"jobs"/(name+".env"));
 
@@ -151,7 +145,7 @@ bool Run::configure(uint buildNum, std::shared_ptr<Node> nd, const kj::Directory
     // All good, we've "started"
     startedAt = time(nullptr);
     build = buildNum;
-    node = nd;
+    context = nd;
 
     // notifies the rpc client if the start command was used
     started.fulfiller->fulfill();
@@ -212,8 +206,7 @@ bool Run::step() {
         setenv("PATH", PATH.c_str(), true);
         setenv("RUN", buildNum.c_str(), true);
         setenv("JOB", name.c_str(), true);
-        if(!node->name.empty())
-            setenv("NODE", node->name.c_str(), true);
+        setenv("CONTEXT", context->name.c_str(), true);
         setenv("RESULT", to_string(result).c_str(), true);
         setenv("LAST_RESULT", to_string(lastResult).c_str(), true);
         setenv("WORKSPACE", (rootPath/"run"/name/"workspace").toString(true).cStr(), true);

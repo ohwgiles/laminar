@@ -21,15 +21,15 @@
 
 #include "run.h"
 #include "monitorscope.h"
-#include "node.h"
+#include "context.h"
 #include "database.h"
 
 #include <unordered_map>
 #include <kj/filesystem.h>
 #include <kj/async-io.h>
 
-// Node name to node object map
-typedef std::unordered_map<std::string, std::shared_ptr<Node>> NodeMap;
+// Context name to context object map
+typedef std::unordered_map<std::string, std::shared_ptr<Context>> ContextMap;
 
 struct Server;
 class Json;
@@ -107,7 +107,6 @@ private:
     bool tryStartRun(std::shared_ptr<Run> run, int queueIndex);
     kj::Promise<void> handleRunStep(Run *run);
     void runFinished(Run*);
-    bool nodeCanQueue(const Node&, std::string jobName) const;
     // expects that Json has started an array
     void populateArtifacts(Json& out, std::string job, uint num) const;
 
@@ -120,13 +119,15 @@ private:
 
     std::unordered_map<std::string, uint> buildNums;
 
-    std::unordered_map<std::string, std::set<std::string>> jobTags;
+    std::unordered_map<std::string, std::set<std::string>> jobContexts;
+
+    std::unordered_map<std::string, std::string> jobGroups;
 
     Settings settings;
     RunSet activeJobs;
     Database* db;
     Server& srv;
-    NodeMap nodes;
+    ContextMap contexts;
     kj::Path homePath;
     kj::Own<const kj::Directory> fsHome;
     uint numKeepRunDirs;
