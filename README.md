@@ -34,3 +34,7 @@ sudo make install
 ## Packaging for distributions
 
 The `pkg` directory contains shell scripts which use docker to build native packages (deb,rpm) for common Linux distributions. Note that these are very simple packages which may not completely conform to the distribution's packaging guidelines, however they may serve as a starting point for creating an official package, or may be useful if the official package lags.
+
+## Contributing
+
+Issues and pull requests via GitHub are most welcome. All pull requests must adhere to the [Developer Certificate of Origin](https://developercertificate.org/).
