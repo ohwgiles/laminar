@@ -77,7 +77,7 @@ Laminar::Laminar(Server &server, Settings settings) :
     LASSERT(settings.home[0] == '/');
 
     if(fsHome->exists(homePath/"cfg"/"nodes")) {
-        LLOG(ERROR, "Found node configuration directory cfg/nodes. Nodes have been deprecated, please migrate to contexts. The helper script laminar-migrate-to-contexts.sh script may help with this. Laminar will now exit.");
+        LLOG(ERROR, "Found node configuration directory cfg/nodes. Nodes have been deprecated, please migrate to contexts. Laminar will now exit.");
         exit(EXIT_FAILURE);
     }
 
