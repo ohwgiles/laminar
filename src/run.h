@@ -57,24 +57,15 @@ public:
     Run(const Run&) = delete;
     Run& operator=(const Run&) = delete;
 
-    // Call this to "start" the run with a specific number and context
-    bool configure(uint buildNum, std::shared_ptr<Context> context, const kj::Directory &fsHome);
-
-    // executes the next script (if any), returning true if there is nothing
-    // more to be done.
-    bool step();
+    kj::Promise<RunState> start(uint buildNum, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise);
 
     // aborts this run
-    void abort(bool respectRunOnAbort);
-
-    // called when a process owned by this run has been reaped. The status
-    // may be used to set the run's job status
-    void reaped(int status);
+    bool abort();
 
     std::string reason() const;
 
-    kj::Promise<void>&& whenStarted() { return kj::mv(started.promise); }
-    kj::Promise<RunState>&& whenFinished() { return kj::mv(finished.promise); }
+    kj::Promise<void> whenStarted() { return startedFork.addBranch(); }
+    kj::Promise<RunState> whenFinished() { return finishedFork.addBranch(); }
 
     std::shared_ptr<Context> context;
     RunState result;
@@ -84,7 +75,7 @@ public:
     int parentBuild = 0;
     uint build = 0;
     std::string log;
-    kj::Maybe<pid_t> current_pid;
+    kj::Maybe<pid_t> pid;
     int output_fd;
     std::unordered_map<std::string, std::string> params;
     int timeout = 0;
@@ -105,13 +96,13 @@ private:
     };
 
     kj::Path rootPath;
-    std::queue<Script> scripts;
-    std::list<kj::Path> env;
     std::string reasonMsg;
-    kj::PromiseFulfillerPair<void> started;
-    kj::PromiseFulfillerPair<RunState> finished;
-};
 
+    kj::PromiseFulfillerPair<void> started;
+    kj::ForkedPromise<void> startedFork;
+    kj::PromiseFulfillerPair<RunState> finished;
+    kj::ForkedPromise<RunState> finishedFork;
+};
 
 // All this below is a somewhat overengineered method of keeping track of
 // currently executing builds (Run objects). This would probably scale

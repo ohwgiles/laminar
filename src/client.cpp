@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define EXIT_BAD_ARGUMENT     1
 #define EXIT_OPERATION_FAILED 2
@@ -169,21 +170,10 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Usage %s set param=value\n", argv[0]);
             return EXIT_BAD_ARGUMENT;
         }
-        auto req = laminar.setRequest();
-        char* eq = strchr(argv[2], '=');
-        char* job = getenv("JOB");
-        char* num = getenv("RUN");
-        if(job && num && eq) {
-            char* name = argv[2];
-            *eq++ = '\0';
-            char* val = eq;
-            req.getRun().setJob(job);
-            req.getRun().setBuildNum(atoi(num));
-            req.getParam().setName(name);
-            req.getParam().setValue(val);
-            req.send().wait(waitScope);
+        if(char* pipeNum = getenv("__LAMINAR_SETENV_PIPE")) {
+            write(atoi(pipeNum), argv[2], strlen(argv[2]));
         } else {
-            fprintf(stderr, "Missing $JOB or $RUN or param is not in the format key=value\n");
+            fprintf(stderr, "Must be run from within a laminar job\n");
             return EXIT_BAD_ARGUMENT;
         }
     } else if(strcmp(argv[1], "abort") == 0) {

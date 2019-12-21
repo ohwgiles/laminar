@@ -16,25 +16,21 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#include <kj/async-unix.h>
-#include <gtest/gtest.h>
-#include <kj/debug.h>
+#ifndef LAMINAR_LEADER_H_
+#define LAMINAR_LEADER_H_
 
-#include "laminar-fixture.h"
-#include "leader.h"
+// Main function for the leader process which is responsible for
+// executing all the scripts which make up a Run. Separating this
+// into its own process allows for a cleaner process tree view,
+// where it's obvious which script belongs to which run of which
+// job, and allows this leader process to act as a subreaper for
+// any wayward child processes.
 
-// gtest main supplied in order to call captureChildExit and handle process leader
-int main(int argc, char **argv) {
-    if(argv[0][0] == '{')
-        return leader_main();
+// This could have been implemented as a separate process, but
+// instead we just fork & exec /proc/self/exe from the main laminar
+// daemon, and distinguish based on argv[0]. This saves installing
+// another binary and avoids some associated pitfalls.
 
-    // TODO: consider handling this differently
-    auto ioContext = kj::setupAsyncIo();
-    LaminarFixture::ioContext = &ioContext;
+int leader_main(void);
 
-    kj::UnixEventPort::captureChildExit();
-    //kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
-
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+#endif // LAMINAR_LEADER_H_

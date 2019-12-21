@@ -86,14 +86,15 @@ generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
 # (see resources.cpp where these are fetched)
 
 set(LAMINARD_CORE_SOURCES
-    src/database.cpp
-    src/server.cpp
-    src/laminar.cpp
     src/conf.cpp
+    src/database.cpp
+    src/laminar.cpp
+    src/leader.cpp
     src/http.cpp
     src/resources.cpp
     src/rpc.cpp
     src/run.cpp
+    src/server.cpp
     laminar.capnp.c++
     index_html_size.h
 )
@@ -111,7 +112,7 @@ set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     include_directories(${GTEST_INCLUDE_DIRS} src)
-    add_executable(laminar-tests ${LAMINARD_CORE_SOURCES} ${COMPRESSED_BINS} test/main.cpp test/laminar-functional.cpp test/unit-conf.cpp test/unit-database.cpp test/unit-run.cpp)
+    add_executable(laminar-tests ${LAMINARD_CORE_SOURCES} ${COMPRESSED_BINS} test/main.cpp test/laminar-functional.cpp test/unit-conf.cpp test/unit-database.cpp)
     target_link_libraries(laminar-tests ${GTEST_LIBRARY} capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 endif()
 

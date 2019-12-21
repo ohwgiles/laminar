@@ -52,7 +52,9 @@ Run::Run(std::string name, ParamMap pm, kj::Path&& rootPath) :
     queuedAt(time(nullptr)),
     rootPath(kj::mv(rootPath)),
     started(kj::newPromiseAndFulfiller<void>()),
-    finished(kj::newPromiseAndFulfiller<RunState>())
+    startedFork(started.promise.fork()),
+    finished(kj::newPromiseAndFulfiller<RunState>()),
+    finishedFork(finished.promise.fork())
 {
     for(auto it = params.begin(); it != params.end();) {
         if(it->first[0] == '=') {
@@ -75,113 +77,53 @@ Run::~Run() {
     LLOG(INFO, "Run destroyed");
 }
 
-bool Run::configure(uint buildNum, std::shared_ptr<Context> nd, const kj::Directory& fsHome)
+static void setEnvFromFile(const kj::Path& rootPath, kj::Path file) {
+    StringMap vars = parseConfFile((rootPath/file).toString(true).cStr());
+    for(auto& it : vars) {
+        setenv(it.first.c_str(), it.second.c_str(), true);
+    }
+}
+
+kj::Promise<RunState> Run::start(uint buildNum, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise)
 {
     kj::Path cfgDir{"cfg"};
-
-    // create the run directory
-    kj::Path rd{"run",name,std::to_string(buildNum)};
-    bool createWorkdir = true;
-    KJ_IF_MAYBE(ls, fsHome.tryLstat(rd)) {
-        LASSERT(ls->type == kj::FsNode::Type::DIRECTORY);
-        LLOG(WARNING, "Working directory already exists, removing", rd.toString());
-        if(fsHome.tryRemove(rd) == false) {
-            LLOG(WARNING, "Failed to remove working directory");
-            createWorkdir = false;
-        }
-    }
-    if(createWorkdir && fsHome.tryOpenSubdir(rd, kj::WriteMode::CREATE|kj::WriteMode::CREATE_PARENT) == nullptr) {
-        LLOG(ERROR, "Could not create working directory", rd.toString());
-        return false;
-    }
-
-    // create an archive directory
-    kj::Path archive = kj::Path{"archive",name,std::to_string(buildNum)};
-    if(fsHome.exists(archive)) {
-        LLOG(WARNING, "Archive directory already exists", archive.toString());
-    } else if(fsHome.tryOpenSubdir(archive, kj::WriteMode::CREATE|kj::WriteMode::CREATE_PARENT) == nullptr) {
-        LLOG(ERROR, "Could not create archive directory", archive.toString());
-        return false;
-    }
-
-    // create a workspace for this job if it doesn't exist
-    kj::Path ws{"run",name,"workspace"};
-    if(!fsHome.exists(ws)) {
-        fsHome.openSubdir(ws, kj::WriteMode::CREATE|kj::WriteMode::CREATE_PARENT);
-        // prepend the workspace init script
-        if(fsHome.exists(cfgDir/"jobs"/(name+".init")))
-            addScript(cfgDir/"jobs"/(name+".init"), kj::mv(ws));
-    }
-
-    // add scripts
-    // global before-run script
-    if(fsHome.exists(cfgDir/"before"))
-        addScript(cfgDir/"before", rd.clone());
-    // job before-run script
-    if(fsHome.exists(cfgDir/"jobs"/(name+".before")))
-        addScript(cfgDir/"jobs"/(name+".before"), rd.clone());
-    // main run script. must exist.
-    addScript(cfgDir/"jobs"/(name+".run"), rd.clone());
-    // job after-run script
-    if(fsHome.exists(cfgDir/"jobs"/(name+".after")))
-        addScript(cfgDir/"jobs"/(name+".after"), rd.clone(), true);
-    // global after-run script
-    if(fsHome.exists(cfgDir/"after"))
-        addScript(cfgDir/"after", rd.clone(), true);
-
-    // add environment files
-    if(fsHome.exists(cfgDir/"env"))
-        addEnv(cfgDir/"env");
-    if(fsHome.exists(cfgDir/"contexts"/(nd->name+".env")))
-        addEnv(cfgDir/"contexts"/(nd->name+".env"));
-    if(fsHome.exists(cfgDir/"jobs"/(name+".env")))
-        addEnv(cfgDir/"jobs"/(name+".env"));
 
     // add job timeout if specified
     if(fsHome.exists(cfgDir/"jobs"/(name+".conf"))) {
         timeout = parseConfFile((rootPath/cfgDir/"jobs"/(name+".conf")).toString(true).cStr()).get<int>("TIMEOUT", 0);
     }
 
-    // All good, we've "started"
-    startedAt = time(nullptr);
-    build = buildNum;
-    context = nd;
+    int plog[2];
+    LSYSCALL(pipe(plog));
 
-    // notifies the rpc client if the start command was used
-    started.fulfiller->fulfill();
+    // Fork a process leader to run all the steps of the job. This gives us a nice
+    // process tree output (job name and number as the process name) and helps
+    // contain any wayward descendent processes.
+    pid_t leader;
+    LSYSCALL(leader = fork());
 
-    return true;
-}
+    if(leader == 0) {
+        // All output from this process will be captured in the plog pipe
+        close(plog[0]);
+        dup2(plog[1], STDOUT_FILENO);
+        dup2(plog[1], STDERR_FILENO);
+        close(plog[1]);
 
-std::string Run::reason() const {
-    return reasonMsg;
-}
+        // All initial/fixed env vars can be set here. Dynamic ones, including
+        // "RESULT" and any set by `laminarc set` have to be handled in the subprocess.
 
-bool Run::step() {
-    if(!scripts.size())
-        return true;
+        // add environment files
+        if(fsHome.exists(cfgDir/"env"))
+            setEnvFromFile(rootPath, cfgDir/"env");
+        if(fsHome.exists(cfgDir/"contexts"/(ctx->name+".env")))
+            setEnvFromFile(rootPath, cfgDir/"contexts"/(ctx->name+".env"));
+        if(fsHome.exists(cfgDir/"jobs"/(name+".env")))
+            setEnvFromFile(rootPath, cfgDir/"jobs"/(name+".env"));
 
-    Script currentScript = kj::mv(scripts.front());
-    scripts.pop();
-
-    int pfd[2];
-    pipe(pfd);
-    pid_t pid = fork();
-    if(pid == 0) { // child
-        // reset signal mask (SIGCHLD blocked in Laminar::start)
-        sigset_t mask;
-        sigemptyset(&mask);
-        sigaddset(&mask, SIGCHLD);
-        sigprocmask(SIG_UNBLOCK, &mask, nullptr);
-
-        // set pgid == pid for easy killing on abort
-        setpgid(0, 0);
-
-        close(pfd[0]);
-        dup2(pfd[1], 1);
-        dup2(pfd[1], 2);
-        close(pfd[1]);
-        std::string buildNum = std::to_string(build);
+        // parameterized vars
+        for(auto& pair : params) {
+            setenv(pair.first.c_str(), pair.second.c_str(), false);
+        }
 
         std::string PATH = (rootPath/"cfg"/"scripts").toString(true).cStr();
         if(const char* p = getenv("PATH")) {
@@ -189,72 +131,62 @@ bool Run::step() {
             PATH.append(p);
         }
 
-        LSYSCALL(chdir((rootPath/currentScript.cwd).toString(true).cStr()));
-
-        // conf file env vars
-        for(kj::Path& file : env) {
-            StringMap vars = parseConfFile((rootPath/file).toString(true).cStr());
-            for(auto& it : vars) {
-                setenv(it.first.c_str(), it.second.c_str(), true);
-            }
-        }
-        // parameterized vars
-        for(auto& pair : params) {
-            setenv(pair.first.c_str(), pair.second.c_str(), false);
-        }
+        std::string runNumStr = std::to_string(buildNum);
 
         setenv("PATH", PATH.c_str(), true);
-        setenv("RUN", buildNum.c_str(), true);
+        setenv("RUN", runNumStr.c_str(), true);
         setenv("JOB", name.c_str(), true);
-        setenv("CONTEXT", context->name.c_str(), true);
-        setenv("RESULT", to_string(result).c_str(), true);
+        setenv("CONTEXT", ctx->name.c_str(), true);
         setenv("LAST_RESULT", to_string(lastResult).c_str(), true);
         setenv("WORKSPACE", (rootPath/"run"/name/"workspace").toString(true).cStr(), true);
-        setenv("ARCHIVE", (rootPath/"archive"/name/buildNum).toString(true).cStr(), true);
+        setenv("ARCHIVE", (rootPath/"archive"/name/runNumStr).toString(true).cStr(), true);
+        // RESULT set in leader process
 
-        fprintf(stderr, "[laminar] Executing %s\n", currentScript.path.toString().cStr());
-        kj::String execPath = (rootPath/currentScript.path).toString(true);
-        execl(execPath.cStr(), execPath.cStr(), NULL);
-        // cannot use LLOG because stdout/stderr are captured
-        fprintf(stderr, "[laminar] Failed to execute %s\n", currentScript.path.toString().cStr());
-        _exit(1);
+        // leader process assumes $LAMINAR_HOME as CWD
+        LSYSCALL(chdir(rootPath.toString(true).cStr()));
+        setenv("PWD", rootPath.toString(true).cStr(), 1);
+
+        // We could just fork/wait over all the steps here directly, but then we
+        // can't set a nice name for the process tree. There is pthread_setname_np,
+        // but it's limited to 16 characters, which most of the time probably isn't
+        // enough. Instead, we'll just exec ourselves and handle that in laminard's
+        // main() by calling leader_main()
+        char* procName;
+        asprintf(&procName, "{laminar} %s:%d", name.data(), buildNum);
+        execl("/proc/self/exe", procName, NULL); // does not return
+        _exit(EXIT_FAILURE);
     }
 
-    LLOG(INFO, "Forked", currentScript.path, currentScript.cwd, pid);
-    close(pfd[1]);
+    // All good, we've "started"
+    startedAt = time(nullptr);
+    build = buildNum;
+    context = ctx;
 
-    current_pid = pid;
-    output_fd = pfd[0];
-    return false;
+    output_fd = plog[0];
+    close(plog[1]);
+    pid = leader;
+
+    // notifies the rpc client if the start command was used
+    started.fulfiller->fulfill();
+
+    return getPromise(pid).then([this](int status){
+        // The leader process passes a RunState through the return value.
+        // Check it didn't die abnormally, then cast to get it back.
+        result = WIFEXITED(status) ? RunState(WEXITSTATUS(status)) : RunState::ABORTED;
+        finished.fulfiller->fulfill(RunState(result));
+        return result;
+    });
 }
 
-void Run::addScript(kj::Path scriptPath, kj::Path scriptWorkingDir, bool runOnAbort) {
-    scripts.push({kj::mv(scriptPath), kj::mv(scriptWorkingDir), runOnAbort});
+std::string Run::reason() const {
+    return reasonMsg;
 }
 
-void Run::addEnv(kj::Path path) {
-    env.push_back(kj::mv(path));
-}
-
-void Run::abort(bool respectRunOnAbort) {
-    while(scripts.size() && (!respectRunOnAbort || !scripts.front().runOnAbort))
-        scripts.pop();
+bool Run::abort() {
     // if the Maybe is empty, wait() was already called on this process
-    KJ_IF_MAYBE(p, current_pid) {
+    KJ_IF_MAYBE(p, pid) {
         kill(-*p, SIGTERM);
+        return true;
     }
-}
-
-void Run::reaped(int status) {
-    // once state is non-success it cannot change again
-    if(result != RunState::SUCCESS)
-        return;
-
-    if(WIFSIGNALED(status) && (WTERMSIG(status) == SIGTERM || WTERMSIG(status) == SIGKILL))
-        result = RunState::ABORTED;
-    else if(status != 0)
-        result = RunState::FAILED;
-    // otherwise preserve earlier status
-
-    finished.fulfiller->fulfill(RunState(result));
+    return false;
 }

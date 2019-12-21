@@ -105,8 +105,7 @@ private:
     bool loadConfiguration();
     void assignNewJobs();
     bool tryStartRun(std::shared_ptr<Run> run, int queueIndex);
-    kj::Promise<void> handleRunStep(Run *run);
-    void runFinished(Run*);
+    void handleRunFinished(Run*);
     // expects that Json has started an array
     void populateArtifacts(Json& out, std::string job, uint num) const;
 

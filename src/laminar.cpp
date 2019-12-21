@@ -581,16 +581,14 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
 }
 
 bool Laminar::abort(std::string job, uint buildNum) {
-    if(Run* run = activeRun(job, buildNum)) {
-        run->abort(true);
-        return true;
-    }
+    if(Run* run = activeRun(job, buildNum))
+        return run->abort();
     return false;
 }
 
 void Laminar::abortAll() {
     for(std::shared_ptr<Run> run : activeJobs) {
-        run->abort(false);
+        run->abort();
     }
 }
 
@@ -598,7 +596,9 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
     for(auto& sc : contexts) {
         std::shared_ptr<Context> ctx = sc.second;
 
-        if(ctx->canQueue(jobContexts.at(run->name)) && run->configure(buildNums[run->name] + 1, ctx, *fsHome)) {
+        if(ctx->canQueue(jobContexts.at(run->name))) {
+            kj::Promise<RunState> onRunFinished = run->start(buildNums[run->name] + 1, ctx, *fsHome,[this](kj::Maybe<pid_t>& pid){return srv.onChildExit(pid);});
+
             ctx->busyExecutors++;
             // set the last known result if exists
             db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
@@ -607,13 +607,20 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
                 run->lastResult = RunState(result);
             });
 
-            // Actually schedules the Run steps
-            kj::Promise<void> exec = handleRunStep(run.get()).then([=]{
-                runFinished(run.get());
+            kj::Promise<void> exec = srv.readDescriptor(run->output_fd, [this, run](const char*b, size_t n){
+                // handle log output
+                std::string s(b, n);
+                run->log += s;
+                http->notifyLog(run->name, run->build, s, false);
+            }).then([run, p = kj::mv(onRunFinished)]() mutable {
+                // wait until leader reaped
+                return kj::mv(p);
+            }).then([this, run](RunState){
+                handleRunFinished(run.get());
             });
             if(run->timeout > 0) {
                 exec = exec.attach(srv.addTimeout(run->timeout, [r=run.get()](){
-                    r->abort(true);
+                    r->abort();
                 }));
             }
             srv.addTask(kj::mv(exec));
@@ -657,31 +664,7 @@ void Laminar::assignNewJobs() {
     }
 }
 
-kj::Promise<void> Laminar::handleRunStep(Run* run) {
-    if(run->step()) {
-        // no more steps
-        return kj::READY_NOW;
-    }
-
-    kj::Promise<int> exited = srv.onChildExit(run->current_pid);
-    // promise is fulfilled when the process is reaped. But first we wait for all
-    // output from the pipe (Run::output_fd) to be consumed.
-    return srv.readDescriptor(run->output_fd, [this,run](const char*b,size_t n){
-        // handle log output
-        std::string s(b, n);
-        run->log += s;
-        http->notifyLog(run->name, run->build, s, false);
-    }).then([p = std::move(exited)]() mutable {
-        // wait until the process is reaped
-        return kj::mv(p);
-    }).then([this, run](int status){
-        run->reaped(status);
-        // next step in Run
-        return handleRunStep(run);
-    });
-}
-
-void Laminar::runFinished(Run * r) {
+void Laminar::handleRunFinished(Run * r) {
     std::shared_ptr<Context> ctx = r->context;
 
     ctx->busyExecutors--;

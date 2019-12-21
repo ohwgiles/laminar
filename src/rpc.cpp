@@ -81,29 +81,15 @@ public:
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC run", jobName);
         std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
-        if(Run* r = run.get()) {
-            return r->whenFinished().then([context,r](RunState state) mutable {
+        if(run) {
+            return run->whenFinished().then([context,run](RunState state) mutable {
                 context.getResults().setResult(fromRunState(state));
-                context.getResults().setBuildNum(r->build);
+                context.getResults().setBuildNum(run->build);
             });
         } else {
             context.getResults().setResult(LaminarCi::JobResult::UNKNOWN);
             return kj::READY_NOW;
         }
-    }
-
-    // Set a parameter on a running build
-    kj::Promise<void> set(SetContext context) override {
-        std::string jobName = context.getParams().getRun().getJob();
-        uint buildNum = context.getParams().getRun().getBuildNum();
-        LLOG(INFO, "RPC set", jobName, buildNum);
-
-        LaminarCi::MethodResult result = laminar.setParam(jobName, buildNum,
-            context.getParams().getParam().getName(), context.getParams().getParam().getValue())
-                ? LaminarCi::MethodResult::SUCCESS
-                : LaminarCi::MethodResult::FAILED;
-        context.getResults().setResult(result);
-        return kj::READY_NOW;
     }
 
     // List jobs in queue

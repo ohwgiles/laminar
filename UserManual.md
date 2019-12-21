@@ -323,8 +323,6 @@ Then in `example.run`
 echo $foo            # prints "bar"
 ```
 
-This works because laminarc reads `$JOB` and `$NUM` and passes them to the laminar daemon as part of the `set` request. (It is thus possible to set environment variables on other jobs by overriding these variables, but this is not very useful).
-
 ---
 
 # Archiving artefacts

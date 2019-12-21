@@ -18,13 +18,14 @@
 ///
 #include <kj/async-unix.h>
 #include "laminar-fixture.h"
+#include "conf.h"
 
 // TODO: consider handling this differently
-kj::AsyncIoContext LaminarFixture::ioContext = kj::setupAsyncIo();
+kj::AsyncIoContext* LaminarFixture::ioContext;
 
 TEST_F(LaminarFixture, EmptyStatusMessageStructure) {
     auto es = eventSource("/");
-    ioContext.waitScope.poll();
+    ioContext->waitScope.poll();
     ASSERT_EQ(1, es->messages().size());
 
     auto json = es->messages().front().GetObject();
@@ -51,12 +52,7 @@ TEST_F(LaminarFixture, JobNotifyHomePage) {
     defineJob("foo", "true");
     auto es = eventSource("/");
 
-    auto req = client().runRequest();
-    req.setJobName("foo");
-    ASSERT_EQ(LaminarCi::JobResult::SUCCESS, req.send().wait(ioContext.waitScope).getResult());
-
-    // wait for job completed
-    ioContext.waitScope.poll();
+    runJob("foo");
 
     ASSERT_EQ(4, es->messages().size());
 
@@ -84,13 +80,8 @@ TEST_F(LaminarFixture, OnlyRelevantNotifications) {
     auto es1Run = eventSource("/jobs/job1/1");
     auto es2Run = eventSource("/jobs/job2/1");
 
-    auto req1 = client().runRequest();
-    req1.setJobName("job1");
-    ASSERT_EQ(LaminarCi::JobResult::SUCCESS, req1.send().wait(ioContext.waitScope).getResult());
-    auto req2 = client().runRequest();
-    req2.setJobName("job2");
-    ASSERT_EQ(LaminarCi::JobResult::SUCCESS, req2.send().wait(ioContext.waitScope).getResult());
-    ioContext.waitScope.poll();
+    runJob("job1");
+    runJob("job2");
 
     EXPECT_EQ(7, esHome->messages().size());
     EXPECT_EQ(7, esJobs->messages().size());
@@ -100,4 +91,63 @@ TEST_F(LaminarFixture, OnlyRelevantNotifications) {
 
     EXPECT_EQ(4, es1Run->messages().size());
     EXPECT_EQ(4, es2Run->messages().size());
+}
+
+TEST_F(LaminarFixture, FailedStatus) {
+    defineJob("job1", "false");
+    auto run = runJob("job1");
+    ASSERT_EQ(LaminarCi::JobResult::FAILED, run.result);
+}
+
+TEST_F(LaminarFixture, WorkingDirectory) {
+    defineJob("job1", "pwd");
+    auto run = runJob("job1");
+    ASSERT_EQ(LaminarCi::JobResult::SUCCESS, run.result);
+    std::string cwd{tmp.path.append(kj::Path{"run","job1","1"}).toString(true).cStr()};
+    EXPECT_EQ(cwd + "\n", stripLaminarLogLines(run.log).cStr());
+}
+
+
+TEST_F(LaminarFixture, Environment) {
+    defineJob("foo", "env");
+    auto run = runJob("foo");
+
+    std::string ws{tmp.path.append(kj::Path{"run","foo","workspace"}).toString(true).cStr()};
+    std::string archive{tmp.path.append(kj::Path{"archive","foo","1"}).toString(true).cStr()};
+
+    StringMap map = parseFromString(run.log);
+    EXPECT_EQ("1", map["RUN"]);
+    EXPECT_EQ("foo", map["JOB"]);
+    EXPECT_EQ("success", map["RESULT"]);
+    EXPECT_EQ("unknown", map["LAST_RESULT"]);
+    EXPECT_EQ(ws, map["WORKSPACE"]);
+    EXPECT_EQ(archive, map["ARCHIVE"]);
+}
+
+TEST_F(LaminarFixture, ParamsToEnv) {
+    defineJob("foo", "env");
+    StringMap params;
+    params["foo"] = "bar";
+    auto run = runJob("foo", params);
+    StringMap map = parseFromString(run.log);
+    EXPECT_EQ("bar", map["foo"]);
+}
+
+TEST_F(LaminarFixture, Abort) {
+    defineJob("job1", "yes");
+    auto req = client().runRequest();
+    req.setJobName("job1");
+    auto res = req.send();
+    // There isn't a nice way of knowing when the leader process is ready to
+    // handle SIGTERM. Just wait until it prints something to the log
+    ioContext->waitScope.poll();
+    kj::HttpHeaderTable headerTable;
+    char _;
+    kj::newHttpClient(ioContext->lowLevelProvider->getTimer(), headerTable,
+                      *ioContext->provider->getNetwork().parseAddress(bind_http.c_str()).wait(ioContext->waitScope))
+            ->request(kj::HttpMethod::GET, "/log/job1/1", kj::HttpHeaders(headerTable)).response.wait(ioContext->waitScope).body
+            ->tryRead(&_, 1, 1).wait(ioContext->waitScope);
+    // now it should be ready to abort
+    ASSERT_TRUE(laminar->abort("job1", 1));
+    EXPECT_EQ(LaminarCi::JobResult::ABORTED, res.wait(ioContext->waitScope).getResult());
 }

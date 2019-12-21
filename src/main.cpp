@@ -17,6 +17,7 @@
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
 #include "laminar.h"
+#include "leader.h"
 #include "server.h"
 #include "log.h"
 #include <signal.h>
@@ -40,9 +41,10 @@ constexpr const char* INTADDR_HTTP_DEFAULT = "*:8080";
 constexpr const char* ARCHIVE_URL_DEFAULT = "/archive/";
 }
 
-
-
 int main(int argc, char** argv) {
+    if(argv[0][0] == '{')
+        return leader_main();
+
     for(int i = 1; i < argc; ++i) {
         if(strcmp(argv[i], "-v") == 0) {
             kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
