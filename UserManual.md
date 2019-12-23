@@ -582,6 +582,20 @@ EOF
 
 ---
 
+# Colours in log output
+
+Laminar's frontend supports ANSI colours using the [ansi-up library](https://github.com/drudru/ansi_up). Unfortunately, there is no standard way of convincing applications to output colours when not connected to a tty. It is recommended to set [CLICOLOR_FORCE=1](https://bixense.com/clicolors/) in Laminar's [global environment file](#Environment-variables), plus any of the following environment variables that may be relevant (please submit more):
+
+* git: `GIT_CONFIG_PARAMETERS='color.status=always' 'color.ui=always'`
+* google test: `GTEST_COLOR=1`
+* grep: `GREP_OPTIONS=--color=always`
+
+More intrusive options for other common tools which do not support enabling colours via environment variable:
+
+* gcc and clang: Add `-fdiagnostics-color=always` to compile flags
+
+---
+
 # Customizing the WebUI
 
 ## Organising jobs into groups
