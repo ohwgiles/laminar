@@ -120,6 +120,8 @@ private:
 
     std::unordered_map<std::string, std::set<std::string>> jobContexts;
 
+    std::unordered_map<std::string, std::string> jobDescriptions;
+
     std::unordered_map<std::string, std::string> jobGroups;
 
     Settings settings;

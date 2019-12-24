@@ -51,10 +51,15 @@ public:
         return kj::heap<EventSource>(*ioContext, bind_http.c_str(), path);
     }
 
-    void defineJob(const char* name, const char* scriptContent) {
+    void defineJob(const char* name, const char* scriptContent, const char* configContent = nullptr) {
         KJ_IF_MAYBE(f, tmp.fs->tryOpenFile(kj::Path{"cfg", "jobs", std::string(name) + ".run"},
                 kj::WriteMode::CREATE | kj::WriteMode::CREATE_PARENT | kj::WriteMode::EXECUTABLE)) {
             (*f)->writeAll(std::string("#!/bin/sh\n") + scriptContent + "\n");
+        }
+        if(configContent) {
+            KJ_IF_MAYBE(f, tmp.fs->tryOpenFile(kj::Path{"cfg", "jobs", std::string(name) + ".conf"}, kj::WriteMode::CREATE)) {
+                (*f)->writeAll(configContent);
+            }
         }
     }
 

@@ -604,6 +604,14 @@ All=.*
 
 Changes to this file are detected immediately and will be visible on next page refresh.
 
+## Adding a description to a job
+
+Edit `/var/lib/laminar/cfg/jobs/$JOBNAME.conf`:
+
+```
+DESCRIPTION=Anything here will appear on the job page in the frontend <em>unescaped</em>.
+```
+
 ## Setting the page title
 
 Change `LAMINAR_TITLE` in `/etc/laminar.conf` to your preferred page title. Laminar must be restarted for this change to take effect.

@@ -151,3 +151,15 @@ TEST_F(LaminarFixture, Abort) {
     ASSERT_TRUE(laminar->abort("job1", 1));
     EXPECT_EQ(LaminarCi::JobResult::ABORTED, res.wait(ioContext->waitScope).getResult());
 }
+
+TEST_F(LaminarFixture, JobDescription) {
+    defineJob("foo", "true", "DESCRIPTION=bar");
+    auto es = eventSource("/jobs/foo");
+    ioContext->waitScope.poll();
+    ASSERT_EQ(1, es->messages().size());
+    auto json = es->messages().front().GetObject();
+    ASSERT_TRUE(json.HasMember("data"));
+    auto data = json["data"].GetObject();
+    ASSERT_TRUE(data.HasMember("description"));
+    EXPECT_STREQ("bar", data["description"].GetString());
+}

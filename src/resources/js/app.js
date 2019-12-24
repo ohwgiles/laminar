@@ -507,6 +507,7 @@ const Jobs = function() {
 
 var Job = function() {
   var state = {
+    description: '',
     jobsRunning: [],
     jobsRecent: [],
     lastSuccess: null,
@@ -524,6 +525,7 @@ var Job = function() {
     },
     methods: {
       status: function(msg) {
+        state.description = msg.description;
         state.jobsRunning = msg.running;
         state.jobsRecent = msg.recent;
         state.lastSuccess = msg.lastSuccess;

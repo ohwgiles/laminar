@@ -317,7 +317,8 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.set("number", build).set("started", started);
             j.EndObject();
         });
-
+        auto desc = jobDescriptions.find(scope.job);
+        j.set("description", desc == jobDescriptions.end() ? "" : desc->second);
     } else if(scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
         db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b JOIN (SELECT name n,MAX(number) l FROM builds GROUP BY n) q ON b.name = q.n AND b.number = q.l")
@@ -542,6 +543,10 @@ bool Laminar::loadConfiguration() {
                 while(std::getline(iss, ctx, ','))
                     ctxPtnList.insert(ctx);
                 jobContexts[jobName].swap(ctxPtnList);
+            }
+            std::string desc = conf.get<std::string>("DESCRIPTION");
+            if(!desc.empty()) {
+                jobDescriptions[jobName] = desc;
             }
         }
     }
