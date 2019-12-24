@@ -523,13 +523,7 @@ FOO=bar
 
 This environment will then be available the run script of jobs associated with this context.
 
-
-
-
-## Grouping jobs with tags
-
-Tags are also used to group jobs in the web UI. Each tag will presented as a tab in the "Jobs" page.
-
+---
 
 # Remote jobs
 
