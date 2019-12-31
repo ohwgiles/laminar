@@ -60,7 +60,7 @@ make
 
 %files
 %{_bindir}/laminarc
-%{_bindir}/laminard
+%{_sbindir}/laminard
 %{_unitdir}/laminar.service
 %config(noreplace) %{_sysconfdir}/laminar.conf
 %{_datarootdir}/bash-completion/completions/laminarc
