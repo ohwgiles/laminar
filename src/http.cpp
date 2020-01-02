@@ -268,8 +268,8 @@ Http::Http(Laminar &li) :
 
 Http::~Http()
 {
-    KJ_ASSERT(logWatchers.size() == 0);
-    KJ_ASSERT(eventPeers.size() == 0);
+    LASSERT(logWatchers.size() == 0);
+    LASSERT(eventPeers.size() == 0);
 }
 
 kj::Promise<void> Http::startServer(kj::Timer& timer, kj::Own<kj::ConnectionReceiver>&& listener)
