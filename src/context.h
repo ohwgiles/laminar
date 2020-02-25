@@ -24,6 +24,11 @@
 #include <set>
 class Run;
 
+// FNM_EXTMATCH isn't supported under musl
+#if !defined(FNM_EXTMATCH)
+#define FNM_EXTMATCH 0
+#endif
+
 // Represents a context within which a Run will be executed. Allows applying
 // a certain environment to a set of Jobs, or setting a limit on the number
 // of parallel Runs
