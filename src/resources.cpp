@@ -42,6 +42,7 @@ Resources::Resources()
     INIT_RESOURCE("/favicon-152.png", favicon_152_png, CONTENT_TYPE_PNG);
     INIT_RESOURCE("/icon.png", icon_png, CONTENT_TYPE_PNG);
     INIT_RESOURCE("/js/app.js", js_app_js, CONTENT_TYPE_JS);
+    INIT_RESOURCE("/css/app.css", css_app_css, CONTENT_TYPE_CSS);
 
     if(const char* baseUrl = getenv("LAMINAR_BASE_URL")) {
         // The administrator needs to customize the <base href>. Unfortunately this seems
