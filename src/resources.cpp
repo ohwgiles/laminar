@@ -42,12 +42,6 @@ Resources::Resources()
     INIT_RESOURCE("/favicon-152.png", favicon_152_png, CONTENT_TYPE_PNG);
     INIT_RESOURCE("/icon.png", icon_png, CONTENT_TYPE_PNG);
     INIT_RESOURCE("/js/app.js", js_app_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/js/vue.min.js", js_vue_min_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/js/vue-router.min.js", js_vue_router_min_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/js/Chart.min.js", js_Chart_min_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/css/bootstrap.min.css", css_bootstrap_min_css, CONTENT_TYPE_CSS);
 
     if(const char* baseUrl = getenv("LAMINAR_BASE_URL")) {
         // The administrator needs to customize the <base href>. Unfortunately this seems
@@ -110,4 +104,3 @@ bool Resources::handleRequest(std::string path, const char** start, const char**
 
     return false;
 }
-
