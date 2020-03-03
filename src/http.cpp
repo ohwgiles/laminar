@@ -248,7 +248,7 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
     }
     // If there is custom html defined, serve it. Otherwise, the default html
     // will be served by the next block.
-    if(url == "/index.html" || url == "/") {
+    if(url == "/" || url == "/index.html" || url.startsWith("/jobs")) {
         responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/html; charset=utf-8");
         responseHeaders.add("Content-Transfer-Encoding", "binary");
         std::string html = laminar.getCustomIndexHtml();
