@@ -14,7 +14,6 @@
         <script src="https://cdn.jsdelivr.net/npm/ansi_up@1.3.0/ansi_up.js" integrity="sha256-2UR0QYPMTIY0yP5S6ubBS7wFNKhn8uW7pV5E3LlvI6U=" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js" integrity="sha256-R4pqcOYV8lt7snxMQO/HSbVCFRPMdrhAFMH+vr9giYI=" crossorigin="anonymous"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css" integrity="sha256-UXesixbeLkB/UYxVTzuj/gg3+LMzgwAmg3zD+C4ZASQ=" crossorigin="anonymous">
-        <link href="css/app.css" rel="stylesheet">
         <link href="custom/style.css" rel="stylesheet">
         <script src="js/app.js" defer></script>
     </head>
@@ -23,7 +22,7 @@
         <template id="home">
             <div class="ui stackable vertically padded grid">
                 <aside class="four wide column jobs list">
-                    <h3 class="ui header">Jobs</h3>
+                    <h2 class="ui header">Jobs</h2>
                     <div class="ui grey segment" v-for="job in jobsQueued">
                         <p><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> queued</p>
                     </div>
@@ -139,143 +138,193 @@
             </div>
         </template>
 
-      <template id="jobs"><div>
-        <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li class="active">Jobs</li></ol>
-        <div class="container-fluid"><div class="row">
-        <div class="col-xs-12">
-          <div class="pull-right">
-          <input class="form-control" id="jobFilter" v-model="search" placeholder="Filter...">
-          </div>
-          <ul class="nav nav-tabs">
-          <li v-show="ungrouped.length" :class="{'active':group==null}"><a href v-on:click.prevent="group = null">Ungrouped Jobs</a></li>
-          <li v-for="g in Object.keys(groups)" :class="{'active':g==group}"><a href v-on:click.prevent="group = g">{{g}}</a></li>
-          </ul>
-          <table class="table table-striped" id="joblist">
-          <tr   v-for="job in filteredJobs()">
-            <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td>
-            <td class="text-center"><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></td>
-            <td class="text-center">{{formatDate(job.started)}}</td>
-            <td class="text-center">{{formatDuration(job.started,job.completed)}}</td>
-          </tr>
-          </table>
-        </div>
-        </div></div>
-      </div></template>
-
-      <template id="job"><div>
-        <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li><router-link to="/jobs">Jobs</router-link></li><li class="active">{{$route.params.name}}</li></ol></ol>
-        <div class="container-fluid">
-        <div class="row">
-          <div class="col-sm-5 col-md-6 col-lg-7">
-          <h3>{{$route.params.name}}</h3>
-          <div v-html="description"></div>
-          <dl class="dl-horizontal">
-          <dt>Last Successful Run</dt>
-          <dd><router-link v-if="lastSuccess" :to="'/jobs/'+$route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</dd>
-          <dt>Last Failed Run</dt>
-          <dd><router-link v-if="lastFailed" :to="'/jobs/'+$route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</dd>
-          </dl>
-          </div>
-          <div class="col-sm-7 col-md-6 col-lg-5">
-          <div class="panel panel-default">
-            <div class="panel-heading">Build time</div>
-            <div class="panel-body">
-            <canvas id="chartBt"></canvas>
+        <template id="jobs">
+            <main class="ui stackable vertically padded fourteen wide column">
+                <div class="ui basic segment masthead">
+                    <h2 class="ui header">Jobs</h2>
+                </div>
+                <div class="ui secondary pointing menu">
+                    <a v-show="ungrouped.length" :class="{'active':group==null}" v-on:click.prevent="group = null" class="item">Ungrouped jobs</a>
+                    <a v-for="g in Object.keys(groups)" :class="{'active':g==group}" href v-on:click.prevent="group = g" class="item">{{g}}</a>
+                    <div class="right menu">
+                        <div class="item">
+                            <div class="ui transparent icon input">
+                                <input id="jobFilter" v-model="search" type="text" placeholder="Filter...">
+                                <i class="search link icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <table class="ui striped table" id="joblist">
+                    <thead>
+                        <tr>
+                            <th class="four wide">Job</th>
+                            <th>Last run</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="job in filteredJobs()">
+                            <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td>
+                            <td>
+                                <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>: <span v-html="job.result ? job.result : 'pending'"></span><br />
+                                Started at {{formatDate(job.started)}} and ran for {{formatDuration(job.started,job.completed)}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-          </div>
-          </div>
-        </div>
-        <div class="row"><div class="col-xs-12">
-          <table class="table table-striped">
-          <thead><tr>
-            <th><a class="sort" :class="(sort.field=='result'?sort.order:'')" v-on:click="do_sort('result')">&nbsp;</a></th>
-            <th>Run <a class="sort" :class="(sort.field=='number'?sort.order:'')" v-on:click="do_sort('number')">&nbsp;</a></th>
-            <th class="text-center">Started <a class="sort" :class="(sort.field=='started'?sort.order:'')" v-on:click="do_sort('started')">&nbsp;</a></th>
-            <th class="text-center">Duration <a class="sort" :class="(sort.field=='duration'?sort.order:'')" v-on:click="do_sort('duration')">&nbsp;</a></th>
-            <th class="text-center hidden-xs">Reason <a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
-          </tr></thead>
-          <tr v-show="nQueued">
-            <td colspan="5"><i>{{nQueued}} run(s) queued</i></td>
-          </tr>
-          <tr v-for="job in jobsRunning" track-by="$index">
-            <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
-            <td><router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
-            <td class="text-center">{{formatDate(job.started)}}</td>
-            <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
-            <td class="text-center hidden-xs">{{job.reason}}</td>
-          </tr>
-          <tr v-for="job in jobsRecent" track-by="$index">
-            <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
-            <td><router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
-            <td class="text-center">{{formatDate(job.started)}}</td>
-            <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
-            <td class="text-center hidden-xs">{{job.reason}}</td>
-          </tr>
-          </table>
-          <ul class="pagination pull-right">
-            <li><button class="btn btn-default" v-on:click="page_prev" :disabled="sort.page==0">&laquo;</button></li>
-            <li>Page {{sort.page+1}} of {{pages}}</li>
-            <li><button class="btn btn-default" v-on:click="page_next" :disabled="sort.page==pages-1">&raquo;</button></li>
-          </ul>
-        </div></div>
-        </div>
-      </div></template>
+        </template>
 
-      <template id="run"><div>
-        <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li><router-link to="/jobs">Jobs</router-link></li><li><router-link :to="'/jobs/'+$route.params.name">{{$route.params.name}}</router-link></li><li class="active">#{{$route.params.number}}</li></ol></ol>
-        <div class="container-fluid">
-        <div class="row">
-          <div class="col-sm-5 col-md-6 col-lg-7">
-          <h3 style="float:left"><span v-html="runIcon(job.result)"></span> {{$route.params.name}} #{{$route.params.number}}</h3>
-          <nav class="pull-left">
-            <ul class="pagination" style="margin:15px 20px">
-            <li v-show="$route.params.number > 1"><router-link :to="'/jobs/'+$route.params.name+'/'+($route.params.number-1)">&laquo;</router-link></li>
-            <li v-show="latestNum > $route.params.number"><router-link :to="'/jobs/'+$route.params.name+'/'+(parseInt($route.params.number)+1)">&raquo;</router-link></li>
-            </ul>
-          </nav>
-          <div style="clear:both;"></div>
-          <dl class="dl-horizontal">
-            <dt>Reason</dt><dd>{{job.reason}}</dd>
-            <dt v-show="job.upstream.num > 0">Upstream</dt><dd v-show="job.upstream.num > 0"><router-link :to="'/jobs/'+job.upstream.name">{{job.upstream.name}}</router-link> <router-link :to="'/jobs/'+job.upstream.name+'/'+job.upstream.num">#{{job.upstream.num}}</router-link></li></dd>
-            <dt>Queued for</dt><dd>{{job.queued}}s</dd>
-            <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
-            <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
-            <dt>Duration</dt><dd>{{formatDuration(job.started, job.completed)}}</dd>
-          </dl>
-          </div>
-          <div class="col-sm-7 col-md-6 col-lg-5">
-          <div class="progress" v-show="job.result == 'running'">
-            <div class="progress-bar  progress-bar-striped" :class="'progress-bar-'+(job.overtime?'warning':'info')" :class="job.etc?'':'active'" :style="{width:!job.etc?100:job.progress + '%'}"></div>
-          </div>
-          <div class="panel panel-default" v-show="job.artifacts.length">
-            <div class="panel-heading">Artifacts</div>
-            <div class="panel-body">
-            <ul class="list-unstyled" style="margin-bottom: 0">
-              <li v-for="art in job.artifacts"><a :href="art.url" target="_self">{{art.filename}}</a> [{{ art.size | iecFileSize }}]</li>
-            </ul>
-            </div>
-          </div>
-          </div>
-        </div>
-        <div class="row"><div class="col-xs-12">
-          <button type="button" class="btn btn-default btn-xs pull-right" :class="{'active':autoscroll}" v-on:click="autoscroll = !autoscroll" style="margin-top:10px">Autoscroll</button>
-          <h4>Console output</h4>
-          <pre v-html="log"></pre>
-        </div></div>
-        </div>
-      </div></template>
+        <template id="job">
+            <main class="ui stackable vertically padded fourteen wide column">
+                <div class="ui basic segment">
+                    <h2 class="ui header">
+                        Job: {{$route.params.name}}
+                    </h2>
+                    <router-link to="/jobs"><i class="angle left icon"></i>back to jobs list</router-link>
+                </div>
+                <div class="ui stackable padded two column grid">
+                    <div class="ui column seven wide">
+                        <h3 class="ui header">Information</h3>
+                        <div class="sub header" v-html="description"></div>
+                        <table class="ui table">
+                            <tr>
+                                <td>Last successful run</td>
+                                <td><router-link v-if="lastSuccess" :to="'/jobs/'+$route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</td>
+                            </tr>
+                            <tr>
+                                <td>Last failed run</td>
+                                <td><router-link v-if="lastFailed" :to="'/jobs/'+$route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="ui column seven wide">
+                        <h3 class="ui header">Build time</h3>
+                        <div><canvas id="chartBt"></canvas></div>
+                    </div>
+                </div>
+                <table class="ui striped table">
+                    <thead>
+                        <tr>
+                            <th class="three wide">Run</th>
+                            <th class="six wide">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-show="nQueued">
+                            <td colspan="5">{{nQueued}} more run(s) queued</td>
+                        </tr>
+                        <tr v-for="job in jobsRunning" track-by="$index">
+                            <td>
+                                <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link><br>
+                                <span v-html="job.result ? job.result : 'pending'"></span>
+                            </td>
+                            <td>
+                                <div class="ui active small blue progress">
+                                    <div class="bar" :class="job.etc?'':'active'" :style="'width:'+(!job.etc?'100':job.progress)+'%'"></div>
+                                    <div class="label">Running for {{formatDuration(job.started, job.completed)}}</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="job in jobsRecent" track-by="$index">
+                            <td>
+                                <router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link><br>
+                                <span v-html="job.result ? job.result : 'pending'"></span>
+                            </td>
+                            <td>
+                                Started: {{formatDate(job.started)}}<br>
+                                Ran for {{formatDuration(job.started,job.completed)}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="ui pagination menu">
+                    <a class="item" v-on:click="page_prev" :class="sort.page==0 ? 'disabled' : ''"><i class="left angle icon"></i>Previous</a>
+                    <div class="item">
+                    Page {{sort.page+1}} of {{pages}}
+                    </div>
+                    <a class="item" v-on:click="page_next" :class="sort.page==pages-1 ? 'disabled' : ''"><i class="right angle icon"></i>Next</a>
+                </div>
+            </main>
+        </template>
+
+        <template id="run">
+            <main class="ui stackable vertically padded fourteen wide column">
+                <div class="ui basic segment">
+                    <h2 class="ui header">
+                        Job run: {{$route.params.name}} #{{$route.params.number}}
+                    </h2>
+                    <router-link :to="'/jobs/' + $route.params.name"><i class="angle left icon"></i>back to {{$route.params.name}} job list</router-link>
+                </div>
+
+                <div class="ui stackable padded two column grid">
+                    <div class="ui column four wide">
+                        <h3 class="ui header">Information</h3>
+                        <div class="ui pagination menu">
+                            <router-link class="item" v-show="$route.params.number > 1" :to="'/jobs/'+$route.params.name+'/'+($route.params.number-1)"><i class="left angle icon"></i>Previous run</router-link>
+                            <router-link class="item" v-show="latestNum > $route.params.number" :to="'/jobs/'+$route.params.name+'/'+(parseInt($route.params.number)+1)"><i class="right angle icon"></i>Next run</router-link>
+                        </div>
+                        <table class="ui table">
+                            <tr v-show="job.reason">
+                                <td>Reason</td>
+                                <td>{{job.reason}}</td>
+                            </tr>
+                            <tr v-show="job.upstream.num > 0">
+                                <td>Upstream</td>
+                                <td><router-link :to="'/jobs/'+job.upstream.name">{{job.upstream.name}}</router-link> <router-link :to="'/jobs/'+job.upstream.name+'/'+job.upstream.num">#{{job.upstream.num}}</router-link></td>
+                            </tr>
+                            <tr>
+                                <td>Queued for</td>
+                                <td>{{job.queued}}s</td>
+                            </tr>
+                            <tr>
+                                <td>Started</td>
+                                <td>{{formatDate(job.started)}}</td>
+                            </tr>
+                            <tr v-show="runComplete(job)">
+                                <td>Completed</td>
+                                <td>{{formatDate(job.completed)}}</td>
+                            </tr>
+                            <tr v-show="runComplete(job)">
+                                <td>Duration</td>
+                                <td>{{formatDuration(job.started, job.completed)}}</td>
+                            </tr>
+                            <tr v-show="!runComplete(job) && job.result == 'running'">
+                                <td>Progress</td>
+                                <td>
+                                    <div class="ui active small blue progress">
+                                        <div class="bar" :class="job.etc?'':'active'" :style="'width:'+(!job.etc?'100':job.progress)+'%'"></div>
+                                        <div class="label">Running for {{formatDuration(job.started, job.completed)}}</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                        <div v-show="job.artifacts.length">
+                            <h3 class="ui header">Artifacts</h3>
+                            <ul class="list-unstyled" style="margin-bottom: 0">
+                                <li v-for="art in job.artifacts"><a :href="art.url" target="_self">{{art.filename}}</a> [{{ art.size | iecFileSize }}]</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="ui ten wide column">
+                        <h3 class="ui header">Console output</h4>
+                        <pre class="ui inverted segment" v-html="log"></pre>
+                    </div>
+                </div>
+            </main>
+        </template>
 
         <div id="app">
             <nav class="ui visible thin left sidebar inverted vertical labeled icon menu">
                 <span class="item"><img class="icon" src="icon.png">{{title}}</span>
-                <router-link to="/" class="item"><i class="bar chart icon"></i>Status</router-link>
-                <router-link to="/jobs" class="item"><i class="tasks icon"></i>Jobs</router-link>
-                <a v-on:click="toggleNotifications(!notify)" v-show="supportsNotifications" class="item" :title="(notify?'Disable':'Enable')+' notifications'"><i class="bell outline icon" :class="notify?'':'slash'"></i><span v-html="notify ? 'Disable' : 'Enable'"></span><br>notifications</a>
+                <router-link to="/" class="item" exact-active-class="active"><i class="bar chart icon"></i>Status</router-link>
+                <router-link to="/jobs" class="item" active-class="active"><i class="tasks icon"></i>Jobs</router-link>
             </nav>
             <div class="ui main stackable padded grid pusher">
                 <router-view></router-view>
             </div>
             <div v-show="!connected" id="popup-connecting" class="ui segment"><div class="ui basic loading segment"></div><p>Connecting</p></div>
         </div>
+        <script src="http://localhost:35729/livereload.js?snipver=1"></script>
     </body>
 </html>

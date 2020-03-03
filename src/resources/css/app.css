@@ -1,41 +1,41 @@
 #app {
-  height: 100%;
+    height: 100%;
 }
 
 #app aside {
-  background-color: #eeeeee;
-  height: 100%;
+    background-color: #eeeeee;
+    height: 100%;
 }
 
 @media only screen and (min-width: 768px) {
-  #app .main.grid {
-      height: 100%;
-  }
+    #app .main.grid {
+        height: 100%;
+    }
 
-  #app .jobs.list {
-      -webkit-box-shadow: 3px 0px 5px 0px rgba(50, 50, 50, 0.25);
-      -moz-box-shadow:    3px 0px 5px 0px rgba(50, 50, 50, 0.25);
-      box-shadow:         3px 0px 5px 0px rgba(50, 50, 50, 0.25);
-  }
+    #app .jobs.list {
+        -webkit-box-shadow: 3px 0px 5px 0px rgba(50, 50, 50, 0.25);
+        -moz-box-shadow:    3px 0px 5px 0px rgba(50, 50, 50, 0.25);
+        box-shadow:         3px 0px 5px 0px rgba(50, 50, 50, 0.25);
+    }
 }
 
 #popup-connecting {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  padding: 20px;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 20px;
 }
 
 canvas {
- width: 100% !important;
- max-width: 800px;
- height: auto !important;
+    width: 100% !important;
+    max-width: 800px;
+    height: auto !important;
 }
 
 li.chart-overlay {
-  position: absolute;
-  display: inline-block;
-  background: white;
-  border: 1px solid lightgray;
-  padding: 3px;
+    position: absolute;
+    display: inline-block;
+    background: white;
+    border: 1px solid lightgray;
+    padding: 3px;
 } 
