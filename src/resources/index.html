@@ -20,99 +20,124 @@
     </head>
     <body>
 
-      <template id="home"><div>
-        <ol class="breadcrumb"><li class="active">Home</li></ol>
-        <div class="container-fluid"><div class="row">
-        <div class="col-sm-5 col-md-4 col-lg-3 dash">
-          <table class="table table-bordered">
-          <tr v-for="job in jobsQueued">
-            <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <i>queued</i></td>
-          </tr>
-          <tr v-for="job in jobsRunning">
-            <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>
-            <small class="pull-right">{{formatDuration(job.started, job.completed)}}</small>
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped" :class="'progress-bar-'+(job.overtime?'warning':'info')" :class="job.etc?'':'active'" :style="'width:'+(!job.etc?'100':job.progress)+'%'"></div>
+        <template id="home">
+            <div class="ui stackable vertically padded grid">
+                <aside class="four wide column jobs list">
+                    <h3 class="ui header">Jobs</h3>
+                    <div class="ui grey segment" v-for="job in jobsQueued">
+                        <p><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> queued</p>
+                    </div>
+                    <div class="ui blue segment" v-for="job in jobsRunning">
+                        <p><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></p>
+                        <div class="ui active small blue progress">
+                            <div class="bar" :class="job.etc?'':'active'" :style="'width:'+(!job.etc?'100':job.progress)+'%'"></div>
+                            <div class="label">Running for {{formatDuration(job.started, job.completed)}}</div>
+                        </div>
+                    </div>
+                    <div v-for="job in jobsRecent" class="ui segment" :class="job.result == 'success' ? 'green' : ''" :class="job.result == 'failed' ? 'red' : ''" :class="job.result == 'aborted' ? 'red' : ''">
+                        <p>{{job.result | capitalize}}: <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></p>
+                        <p>{{formatDuration(job.started, job.completed)}} at {{formatDate(job.started)}}</p>
+                    </div>
+                </aside>
+                <main class="ten wide column">
+                    <div class="ui three column stackable grid">
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartBpd"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Total runs per day this week</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartBpj"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Most runs per job in the last 24 hours</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartTpj"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Longest average run time per job this week</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartUtil"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Current executor utilization</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartResultChanges"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Regressions and recoveries</span>
+                                    <div class="description">
+                                        <ul v-for="job in resultChanged">
+                                            <li v-if="job.lastFailure>job.lastSuccess" :id="'rcd_'+job.name" class="chart-overlay"><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>: <span v-html="runIcon('failed')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">#{{job.lastFailure}}</router-link> since <span v-html="runIcon('success')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link></li>
+                                            <li v-if="job.lastFailure<job.lastSuccess" :id="'rcd_'+job.name" class="chart-overlay"><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>: <span v-html="runIcon('success')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link> since <span v-html="runIcon('failed')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">#{{job.lastFailure}}</router-link></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartPassRates"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Low pass rates</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartBuildTimeChanges"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Run time changes</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="ui fluid card">
+                                <div class="image">
+                                    <canvas id="chartBuildTimeDist"></canvas>
+                                </div>
+                                <div class="content">
+                                    <span class="header">Average run time distribution</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
             </div>
-            </td>
-          </tr>
-          <tr v-for="job in jobsRecent">
-            <td><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link><br><small>Took {{formatDuration(job.started, job.completed)}} at {{formatDate(job.started)}}</small></td>
-          </tr>
-          </table>
-        </div>
-        <div class="col-sm-7 col-md-8 col-lg-9"><div class="row">
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Total runs per day this week</div>
-            <div class="panel-body">
-            <canvas id="chartBpd"></canvas>
-            </div>
-          </div>
-          </div>
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Most runs per job in the last 24 hours</div>
-            <div class="panel-body" id="chartStatus">
-            <canvas id="chartBpj"></canvas>
-            </div>
-          </div>
-          </div></div><div class="row">
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Longest average run time per job this week</div>
-            <div class="panel-body">
-            <canvas id="chartTpj"></canvas>
-            </div>
-          </div>
-          </div>
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Current executor utilization</div>
-            <div class="panel-body">
-            <canvas id="chartUtil"></canvas>
-            </div>
-          </div>
-          </div></div><div class="row">
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Regressions and recoveries</div>
-            <div class="panel-body"><div style="position:relative">
-            <canvas id="chartResultChanges"></canvas>
-            <ul v-for="job in resultChanged">
-              <li v-if="job.lastFailure>job.lastSuccess" :id="'rcd_'+job.name" class="chart-overlay"><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>: <span v-html="runIcon('failed')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">#{{job.lastFailure}}</router-link> since <span v-html="runIcon('success')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link></li>
-              <li v-if="job.lastFailure<job.lastSuccess" :id="'rcd_'+job.name" class="chart-overlay"><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>: <span v-html="runIcon('success')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link> since <span v-html="runIcon('failed')"></span> <router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">#{{job.lastFailure}}</router-link></li>
-            </ul>
-            </div></div>
-          </div>
-          </div>
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Low pass rates</div>
-            <div class="panel-body">
-            <canvas id="chartPassRates"></canvas>
-            </div>
-          </div>
-          </div></div><div class="row">
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Run time changes</div>
-            <div class="panel-body">
-            <canvas id="chartBuildTimeChanges"></canvas>
-            </div>
-          </div>
-          </div>
-          <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading">Average run time distribution</div>
-            <div class="panel-body">
-            <canvas id="chartBuildTimeDist"></canvas>
-            </div>
-          </div>
-          </div>
-        </div></div>
-        </div></div> 
-      </div></template>
+        </template>
 
       <template id="jobs"><div>
         <ol class="breadcrumb"><li><router-link to="/">Home</router-link></li><li class="active">Jobs</li></ol>
@@ -241,16 +266,16 @@
       </div></template>
 
         <div id="app">
-            <nav class="ui left visible vertical inverted sidebar labeled icon menu">
+            <nav class="ui visible thin left sidebar inverted vertical labeled icon menu">
                 <span class="item"><img class="icon" src="icon.png">{{title}}</span>
                 <router-link to="/" class="item"><i class="bar chart icon"></i>Status</router-link>
                 <router-link to="/jobs" class="item"><i class="tasks icon"></i>Jobs</router-link>
-                <a v-on:click="toggleNotifications(!notify)" v-show="supportsNotifications" class="item" :class="{'active':notify}" :title="(notify?'Disable':'Enable')+' notifications'"><i class="bell icon"></i>&#128276;</a>
+                <a v-on:click="toggleNotifications(!notify)" v-show="supportsNotifications" class="item" :title="(notify?'Disable':'Enable')+' notifications'"><i class="bell outline icon" :class="notify?'':'slash'"></i><span v-html="notify ? 'Disable' : 'Enable'"></span><br>notifications</a>
             </nav>
-            <div class="pusher">
+            <div class="ui main stackable padded grid pusher">
                 <router-view></router-view>
             </div>
-            <div v-show="!connected" id="popup-connecting"><span class="status spin">⚙&#xfe0e;</span>&nbsp;Connecting...</div>
+            <div v-show="!connected" id="popup-connecting" class="ui segment"><div class="ui basic loading segment"></div><p>Connecting</p></div>
         </div>
     </body>
 </html>
