@@ -622,6 +622,10 @@ If it exists, the file `/var/lib/laminar/custom/style.css` will be served by lam
 
 This directory is also a good place to add any extra assets needed for this customization, but note that in this case you will need to serve this directory directly from your [HTTP reverse proxy](#Service-configuration) (highly recommended).
 
+## Custom HTML template
+
+If it exists, the file `/var/lib/laminar/custom/index.html` will be served by laminar instead of the default markup that is bundled into the Laminar binary. This file can be used to change any aspect of Laminar's WebUI, including adding custom menu links, stylesheets, or anything else. Any additional assets that are needed will need to be served directly from your [HTTP reverse proxy](#Service-configuration) (highly recommended). 
+
 ---
 
 # Badges

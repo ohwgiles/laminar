@@ -796,3 +796,11 @@ std::string Laminar::getCustomCss() {
         return std::string();
     }
 }
+
+std::string Laminar::getCustomIndexHtml() {
+    KJ_IF_MAYBE(htmlFile, fsHome->tryOpenFile(kj::Path{"custom","index.html"})) {
+        return (*htmlFile)->readAllText().cStr();
+    } else {
+        return std::string();
+    }
+}

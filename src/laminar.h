@@ -95,6 +95,10 @@ public:
     // which handles this url.
     std::string getCustomCss();
 
+    // Fetches the content of $LAMINAR_HOME/custom/index.html or an empty
+    // string. This is used for custom template overrides.
+    std::string getCustomIndexHtml();
+
     // Aborts a single job
     bool abort(std::string job, uint buildNum);
 
