@@ -34,6 +34,9 @@ public:
     // type. Function returns false if no resource for the given path exists
     bool handleRequest(std::string path, const char** start, const char** end, const char** content_type);
 
+    // Allows providing a custom HTML template. Pass an empty string to use the default.
+    void setHtmlTemplate(std::string templ = std::string());
+
 private:
     struct Resource {
         const char* start;

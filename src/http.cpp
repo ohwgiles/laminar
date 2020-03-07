@@ -211,16 +211,14 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
                 return writeEvents(p,s);
             }).attach(kj::mv(stream)).attach(kj::mv(peer));
         }
-    }
-    if(url.startsWith("/archive/")) {
+    } else if(url.startsWith("/archive/")) {
         KJ_IF_MAYBE(file, laminar.getArtefact(url.slice(strlen("/archive/")))) {
             auto array = (*file)->mmap(0, (*file)->stat().size);
             responseHeaders.add("Content-Transfer-Encoding", "binary");
             auto stream = response.send(200, "OK", responseHeaders, array.size());
             return stream->write(array.begin(), array.size()).attach(kj::mv(array)).attach(kj::mv(file)).attach(kj::mv(stream));
         }
-    }
-    if(parseLogEndpoint(url, name, num)) {
+    } else if(parseLogEndpoint(url, name, num)) {
         auto lw = kj::heap<WithSetRef<LogWatcher>>(logWatchers);
         lw->job = name;
         lw->run = num;
@@ -238,33 +236,19 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
                 return writeLogChunk(c, s);
             }).attach(kj::mv(output)).attach(kj::mv(stream)).attach(kj::mv(lw));
         }
-    }
-    if(url == "/custom/style.css") {
+    } else if(url == "/custom/style.css") {
         responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/css; charset=utf-8");
         responseHeaders.add("Content-Transfer-Encoding", "binary");
         std::string css = laminar.getCustomCss();
         auto stream = response.send(200, "OK", responseHeaders, css.size());
         return stream->write(css.data(), css.size()).attach(kj::mv(css)).attach(kj::mv(stream));
-    }
-    // If there is custom html defined, serve it. Otherwise, the default html
-    // will be served by the next block.
-    if(url == "/" || url == "/index.html" || url.startsWith("/jobs")) {
-        responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/html; charset=utf-8");
-        responseHeaders.add("Content-Transfer-Encoding", "binary");
-        std::string html = laminar.getCustomIndexHtml();
-        if (!html.empty()) {
-            auto stream = response.send(200, "OK", responseHeaders, html.size());
-            return stream->write(html.data(), html.size()).attach(kj::mv(html)).attach(kj::mv(stream));
-        }
-    }
-    if(resources->handleRequest(url.cStr(), &start, &end, &content_type)) {
+    } else if(resources->handleRequest(url.cStr(), &start, &end, &content_type)) {
         responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, content_type);
         responseHeaders.add("Content-Encoding", "gzip");
         responseHeaders.add("Content-Transfer-Encoding", "binary");
         auto stream = response.send(200, "OK", responseHeaders, end-start);
         return stream->write(start, end-start).attach(kj::mv(stream));
-    }
-    if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(std::string(url.begin()+7, url.size()-11), badge)) {
+    } else if(url.startsWith("/badge/") && url.endsWith(".svg") && laminar.handleBadgeRequest(std::string(url.begin()+7, url.size()-11), badge)) {
         responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "image/svg+xml");
         responseHeaders.add("Cache-Control", "no-cache");
         auto stream = response.send(200, "OK", responseHeaders, badge.size());
@@ -312,4 +296,9 @@ void Http::notifyLog(std::string job, uint run, std::string log_chunk, bool eot)
             lw->fulfiller->fulfill(kj::mv(eot));
         }
     }
+}
+
+void Http::setHtmlTemplate(std::string tmpl)
+{
+    resources->setHtmlTemplate(tmpl);
 }

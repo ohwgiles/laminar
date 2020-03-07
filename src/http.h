@@ -43,6 +43,9 @@ public:
     void notifyEvent(const char* data, std::string job = nullptr);
     void notifyLog(std::string job, uint run, std::string log_chunk, bool eot);
 
+    // Allows supplying a custom HTML template. Pass an empty string to use the default.
+    void setHtmlTemplate(std::string tmpl = std::string());
+
 private:
     virtual kj::Promise<void> request(kj::HttpMethod method, kj::StringPtr url, const kj::HttpHeaders& headers,
                                       kj::AsyncInputStream& requestBody, Response& response) override;
