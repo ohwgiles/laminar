@@ -103,6 +103,7 @@ public:
 
 private:
     bool loadConfiguration();
+    void loadCustomizations();
     void assignNewJobs();
     bool tryStartRun(std::shared_ptr<Run> run, int queueIndex);
     void handleRunFinished(Run*);

@@ -113,12 +113,26 @@ Laminar::Laminar(Server &server, Settings settings) :
       .addPath((homePath/"cfg"/"jobs").toString(true).cStr())
       .addPath((homePath/"cfg").toString(true).cStr()); // for groups.conf
 
+    loadCustomizations();
+    srv.watchPaths([this]{
+        LLOG(INFO, "Reloading customizations");
+        loadCustomizations();
+    }).addPath((homePath/"custom").toString(true).cStr());
+
     srv.listenRpc(*rpc, settings.bind_rpc);
     srv.listenHttp(*http, settings.bind_http);
 
     // Load configuration, may be called again in response to an inotify event
     // that the configuration files have been modified
     loadConfiguration();
+}
+
+void Laminar::loadCustomizations() {
+    KJ_IF_MAYBE(templ, fsHome->tryOpenFile(kj::Path{"custom","index.html"})) {
+        http->setHtmlTemplate((*templ)->readAllText().cStr());
+    } else {
+        http->setHtmlTemplate();
+    }
 }
 
 uint Laminar::latestRun(std::string job) {
@@ -789,8 +803,14 @@ R"x(
     return true;
 }
 
+// TODO: deprecate
 std::string Laminar::getCustomCss() {
     KJ_IF_MAYBE(cssFile, fsHome->tryOpenFile(kj::Path{"custom","style.css"})) {
+        static bool warningShown = false;
+        if(!warningShown) {
+            LLOG(WARNING, "Custom CSS has been deprecated and will be removed from a future release. Use a custom HTML template instead.");
+            warningShown = true;
+        }
         return (*cssFile)->readAllText().cStr();
     } else {
         return std::string();

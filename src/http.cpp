@@ -297,3 +297,8 @@ void Http::notifyLog(std::string job, uint run, std::string log_chunk, bool eot)
         }
     }
 }
+
+void Http::setHtmlTemplate(std::string tmpl)
+{
+    resources->setHtmlTemplate(tmpl);
+}
