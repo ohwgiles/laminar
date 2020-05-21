@@ -24,6 +24,7 @@
 #include <capnp/message.h>
 #include <capnp/capability.h>
 #include <functional>
+#include <sys/types.h>
 
 struct Laminar;
 struct Http;

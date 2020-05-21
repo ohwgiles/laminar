@@ -19,6 +19,7 @@
 #ifndef LAMINAR_CONF_H_
 #define LAMINAR_CONF_H_
 
+#include <string>
 #include <unordered_map>
 
 class StringMap : public std::unordered_map<std::string, std::string> {
