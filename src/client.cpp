@@ -191,7 +191,8 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Usage: %s show-jobs\n", argv[0]);
             return EXIT_BAD_ARGUMENT;
         }
-        for(auto it : laminar.listKnownRequest().send().wait(waitScope).getResult()) {
+        auto jobs = laminar.listKnownRequest().send().wait(waitScope);
+        for(auto it : jobs.getResult()) {
             printf("%s\n", it.cStr());
         }
     } else if(strcmp(argv[1], "show-queued") == 0) {
@@ -199,7 +200,8 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Usage: %s show-queued\n", argv[0]);
             return EXIT_BAD_ARGUMENT;
         }
-        for(auto it : laminar.listQueuedRequest().send().wait(waitScope).getResult()) {
+        auto queued = laminar.listQueuedRequest().send().wait(waitScope);
+        for(auto it : queued.getResult()) {
             printf("%s\n", it.cStr());
         }
     } else if(strcmp(argv[1], "show-running") == 0) {
@@ -207,7 +209,8 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Usage: %s show-running\n", argv[0]);
             return EXIT_BAD_ARGUMENT;
         }
-        for(auto it : laminar.listRunningRequest().send().wait(waitScope).getResult()) {
+        auto running = laminar.listRunningRequest().send().wait(waitScope);
+        for(auto it : running.getResult()) {
             printf("%s:%d\n", it.getJob().cStr(), it.getBuildNum());
         }
     } else {
