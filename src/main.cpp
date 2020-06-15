@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2016 Oliver Giles
+/// Copyright 2015-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -20,9 +20,12 @@
 #include "leader.h"
 #include "server.h"
 #include "log.h"
-#include <signal.h>
+#include <fcntl.h>
 #include <kj/async-unix.h>
 #include <kj/filesystem.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 static Laminar* laminar;
 static Server* server;
@@ -50,6 +53,14 @@ int main(int argc, char** argv) {
             kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
         }
     }
+
+    // The parent process hopefully connected stdin to /dev/null, but
+    // do it again here just in case. This is important because stdin
+    // is inherited to job runs via the leader process, and some
+    // processes misbehave if they can successfully block on reading
+    // from stdin.
+    close(STDIN_FILENO);
+    LASSERT(open("/dev/null", O_RDONLY) == STDIN_FILENO);
 
     auto ioContext = kj::setupAsyncIo();
 
