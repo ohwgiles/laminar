@@ -23,8 +23,9 @@ const timeScale = function(max){
   : { scale:function(v){return v;}, label:'Seconds' };
 }
 const ServerEventHandler = function() {
-  function setupEventSource(path, query, next) {
+  function setupEventSource(path, query, next, comp) {
     const es = new EventSource(document.head.baseURI + path.substr(1) + query);
+    es.comp = comp;
     es.path = path; // save for later in case we need to add query params
     es.onmessage = function(msg) {
       msg = JSON.parse(msg.data);
@@ -46,6 +47,7 @@ const ServerEventHandler = function() {
           this.comp = comp;
           // 2. needed to close the ws on navigation away
           comp.es = this;
+          comp.esReconnectInterval = 500;
           // Update html and nav titles
           document.title = comp.$root.title = msg.title;
           // Calculate clock offset (used by ProgressUpdater)
@@ -66,8 +68,14 @@ const ServerEventHandler = function() {
         }
       }
     }
-    es.onerror = function() {
+    es.onerror = function(e) {
       this.comp.$root.connected = false;
+      setTimeout(() => {
+        this.comp.es = setupEventSource(path, query, null, this.comp);
+      }, this.comp.esReconnectInterval);
+      if(this.comp.esReconnectInterval < 7500)
+        this.comp.esReconnectInterval *= 1.5;
+      this.close();
     }
     return es;
   }
