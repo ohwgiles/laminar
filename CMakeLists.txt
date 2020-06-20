@@ -1,5 +1,5 @@
 ###
-### Copyright 2015-2019 Oliver Giles
+### Copyright 2015-2020 Oliver Giles
 ###
 ### This file is part of Laminar
 ###
@@ -22,7 +22,7 @@ cmake_policy(SET CMP0058 NEW)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_definitions("-std=c++14 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
+add_definitions("-std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -DDEBUG")
 
 # This macro takes a list of files, gzips them and converts the output into
