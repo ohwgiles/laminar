@@ -83,7 +83,10 @@ Leader::Leader(kj::AsyncIoContext &ioContext, kj::Filesystem &fs, const char *jo
             scripts.pop();
         // TODO: probably shouldn't do this if we are already in a runOnAbort script
         kill(-currentGroupId, SIGTERM);
-        // TODO: wait a few seconds for exit, then send KILL?
+        return this->ioContext.provider->getTimer().afterDelay(2*kj::SECONDS).then([this]{
+            fprintf(stderr, "[laminar] sending SIGKILL to process group %d\n", currentGroupId);
+            kill(-currentGroupId, SIGKILL);
+        });
     }));
 
     pipe(setEnvPipe);
