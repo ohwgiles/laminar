@@ -30,7 +30,7 @@ cmake \
 	-DCMAKE_OBJCOPY=/usr/bin/arm-linux-gnueabihf-objcopy \
 	-DCMAKE_STRIP=/usr/bin/arm-linux-gnueabihf-strip \
 	-DCMAKE_BUILD_TYPE=Release \
-	-DCMAKE_INSTALL_PREFIX=/ \
+	-DCMAKE_INSTALL_PREFIX=/usr \
 	-DZSH_COMPLETIONS_DIR=/usr/share/zsh/functions/Completion/Unix \
 	/laminar
 make -j4

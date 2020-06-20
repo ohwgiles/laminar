@@ -28,7 +28,7 @@ RUN apk add --no-cache --virtual .build -X http://dl-3.alpinelinux.org/alpine/ed
         zlib-dev \
         rapidjson-dev && \
     cd /build/laminar && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && \
     make -j4 && \
     make install && \
     apk del .build && \

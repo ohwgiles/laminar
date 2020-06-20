@@ -24,7 +24,7 @@ Then compile and install laminar with:
 ```bash
 git clone https://github.com/ohwgiles/laminar.git
 cd laminar
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 make -j4
 sudo make install
 ```
