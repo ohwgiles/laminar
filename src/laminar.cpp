@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2019 Oliver Giles
+/// Copyright 2015-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -252,7 +252,8 @@ std::string Laminar::getStatus(MonitorScope scope) {
                 j.set("etc", run->startedAt + lastRuntime);
             });
         }
-        j.set("latestNum", int(buildNums[scope.job]));
+        if(auto it = buildNums.find(scope.job); it != buildNums.end())
+            j.set("latestNum", int(it->second));
         j.startArray("artifacts");
         populateArtifacts(j, scope.job, scope.num);
         j.EndArray();
