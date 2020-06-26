@@ -521,7 +521,7 @@ DUT_IP=192.168.3.2
 FOO=bar
 ```
 
-This environment will then be available the run script of jobs associated with this context.
+This environment will then be available the run script of jobs associated with this context. Note that these definitions are not expanded by a shell, so `FOO="bar"` would result in a variable `FOO` whose contents *include* double-quotes.
 
 ---
 
@@ -679,6 +679,8 @@ Laminar will also export variables in the form `KEY=VALUE` found in these files:
 - `env`
 - `contexts/$CONTEXT.env`
 - `jobs/$JOB.env`
+
+Note that definitions in these files are not expanded by a shell, so `FOO="bar"` would result in a variable `FOO` whose contents *include* double-quotes.
 
 Finally, variables supplied on the command-line call to `laminarc queue`, `laminarc start` or `laminarc run` will be available. See [parameterized runs](#Parameterized-runs)
 
