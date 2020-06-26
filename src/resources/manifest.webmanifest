@@ -1,0 +1,21 @@
+{
+  "short_name": "Laminar",
+  "name": "Laminar",
+  "description": "Lightweight Continuous Integration",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "36x36"
+    },
+    {
+      "src": "/favicon-152.png",
+      "type": "image/png",
+      "sizes": "152x152"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#2F3340",
+  "display": "standalone",
+  "scope": "/"
+}

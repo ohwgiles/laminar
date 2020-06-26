@@ -62,7 +62,7 @@ add_custom_command(OUTPUT laminar.capnp.c++ laminar.capnp.h
 
 # Zip and compile statically served resources
 generate_compressed_bins(${CMAKE_SOURCE_DIR}/src/resources index.html js/app.js
-    favicon.ico favicon-152.png icon.png)
+    style.css manifest.webmanifest favicon.ico favicon-152.png icon.png)
 
 # The code that allows dynamic modifying of index.html requires knowing its original size
 add_custom_command(OUTPUT index_html_size.h
@@ -78,11 +78,9 @@ file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v1.3.0/ansi_up.js
         js/ansi_up.js EXPECTED_MD5 158566dc1ff8f2804de972f7e841e2f6)
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js
         js/Chart.min.js EXPECTED_MD5 f6c8efa65711e0cbbc99ba72997ecd0e)
-file(DOWNLOAD https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css
-        css/bootstrap.min.css EXPECTED_MD5 5d5357cb3704e1f43a1f5bfed2aebf42)
 # ...and compile them
 generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
-    js/ansi_up.js js/Chart.min.js css/bootstrap.min.css)
+    js/ansi_up.js js/Chart.min.js)
 # (see resources.cpp where these are fetched)
 
 set(LAMINARD_CORE_SOURCES

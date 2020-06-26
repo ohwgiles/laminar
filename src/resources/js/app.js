@@ -103,15 +103,24 @@ const ServerEventHandler = function() {
 const Utils = {
   methods: {
     runIcon(result) {
-      var marker = '⚙';
-      var classname = result;
-      if (result === 'success')
-         marker = '✔';
-      else if (result === 'failed' || result === 'aborted')
-         marker = '✘';
-      else
-         classname = 'spin';
-      return '<span title="' + result + '" class="status ' + classname + '">' + marker + '&#xfe0e;</span>';
+      return (result == 'success') ? /* checkmark */
+               `<svg class="status success" viewBox="0 0 100 100">
+                 <path d="m 23,46 c -6,0 -17,3 -17,11 0,8 9,30 12,32 3,2 14,5 20,-2 6,-6 24,-36
+                  56,-71 5,-3 -9,-8 -23,-2 -13,6 -33,42 -41,47 -6,-3 -5,-12 -8,-15 z" />
+                </svg>`
+           : (result == 'failed' || result == 'aborted') ? /* cross */
+               `<svg class="status failed" viewBox="0 0 100 100">
+                 <path d="m 19,20 c 2,8 12,29 15,32 -5,5 -18,21 -21,26 2,3 8,15 11,18 4,-6 17,-21
+                  21,-26 5,5 11,15 15,20 8,-2 15,-9 20,-15 -3,-3 -17,-18 -20,-24 3,-5 23,-26 30,-33 -3,-5 -8,-9
+                  -12,-12 -6,5 -26,26 -29,30 -6,-8 -11,-15 -15,-23 -3,0 -12,5 -15,7 z" />
+                </svg>`
+           : /* spinner */
+                `<svg class="status running" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke-width="15" fill="none" stroke-dasharray="175">
+                   <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="2s" values="0 50 50;360 50 50"></animateTransform>
+                  </circle>
+                 </svg>`
+           ;
     },
     formatDate: function(unix) {
       // TODO: reimplement when toLocaleDateString() accepts formatting options on most browsers
@@ -145,7 +154,8 @@ const ProgressUpdater = {
         var p = (Math.floor(Date.now()/1000) + this.$root.clockSkew - o.started) / (o.etc - o.started);
         if (p > 1.2) {
           o.overtime = true;
-        } else if (p >= 1) {
+        }
+        if (p >= 1) {
           o.progress = 99;
         } else {
           o.progress = 100 * p;
@@ -178,7 +188,8 @@ const Home = function() {
   var state = {
     jobsQueued: [],
     jobsRecent: [],
-    resultChanged: []
+    resultChanged: [],
+    lowPassRates: [],
   };
 
   var chtUtilization, chtBuildsPerDay, chtBuildsPerJob, chtTimePerJob;
@@ -201,6 +212,7 @@ const Home = function() {
         state.jobsRunning = msg.running;
         state.jobsRecent = msg.recent;
         state.resultChanged = msg.resultChanged;
+        state.lowPassRates = msg.lowPassRates;
         this.$forceUpdate();
 
         // setup charts
@@ -243,6 +255,7 @@ const Home = function() {
             }]
           },
           options:{
+            title: { display: true, text: 'Builds per day' },
             tooltips:{callbacks:{title: function(tip, data) {
               return buildsPerDayDates[tip[0].index].long;
             }}},
@@ -263,6 +276,7 @@ const Home = function() {
             }]
           },
           options:{
+            title: { display: true, text: 'Builds per job' },
             scales:{xAxes:[{ticks:{userCallback: (label, index, labels)=>{
               if(Number.isInteger(label))
                 return label;
@@ -281,6 +295,7 @@ const Home = function() {
             }]
           },
           options:{
+            title: { display: true, text: 'Mean run time this week' },
             scales:{xAxes:[{
               ticks:{userCallback: tpjScale.scale},
               scaleLabel: {
@@ -291,52 +306,6 @@ const Home = function() {
             tooltips:{callbacks:{label:(tip, data)=>{
               return data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel + ' ' + tpjScale.label.toLowerCase();
             }}}
-          }
-        });
-        var chtResultChanges = new Chart(document.getElementById("chartResultChanges"), {
-          type: 'horizontalBar',
-          data: {
-            labels: msg.resultChanged.map((e)=>{ return e.name; }),
-            datasets: [{
-              //label: '% Passed',
-              backgroundColor: msg.resultChanged.map((e)=>{return e.lastFailure > e.lastSuccess ? 'firebrick' : 'forestgreen';}),
-              data: msg.resultChanged.map((e)=>{ return e.lastSuccess - e.lastFailure; }),
-              itemid: msg.resultChanged.map((e)=> { return 'rcd_' + e.name; })
-            }]
-          },
-          options:{
-            scales:{
-              xAxes:[{ticks:{display: false}}],
-              yAxes:[{ticks:{display: false}}]
-            },
-            tooltips:{
-              enabled:false
-            }
-          }
-        });
-        var chtPassRates = new Chart(document.getElementById("chartPassRates"), {
-          type: 'horizontalBar',
-          data: {
-            labels: msg.lowPassRates.map((e)=>{ return e.name }),
-            datasets: [{
-              stack: 'passrate',
-              label: '% Passed',
-              backgroundColor: "forestgreen",
-              data: msg.lowPassRates.map((e)=>{ return e.passRate*100; })
-            },{
-              stack:'passrate',
-              label: '% Failed',
-              backgroundColor: "firebrick",
-              data: msg.lowPassRates.map((e)=>{ return (1-e.passRate)*100; })
-            }],
-          },
-          options:{
-            scales:{xAxes:[{ticks:{callback:(val,idx,values)=>{
-              return val + '%';
-            }}}]},
-            tooltips:{
-              enabled:false
-            }
           }
         });
         var btcScale = timeScale(Math.max(msg.buildTimeChanges.map((e)=>{return Math.max(e.durations)})));
@@ -352,6 +321,7 @@ const Home = function() {
             }})
           },
           options:{
+            title: { display: true, text: 'Build time changes' },
             legend:{display:true},
             scales:{
               xAxes:[{ticks:{display: false}}],
@@ -377,6 +347,9 @@ const Home = function() {
               data: msg.buildTimeDist,
               backgroundColor: "steelblue",
             }]
+          },
+          options: {
+            title: { display: true, text: 'Build time distribution' }
           }
         });
       },
@@ -573,6 +546,7 @@ var Job = function() {
             }]
           },
           options: {
+            title: { display: true, text: 'Build time' },
             scales:{
               xAxes:[{},{
                 id: 'avg',
@@ -651,9 +625,7 @@ const Run = function() {
     job: { artifacts: [], upstream: {} },
     latestNum: null,
     log: '',
-    autoscroll: false
   };
-  var firstLog = false;
   const logFetcher = (vm, name, num) => {
     const abort = new AbortController();
     fetch('log/'+name+'/'+num, {signal:abort.signal}).then(res => {
@@ -668,11 +640,6 @@ const Run = function() {
             return;
           state.log += ansi_up.ansi_to_html(value.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m,$1,$2)=>{return '<a href="jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:<a href="jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>';}));
           vm.$forceUpdate();
-          if (!firstLog) {
-            firstLog = true;
-          } else if (state.autoscroll) {
-            window.scrollTo(0, document.body.scrollHeight);
-          }
           return pump();
         });
       }();
@@ -780,7 +747,8 @@ new Vue({
         new Notification('Job ' + data.result, {
           body: data.name + ' ' + '#' + data.number + ': ' + data.result
         });
-    }
+    },
+    runIcon: Utils.methods.runIcon
   },
   watch: {
     notify(e) { localStorage.setItem('showNotifications', e ? 1 : 0); }

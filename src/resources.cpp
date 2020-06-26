@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2019 Oliver Giles
+/// Copyright 2015-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -27,11 +27,12 @@
     extern const char _binary_##name##_z_end[]; \
     resources.emplace(route, Resource{_binary_ ## name ## _z_start, _binary_ ## name ## _z_end, content_type})
 
-#define CONTENT_TYPE_HTML "text/html; charset=utf-8"
-#define CONTENT_TYPE_ICO  "image/x-icon"
-#define CONTENT_TYPE_PNG  "image/png"
-#define CONTENT_TYPE_JS   "application/javascript; charset=utf-8"
-#define CONTENT_TYPE_CSS  "text/css; charset=utf-8"
+#define CONTENT_TYPE_HTML     "text/html; charset=utf-8"
+#define CONTENT_TYPE_ICO      "image/x-icon"
+#define CONTENT_TYPE_PNG      "image/png"
+#define CONTENT_TYPE_JS       "application/javascript; charset=utf-8"
+#define CONTENT_TYPE_CSS      "text/css; charset=utf-8"
+#define CONTENT_TYPE_MANIFEST "application/manifest+json; charset=utf-8"
 
 #define GZIP_FORMAT 16
 
@@ -46,7 +47,8 @@ Resources::Resources()
     INIT_RESOURCE("/js/vue-router.min.js", js_vue_router_min_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/Chart.min.js", js_Chart_min_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/css/bootstrap.min.css", css_bootstrap_min_css, CONTENT_TYPE_CSS);
+    INIT_RESOURCE("/style.css", style_css, CONTENT_TYPE_CSS);
+    INIT_RESOURCE("/manifest.webmanifest", manifest_webmanifest, CONTENT_TYPE_MANIFEST);
     // Configure the default template
     setHtmlTemplate(std::string());
 }
