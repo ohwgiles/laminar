@@ -177,7 +177,7 @@
  </div></template>
 
  <main id="app" style="display: grid; grid-template-rows: auto 1fr auto; height: 100%;">
-  <nav id="nav-top" style="display: grid; grid-template-columns: auto auto 1fr auto; grid-gap: 15px;">
+  <nav id="nav-top" style="display: grid; grid-template-columns: auto auto 1fr auto auto; grid-gap: 15px;">
    <router-link to="/" style="display: grid; grid-auto-flow: column; align-items: center; margin: 5px; font-size: 20px;">
     <img src="icon.png"> {{title}}
    </router-link>
@@ -186,6 +186,7 @@
     <router-link v-for="(crumb,i) in _route.path.slice(1).split('/').slice(1,-1)" :to="_route.path.split('/').slice(0,i+3).join('/')">{{crumb}}</router-link>
    </div>
    <div></div>
+   <span class="version">{{version}}</span>
    <div style="display: grid; align-items: center; padding: 0 15px">
     <a v-on:click="toggleNotifications(!notify)" class="nav-icon" :class="{active:notify}" v-show="supportsNotifications" :title="(notify?'Disable':'Enable')+' notifications'">
      <svg width="18" viewBox="0 0 12 12">

@@ -40,6 +40,12 @@ body {
 #nav-top a       { color: var(--nav-fg); }
 #nav-top a:hover { color: white; text-decoration: none; }
 
+.version {
+ align-self: center;
+ font-size: x-small;
+ color: rgba(255,255,255,0.3);
+}
+
 /* navbar svg icons (enable notifications) */
 .nav-icon            { display: inherit; }
 .nav-icon svg        { fill: var(--nav-fg); stroke: #000; }

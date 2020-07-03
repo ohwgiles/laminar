@@ -25,6 +25,19 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 add_definitions("-std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -DDEBUG")
 
+# Allow passing in the version string, for e.g. patched/packaged versions
+if(NOT LAMINAR_VERSION AND EXISTS ${CMAKE_SOURCE_DIR}/.git)
+    execute_process(COMMAND git describe --tags --abbrev=8 --dirty
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE LAMINAR_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+if(NOT LAMINAR_VERSION)
+    set(LAMINAR_VERSION xx-unversioned)
+endif()
+set_source_files_properties(src/version.cpp PROPERTIES COMPILE_DEFINITIONS
+	LAMINAR_VERSION=${LAMINAR_VERSION})
+
 # This macro takes a list of files, gzips them and converts the output into
 # object files so they can be linked directly into the application.
 # ld generates symbols based on the string argument given to its executable,
@@ -93,6 +106,7 @@ set(LAMINARD_CORE_SOURCES
     src/rpc.cpp
     src/run.cpp
     src/server.cpp
+    src/version.cpp
     laminar.capnp.c++
     index_html_size.h
 )
@@ -102,7 +116,7 @@ add_executable(laminard ${LAMINARD_CORE_SOURCES} src/main.cpp ${COMPRESSED_BINS}
 target_link_libraries(laminard capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 
 ## Client
-add_executable(laminarc src/client.cpp laminar.capnp.c++)
+add_executable(laminarc src/client.cpp src/version.cpp laminar.capnp.c++)
 target_link_libraries(laminarc capnp-rpc capnp kj-async kj pthread)
 
 ## Tests

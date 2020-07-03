@@ -17,7 +17,7 @@ docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output $DOCKER_TAG
 mkdir /build
 cd /build
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DZSH_COMPLETIONS_DIR=/usr/share/zsh/functions/Completion/Unix /laminar
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DLAMINAR_VERSION=$VERSION -DZSH_COMPLETIONS_DIR=/usr/share/zsh/functions/Completion/Unix /laminar
 make -j4
 mkdir laminar
 make DESTDIR=laminar install/strip

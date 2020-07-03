@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2019 Oliver Giles
+/// Copyright 2015-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -66,6 +66,8 @@ namespace _ {
   if (auto _kjSyscallResult = ::kj::_::Debug::syscall([&](){return (call);}, false)) {} else \
     for (::kj::_::Debug::Fault f(__FILE_BASE__, __LINE__, \
       _kjSyscallResult.getErrorNumber(), #call, #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
+
+const char* laminar_version();
 
 #endif // LAMINAR_LOG_H_
 

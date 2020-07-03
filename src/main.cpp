@@ -20,7 +20,9 @@
 #include "leader.h"
 #include "server.h"
 #include "log.h"
+
 #include <fcntl.h>
+#include <iostream>
 #include <kj/async-unix.h>
 #include <kj/filesystem.h>
 #include <signal.h>
@@ -44,6 +46,13 @@ constexpr const char* INTADDR_HTTP_DEFAULT = "*:8080";
 constexpr const char* ARCHIVE_URL_DEFAULT = "/archive/";
 }
 
+static void usage(std::ostream& out) {
+    out << "laminard version " << laminar_version() << "\n";
+    out << "Usage:\n";
+    out << "  -h|--help       show this help message\n";
+    out << "  -v              enable verbose output\n";
+}
+
 int main(int argc, char** argv) {
     if(argv[0][0] == '{')
         return leader_main();
@@ -51,6 +60,11 @@ int main(int argc, char** argv) {
     for(int i = 1; i < argc; ++i) {
         if(strcmp(argv[i], "-v") == 0) {
             kj::_::Debug::setLogLevel(kj::_::Debug::Severity::INFO);
+        } else if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            return usage(std::cout), EXIT_SUCCESS;
+        } else {
+            std::cerr << "Unknown argument " << argv[i] << "\n";
+            return usage(std::cerr), EXIT_FAILURE;
         }
     }
 
@@ -78,6 +92,8 @@ int main(int argc, char** argv) {
 
     signal(SIGINT, &laminar_quit);
     signal(SIGTERM, &laminar_quit);
+
+    printf("laminard version %s started\n", laminar_version());
 
     server->start();
 

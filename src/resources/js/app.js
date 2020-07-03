@@ -50,6 +50,7 @@ const ServerEventHandler = function() {
           comp.esReconnectInterval = 500;
           // Update html and nav titles
           document.title = comp.$root.title = msg.title;
+          comp.$root.version = msg.version;
           // Calculate clock offset (used by ProgressUpdater)
           comp.$root.clockSkew = msg.time - Math.floor((new Date()).getTime()/1000);
           comp.$root.connected = true;
@@ -726,6 +727,7 @@ new Vue({
   el: '#app',
   data: {
     title: '', // populated by status ws message
+    version: '',
     clockSkew: 0,
     connected: false,
     notify: 'localStorage' in window && localStorage.getItem('showNotifications') == 1

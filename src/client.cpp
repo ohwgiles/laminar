@@ -17,10 +17,12 @@
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
 #include "laminar.capnp.h"
+#include "log.h"
 
 #include <capnp/ez-rpc.h>
 #include <kj/vector.h>
 
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -77,11 +79,35 @@ static void printTriggerLink(const char* job, uint run) {
     printf("\033[{%s:%d\033\\\n", job, run);
 }
 
+static void usage(std::ostream& out) {
+    out << "laminarc version " << laminar_version() << "\n";
+    out << "Usage: laminarc [-h|--help] COMMAND [PARAMETERS...]]\n";
+    out << "  -h|--help       show this help message\n";
+    out << "where COMMAND is:\n";
+    out << "  queue JOB_LIST...     queues one or more jobs for execution and returns immediately.\n";
+    out << "  start JOB_LIST...     queues one or more jobs for execution and blocks until it starts.\n";
+    out << "  run JOB_LIST...       queues one or more jobs for execution and blocks until it finishes.\n";
+    out << "  set PARAMETER_LIST... sets the given parameters as environment variables in the currently\n";
+    out << "                        runing job. Fails if run outside of a job context.\n";
+    out << "  abort NAME NUMBER     aborts the run identified by NAME and NUMBER.\n";
+    out << "  show-jobs             lists all known jobs.\n";
+    out << "  show-queued           lists currently queued jobs.\n";
+    out << "  show-running          lists currently running jobs.\n";
+    out << "JOB_LIST is of the form:\n";
+    out << "  [JOB_NAME [PARAMETER_LIST...]]...\n";
+    out << "PARAMETER_LIST is of the form:\n";
+    out << "  [KEY=VALUE]...\n";
+    out << "Example:\n";
+    out << "  laminarc start \\\n";
+    out << "    nightly-build branch=master type=release \\\n";
+    out << "    nightly-build branch=master type=debug\n";
+}
+
 int main(int argc, char** argv) {
-    if(argc < 2) {
-        fprintf(stderr, "Usage: %s <command> [parameters...]\n", argv[0]);
-        return EXIT_BAD_ARGUMENT;
-    }
+    if(argc < 2)
+        return usage(std::cerr), EXIT_BAD_ARGUMENT;
+    else if(strcmp("-h", argv[1]) == 0 || strcmp("--help", argv[1]) == 0)
+        return usage(std::cout), EXIT_SUCCESS;
 
     struct: public kj::TaskSet::ErrorHandler {
         void taskFailed(kj::Exception&& e) override {

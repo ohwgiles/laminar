@@ -227,6 +227,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
     Json j;
     j.set("type", "status");
     j.set("title", getenv("LAMINAR_TITLE") ?: "Laminar");
+    j.set("version", laminar_version());
     j.set("time", time(nullptr));
     j.startObject("data");
     if(scope.type == MonitorScope::RUN) {
