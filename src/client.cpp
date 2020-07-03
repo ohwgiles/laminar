@@ -74,9 +74,15 @@ static int setParams(int argc, char** argv, T& request) {
 }
 
 static void printTriggerLink(const char* job, uint run) {
-    // use a private ANSI CSI sequence to mark the JOB:NUM so the
-    // frontend can recognise it and generate a hyperlink.
-    printf("\033[{%s:%d\033\\\n", job, run);
+    if(getenv("__LAMINAR_SETENV_PIPE")) {
+        // use a private ANSI CSI sequence to mark the JOB:NUM so the
+        // frontend can recognise it and generate a hyperlink.
+        printf("\033[{%s:%d\033\\\n", job, run);
+    } else {
+        // not called from within a laminar job, let's not confuse
+        // scripts with ANSI sequences.
+        printf("%s:%d\n", job, run);
+    }
 }
 
 static void usage(std::ostream& out) {
