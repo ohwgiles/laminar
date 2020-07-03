@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
             return EXIT_BAD_ARGUMENT;
         }
         if(char* pipeNum = getenv("__LAMINAR_SETENV_PIPE")) {
-            write(atoi(pipeNum), argv[2], strlen(argv[2]));
+            LSYSCALL(write(atoi(pipeNum), argv[2], strlen(argv[2])));
         } else {
             fprintf(stderr, "Must be run from within a laminar job\n");
             return EXIT_BAD_ARGUMENT;

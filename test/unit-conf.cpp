@@ -1,5 +1,5 @@
 ///
-/// Copyright 2018 Oliver Giles
+/// Copyright 2018-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -16,8 +16,9 @@
 /// You should have received a copy of the GNU General Public License
 /// along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ///
-#include <gtest/gtest.h>
 #include "conf.h"
+#include "log.h"
+#include <gtest/gtest.h>
 
 class ConfTest : public ::testing::Test {
 protected:
@@ -30,7 +31,7 @@ protected:
     }
     void parseConf(std::string conf) {
         lseek(fd, SEEK_SET, 0);
-        write(fd, conf.data(), conf.size());
+        LSYSCALL(write(fd, conf.data(), conf.size()));
         cfg = parseConfFile(tmpFile);
     }
     StringMap cfg;

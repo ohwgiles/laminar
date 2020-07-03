@@ -780,7 +780,7 @@ bool Laminar::handleBadgeRequest(std::string job, std::string &badge) {
     const char* gradient1 = (rs == RunState::SUCCESS) ? "#2aff4d" : "#ff2a2a";
     const char* gradient2 = (rs == RunState::SUCCESS) ? "#24b43c" : "#b42424";
     char* svg = NULL;
-    asprintf(&svg,
+    if(asprintf(&svg,
 R"x(
 <svg xmlns="http://www.w3.org/2000/svg" width="%d" height="20">
   <clipPath id="clip">
@@ -800,7 +800,9 @@ R"x(
     <rect x="%d" width="%d" height="20" fill="url(#status)"/>
     <text x="%d" y="14" fill="#000">%s</text>
   </g>
-</svg>)x", jobNameWidth+statusWidth, jobNameWidth+statusWidth, gradient1, gradient2, jobNameWidth, jobNameWidth/2+1, job.data(), jobNameWidth, statusWidth, jobNameWidth+statusWidth/2, status.data());
+</svg>)x", jobNameWidth+statusWidth, jobNameWidth+statusWidth, gradient1, gradient2, jobNameWidth, jobNameWidth/2+1, job.data(), jobNameWidth, statusWidth, jobNameWidth+statusWidth/2, status.data()) < 0)
+        return false;
+
     badge = svg;
     return true;
 }

@@ -1,5 +1,5 @@
 ///
-/// Copyright 2019 Oliver Giles
+/// Copyright 2019-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -19,14 +19,16 @@
 #ifndef LAMINAR_FIXTURE_H_
 #define LAMINAR_FIXTURE_H_
 
-#include <capnp/rpc-twoparty.h>
-#include <gtest/gtest.h>
 #include "laminar.capnp.h"
 #include "eventsource.h"
 #include "tempdir.h"
 #include "laminar.h"
+#include "log.h"
 #include "server.h"
 #include "conf.h"
+
+#include <capnp/rpc-twoparty.h>
+#include <gtest/gtest.h>
 
 class LaminarFixture : public ::testing::Test {
 public:
@@ -108,7 +110,7 @@ public:
     StringMap parseFromString(kj::StringPtr content) {
         char tmp[16] = "/tmp/lt.XXXXXX";
         int fd = mkstemp(tmp);
-        write(fd, content.begin(), content.size());
+        LSYSCALL(write(fd, content.begin(), content.size()));
         close(fd);
         StringMap map = parseConfFile(tmp);
         unlink(tmp);

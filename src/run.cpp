@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2018 Oliver Giles
+/// Copyright 2015-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -152,8 +152,8 @@ kj::Promise<RunState> Run::start(uint buildNum, std::shared_ptr<Context> ctx, co
         // enough. Instead, we'll just exec ourselves and handle that in laminard's
         // main() by calling leader_main()
         char* procName;
-        asprintf(&procName, "{laminar} %s:%d", name.data(), buildNum);
-        execl("/proc/self/exe", procName, NULL); // does not return
+        if(asprintf(&procName, "{laminar} %s:%d", name.data(), buildNum) > 0)
+            execl("/proc/self/exe", procName, NULL); // does not return
         _exit(EXIT_FAILURE);
     }
 

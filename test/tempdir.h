@@ -1,5 +1,5 @@
 ///
-/// Copyright 2018 Oliver Giles
+/// Copyright 2018-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -19,6 +19,8 @@
 #ifndef LAMINAR_TEMPDIR_H_
 #define LAMINAR_TEMPDIR_H_
 
+#include "log.h"
+
 #include <kj/filesystem.h>
 #include <stdlib.h>
 
@@ -37,7 +39,7 @@ public:
 private:
     static kj::Path mkdtemp() {
         char dir[] = "/tmp/laminar-test-XXXXXX";
-        ::mkdtemp(dir);
+        LASSERT(::mkdtemp(dir) != nullptr, "mkdtemp failed");
         return kj::Path::parse(&dir[1]);
     }
 };
