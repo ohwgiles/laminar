@@ -20,6 +20,7 @@
 #include <string>
 #include <unistd.h>
 #include <queue>
+#include <dirent.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -45,6 +46,39 @@ struct Script {
     bool runOnAbort;
 };
 
+static void aggressive_recursive_kill(pid_t parent) {
+    DIR* proc = opendir("/proc");
+    if(!proc)
+        return;
+
+    while(struct dirent* de = readdir(proc)) {
+        if(!isdigit(*de->d_name))
+            continue;
+
+        char status_file[640];
+        sprintf(status_file, "/proc/%s/status", de->d_name);
+
+        FILE* status_fp = fopen(status_file, "rb");
+        if(!status_fp)
+            continue;
+
+        char status_buffer[512];
+        int n = fread(status_buffer, 1, 512, status_fp);
+        if(char* p = (char*)memmem(status_buffer, n, "PPid:\t", 6)) {
+            pid_t ppid = strtol(p + 6, NULL, 10);
+            if(ppid == parent) {
+                pid_t pid = atoi(de->d_name);
+                aggressive_recursive_kill(pid);
+                fprintf(stderr, "[laminar] sending SIGKILL to pid %d\n", pid);
+                kill(pid, SIGKILL);
+            }
+        }
+        fclose(status_fp);
+    }
+    closedir(proc);
+}
+
+
 class Leader final : public kj::TaskSet::ErrorHandler {
 public:
     Leader(kj::AsyncIoContext& ioContext, kj::Filesystem& fs, const char* jobName, uint runNumber);
@@ -67,6 +101,7 @@ private:
     pid_t currentScriptPid;
     std::queue<Script> scripts;
     int setEnvPipe[2];
+    bool aborting;
 };
 
 Leader::Leader(kj::AsyncIoContext &ioContext, kj::Filesystem &fs, const char *jobName, uint runNumber) :
@@ -76,7 +111,8 @@ Leader::Leader(kj::AsyncIoContext &ioContext, kj::Filesystem &fs, const char *jo
     home(fs.getCurrent()),
     rootPath(fs.getCurrentPath()),
     jobName(jobName),
-    runNumber(runNumber)
+    runNumber(runNumber),
+    aborting(false)
 {
     tasks.add(ioContext.unixEventPort.onSignal(SIGTERM).then([this](siginfo_t) {
         while(scripts.size() && (!scripts.front().runOnAbort))
@@ -84,8 +120,8 @@ Leader::Leader(kj::AsyncIoContext &ioContext, kj::Filesystem &fs, const char *jo
         // TODO: probably shouldn't do this if we are already in a runOnAbort script
         kill(-currentGroupId, SIGTERM);
         return this->ioContext.provider->getTimer().afterDelay(2*kj::SECONDS).then([this]{
-            fprintf(stderr, "[laminar] sending SIGKILL to process group %d\n", currentGroupId);
-            kill(-currentGroupId, SIGKILL);
+            aborting = true;
+            aggressive_recursive_kill(getpid());
         });
     }));
 
@@ -223,14 +259,18 @@ kj::Promise<void> Leader::reapChildProcesses()
                     // waiting for is done
                     return reapChildProcesses();
                 }
+                // we were aborted by the primary process already, just wait until all
+                // SIGKILLs are processed
+                if(aborting) {
+                    return reapChildProcesses();
+                }
                 // Otherwise, reparented orphans are on borrowed time
                 // TODO list wayward processes?
                 fprintf(stderr, "[laminar] sending SIGHUP to adopted child processes\n");
                 kill(-currentGroupId, SIGHUP);
                 return ioContext.provider->getTimer().afterDelay(5*kj::SECONDS).then([this]{
-                    fprintf(stderr, "[laminar] sending SIGKILL to process group %d\n", currentGroupId);
                     // TODO: should we mark the job as failed if we had to kill reparented processes?
-                    kill(-currentGroupId, SIGKILL);
+                    aggressive_recursive_kill(getpid());
                     return reapChildProcesses();
                 }).exclusiveJoin(reapChildProcesses());
             } else if(pid == currentScriptPid) {
