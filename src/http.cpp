@@ -203,6 +203,8 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
     if(is_sse) {
         KJ_IF_MAYBE(s, fromUrl(url.cStr(), queryString)) {
             responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/event-stream");
+            // Disables nginx reverse-proxy's buffering. Necessary for streamed events.
+            responseHeaders.add("X-Accel-Buffering", "no");
             auto peer = kj::heap<WithSetRef<EventPeer>>(eventPeers);
             peer->scope = *s;
             std::string st = "data: " + laminar.getStatus(peer->scope) + "\n\n";
