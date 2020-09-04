@@ -138,16 +138,15 @@
  
  <template id="run"><div style="display: grid; grid-template-rows: auto 1fr">
   <div style="padding: 15px">
-   <div style="display: grid; grid-template-columns: auto 1fr 400px auto auto; gap: 5px; align-items: center">
+   <div style="display: grid; grid-template-columns: auto 25px auto auto 1fr 400px; gap: 5px; align-items: center">
     <h2 style="white-space: nowrap"><span v-html="runIcon(job.result)"></span> {{$route.params.name}} #{{$route.params.number}}</h2>
     <span></span>
-    <div><!-- extra div to preserve grid columns when v-show hides the progress bar -->
-     <div class="progress" v-show="job.result == 'running'">
-      <div class="progress-bar" :class="{overtime:job.overtime,indeterminate:!job.etc}" :style="job.etc && {width:job.progress+'%'}"></div>
-     </div>
-    </div>
     <router-link :disabled="$route.params.number == 1" :to="'/jobs/'+$route.params.name+'/'+($route.params.number-1)" tag="button">&laquo;</router-link>
     <router-link :disabled="$route.params.number == latestNum" :to="'/jobs/'+$route.params.name+'/'+(parseInt($route.params.number)+1)" tag="button">&raquo;</router-link>
+    <span></span>
+    <div class="progress" v-show="job.result == 'running'">
+     <div class="progress-bar" :class="{overtime:job.overtime,indeterminate:!job.etc}" :style="job.etc && {width:job.progress+'%'}"></div>
+    </div>
    </div>
    <div id="page-run-detail">
     <dl>
