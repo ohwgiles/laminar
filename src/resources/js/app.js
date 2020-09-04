@@ -19,7 +19,7 @@ const timeScale = function(max){
   return max > 3600
   ? { scale:function(v){return Math.round(v/360)/10}, label:'Hours' }
   : max > 60
-  ? { scale:function(v){return Math.round(v/60)/10}, label:'Minutes' }
+  ? { scale:function(v){return Math.round(v/6)/10}, label:'Minutes' }
   : { scale:function(v){return v;}, label:'Seconds' };
 }
 const ServerEventHandler = function() {
@@ -284,7 +284,7 @@ const Home = function() {
             }}}]}
           }
         });
-        var tpjScale = timeScale(Math.max(Object.values(msg.timePerJob)));
+        var tpjScale = timeScale(Math.max(...Object.values(msg.timePerJob)));
         chtTimePerJob = new Chart(document.getElementById("chartTpj"), {
           type: 'horizontalBar',
           data: {
@@ -309,7 +309,7 @@ const Home = function() {
             }}}
           }
         });
-        var btcScale = timeScale(Math.max(msg.buildTimeChanges.map((e)=>{return Math.max(e.durations)})));
+        const btcScale = timeScale(Math.max(...msg.buildTimeChanges.map(e=>Math.max(...e.durations))));
         var chtBuildTimeChanges = new Chart(document.getElementById("chartBuildTimeChanges"), {
           type: 'line',
           data: {
@@ -520,7 +520,7 @@ var Job = function() {
         // old chart and recreate it to prevent flickering of old data
         if(chtBt)
           chtBt.destroy();
-        var btScale = timeScale(Math.max(msg.recent.map(v=>{v.completed-v.started})));
+        const btScale = timeScale(Math.max(...msg.recent.map(v=>v.completed-v.started)));
         chtBt = new Chart(document.getElementById("chartBt"), {
           type: 'bar',
           data: {
