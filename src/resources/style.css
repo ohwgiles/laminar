@@ -214,10 +214,25 @@ button:not([disabled]) { cursor: pointer; color: var(--main-fg); }
  grid-template-columns: 1fr 1fr 1fr;
  padding: 15px;
  gap: 15px;
+ max-width: 1600px;
+ margin: auto;
  text-align: center;
 }
 @media (max-width: 650px) {
  #page-home-stats {
+  grid-template-columns: 1fr;
+ }
+}
+#page-home-plots {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ padding: 5px;
+ gap: 5px;
+ max-width: 1600px;
+ margin: auto;
+}
+@media (max-width: 1095px) {
+ #page-home-plots {
   grid-template-columns: 1fr;
  }
 }

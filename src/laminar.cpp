@@ -259,7 +259,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
         populateArtifacts(j, scope.job, scope.num);
         j.EndArray();
     } else if(scope.type == MonitorScope::JOB) {
-        const uint runsPerPage = 10;
+        const uint runsPerPage = 20;
         j.startArray("recent");
         // ORDER BY param cannot be bound
         std::string order_by;
@@ -364,7 +364,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.EndObject();
     } else { // Home page
         j.startArray("recent");
-        db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 15")
+        db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 20")
         .fetch<str,uint,str,time_t,time_t,time_t,int>([&](str name,uint build,str context,time_t,time_t started,time_t completed,int result){
             j.StartObject();
             j.set("name", name)
