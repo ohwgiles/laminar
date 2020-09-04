@@ -223,8 +223,11 @@ const Home = function() {
             labels: ["Busy", "Idle"],
             datasets: [{
               data: [ msg.executorsBusy, msg.executorsTotal - msg.executorsBusy ],
-              backgroundColor: ["darkgoldenrod", "forestgreen"]
+              backgroundColor: ["#afa674", "#7483af"]
             }]
+          },
+          options: {
+            hover: { mode: null }
           }
         });
         var buildsPerDayDates = function(){
@@ -244,15 +247,13 @@ const Home = function() {
           data: {
             labels: buildsPerDayDates.map((e)=>{ return e.short; }),
             datasets: [{
-              label: 'Successful Builds',
-              backgroundColor: "rgba(34,139,34,0.65)", //forestgreen at 0.65
-              borderColor: "forestgreen",
-              data: msg.buildsPerDay.map((e)=>{ return e.success || 0; })
-            }, {
               label: 'Failed Builds',
-              backgroundColor: "rgba(178,34,34,0.65)", //firebrick at 0.65
-              borderColor: "firebrick",
+              backgroundColor: "#883d3d",
               data: msg.buildsPerDay.map((e)=>{ return e.failed || 0; })
+            },{
+              label: 'Successful Builds',
+              backgroundColor: "#74af77",
+              data: msg.buildsPerDay.map((e)=>{ return e.success || 0; })
             }]
           },
           options:{
@@ -260,10 +261,13 @@ const Home = function() {
             tooltips:{callbacks:{title: function(tip, data) {
               return buildsPerDayDates[tip[0].index].long;
             }}},
-            scales:{yAxes:[{ticks:{userCallback: (label, index, labels)=>{
-              if(Number.isInteger(label))
-                return label;
-            }}}]}
+            scales:{yAxes:[{
+              ticks:{userCallback: (label, index, labels)=>{
+                if(Number.isInteger(label))
+                  return label;
+              }},
+              stacked: true
+            }]}
           }
         });
         chtBuildsPerJob = new Chart(document.getElementById("chartBpj"), {
@@ -272,12 +276,13 @@ const Home = function() {
             labels: Object.keys(msg.buildsPerJob),
             datasets: [{
               label: 'Runs in last 24 hours',
-              backgroundColor: "steelblue",
+              backgroundColor: "#7483af",
               data: Object.keys(msg.buildsPerJob).map((e)=>{ return msg.buildsPerJob[e]; })
             }]
           },
           options:{
             title: { display: true, text: 'Builds per job' },
+            hover: { mode: null },
             scales:{xAxes:[{ticks:{userCallback: (label, index, labels)=>{
               if(Number.isInteger(label))
                 return label;
@@ -291,12 +296,13 @@ const Home = function() {
             labels: Object.keys(msg.timePerJob),
             datasets: [{
               label: 'Mean run time this week',
-              backgroundColor: "steelblue",
+              backgroundColor: "#7483af",
               data: Object.keys(msg.timePerJob).map((e)=>{ return msg.timePerJob[e]; })
             }]
           },
           options:{
             title: { display: true, text: 'Mean run time this week' },
+            hover: { mode: null },
             scales:{xAxes:[{
               ticks:{userCallback: tpjScale.scale},
               scaleLabel: {
@@ -317,13 +323,13 @@ const Home = function() {
             datasets: msg.buildTimeChanges.map((e)=>{return {
               label: e.name,
               data: e.durations,
-              borderColor: 'hsl('+(e.name.hashCode() % 360)+', 61%, 34%)',
+              borderColor: 'hsl('+(e.name.hashCode() % 360)+', 27%, 57%)',
               backgroundColor: 'transparent'
             }})
           },
           options:{
             title: { display: true, text: 'Build time changes' },
-            legend:{display:true},
+            legend:{ display: true, position: 'bottom' },
             scales:{
               xAxes:[{ticks:{display: false}}],
               yAxes:[{
@@ -346,7 +352,7 @@ const Home = function() {
             datasets: [{
               label: 'Number jobs with average build time in range',
               data: msg.buildTimeDist,
-              backgroundColor: "steelblue",
+              backgroundColor: "#7483af",
             }]
           },
           options: {
@@ -531,7 +537,7 @@ var Job = function() {
               label: 'Average',
               type: 'line',
               data: [{x:0,y:msg.averageRuntime},{x:1,y:msg.averageRuntime}],
-              borderColor: 'steelblue',
+              borderColor: '#7483af',
               backgroundColor: 'transparent',
               xAxisID: 'avg',
               pointRadius: 0,
@@ -547,8 +553,12 @@ var Job = function() {
           },
           options: {
             title: { display: true, text: 'Build time' },
+            hover: { mode: null },
             scales:{
-              xAxes:[{},{
+              xAxes:[{
+                categoryPercentage: 1.0,
+                barPercentage: 1.0
+              },{
                 id: 'avg',
                 type: 'linear',
                 ticks: {
@@ -699,6 +709,8 @@ Chart.scaleService.updateScaleDefaults('linear', {
 });
 // Don't display legend by default
 Chart.defaults.global.legend.display = false;
+// Disable tooltip hover animations
+Chart.defaults.global.hover.animationDuration = 0;
 // Plugin to move a DOM item on top of a chart element
 Chart.plugins.register({
   afterDatasetsDraw: (chart) => {
