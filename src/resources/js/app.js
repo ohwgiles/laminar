@@ -539,8 +539,7 @@ var Job = function() {
               pointHoverRadius: 0,
             },{
               label: 'Build time',
-              backgroundColor: (new Array(msg.recent.length)).fill('darkseagreen'),
-              borderColor: (new Array(msg.recent.length)).fill('forestgreen'),
+              backgroundColor: msg.recent.map(e => e.result == 'success' ? '#74af77': '#883d3d'),
               data: msg.recent.map(function(e) {
                 return e.completed - e.started;
               }).reverse()
@@ -570,14 +569,6 @@ var Job = function() {
             }}}
           }
         });
-
-        for (var i = 0, n = msg.recent.length; i < n; ++i) {
-          if (msg.recent[i].result != "success") {
-            chtBt.data.datasets[0].backgroundColor[n - i - 1] = "darksalmon";
-            chtBt.data.datasets[0].borderColor[n - i - 1] = "crimson";
-          }
-        }
-        chtBt.update();
       },
       job_queued: function() {
         state.nQueued++;
