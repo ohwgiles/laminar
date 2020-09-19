@@ -46,7 +46,6 @@ std::string to_string(const RunState& rs) {
 
 Run::Run(std::string name, ParamMap pm, kj::Path&& rootPath) :
     result(RunState::SUCCESS),
-    lastResult(RunState::UNKNOWN),
     name(name),
     params(kj::mv(pm)),
     queuedAt(time(nullptr)),
@@ -84,7 +83,7 @@ static void setEnvFromFile(const kj::Path& rootPath, kj::Path file) {
     }
 }
 
-kj::Promise<RunState> Run::start(uint buildNum, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise)
+kj::Promise<RunState> Run::start(uint buildNum, RunState lastResult, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise)
 {
     kj::Path cfgDir{"cfg"};
 

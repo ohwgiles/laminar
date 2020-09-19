@@ -618,15 +618,18 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
         std::shared_ptr<Context> ctx = sc.second;
 
         if(ctx->canQueue(jobContexts.at(run->name))) {
-            kj::Promise<RunState> onRunFinished = run->start(buildNums[run->name] + 1, ctx, *fsHome,[this](kj::Maybe<pid_t>& pid){return srv.onChildExit(pid);});
+            RunState lastResult = RunState::UNKNOWN;
 
-            ctx->busyExecutors++;
             // set the last known result if exists
             db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
-             .fetch<int>([=](int result){
-                run->lastResult = RunState(result);
+             .fetch<int>([&](int result){
+                lastResult = RunState(result);
             });
+
+            kj::Promise<RunState> onRunFinished = run->start(buildNums[run->name] + 1, lastResult, ctx, *fsHome,[this](kj::Maybe<pid_t>& pid){return srv.onChildExit(pid);});
+
+            ctx->busyExecutors++;
 
             kj::Promise<void> exec = srv.readDescriptor(run->output_fd, [this, run](const char*b, size_t n){
                 // handle log output

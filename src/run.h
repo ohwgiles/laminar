@@ -57,7 +57,7 @@ public:
     Run(const Run&) = delete;
     Run& operator=(const Run&) = delete;
 
-    kj::Promise<RunState> start(uint buildNum, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise);
+    kj::Promise<RunState> start(uint buildNum, RunState lastResult, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise);
 
     // aborts this run
     bool abort();
@@ -69,7 +69,6 @@ public:
 
     std::shared_ptr<Context> context;
     RunState result;
-    RunState lastResult;
     std::string name;
     std::string parentName;
     int parentBuild = 0;
