@@ -545,7 +545,7 @@ var Job = function() {
               pointHoverRadius: 0,
             },{
               label: 'Build time',
-              backgroundColor: msg.recent.map(e => e.result == 'success' ? '#74af77': '#883d3d'),
+              backgroundColor: msg.recent.map(e => e.result == 'success' ? '#74af77': '#883d3d').reverse(),
               data: msg.recent.map(function(e) {
                 return e.completed - e.started;
               }).reverse()
