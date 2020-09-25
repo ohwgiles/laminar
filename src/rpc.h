@@ -1,5 +1,5 @@
 ///
-/// Copyright 2019 Oliver Giles
+/// Copyright 2019-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -23,7 +23,7 @@
 #include <capnp/rpc-twoparty.h>
 #include <capnp/rpc.capnp.h>
 
-struct Laminar;
+class Laminar;
 
 class Rpc {
 public:

@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2019 Oliver Giles
+/// Copyright 2015-2020 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -31,7 +31,7 @@
 // Context name to context object map
 typedef std::unordered_map<std::string, std::shared_ptr<Context>> ContextMap;
 
-struct Server;
+class Server;
 class Json;
 
 class Http;
@@ -125,7 +125,6 @@ private:
 
     std::unordered_map<std::string, std::string> jobGroups;
 
-    Settings settings;
     RunSet activeJobs;
     Database* db;
     Server& srv;

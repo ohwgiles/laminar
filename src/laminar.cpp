@@ -67,7 +67,6 @@ inline kj::Path operator/(const std::string& p, const T& ext) {
 typedef std::string str;
 
 Laminar::Laminar(Server &server, Settings settings) :
-    settings(settings),
     srv(server),
     homePath(kj::Path::parse(&settings.home[1])),
     fsHome(kj::newDiskFilesystem()->getRoot().openSubdir(homePath, kj::WriteMode::MODIFY)),

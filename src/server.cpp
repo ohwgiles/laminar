@@ -95,7 +95,7 @@ kj::Promise<int> Server::onChildExit(kj::Maybe<pid_t> &pid) {
 
 Server::PathWatcher& Server::watchPaths(std::function<void()> fn)
 {
-    struct PathWatcherImpl : public PathWatcher {
+    struct PathWatcherImpl final : public PathWatcher {
         PathWatcher& addPath(const char* path) override {
             inotify_add_watch(fd, path, IN_ONLYDIR | IN_CLOSE_WRITE | IN_CREATE | IN_DELETE);
             return *this;
