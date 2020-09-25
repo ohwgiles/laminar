@@ -118,7 +118,8 @@
      <th class="text-center vp-sm-hide">Reason <a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
     </tr></thead>
     <tr v-show="nQueued">
-     <td colspan="5"><i>{{nQueued}} run(s) queued</i></td>
+     <td style="width:1px"><span v-html="runIcon('queued')"></span></td>
+     <td colspan="4"><i>{{nQueued}} run(s) queued</i></td>
     </tr>
     <tr v-for="job in jobsRunning.concat(jobsRecent)" track-by="$index">
      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
@@ -152,10 +153,10 @@
     <dl>
      <dt>Reason</dt><dd>{{job.reason}}</dd>
      <dt v-show="job.upstream.num > 0">Upstream</dt><dd v-show="job.upstream.num > 0"><router-link :to="'/jobs/'+job.upstream.name">{{job.upstream.name}}</router-link> <router-link :to="'/jobs/'+job.upstream.name+'/'+job.upstream.num">#{{job.upstream.num}}</router-link></li></dd>
-     <dt>Queued for</dt><dd>{{job.queued}}s</dd>
-     <dt>Started</dt><dd>{{formatDate(job.started)}}</dd>
+     <dt>Queued for</dt><dd>{{formatDuration(job.queued, job.started ? job.started : Math.floor(Date.now()/1000))}}</dd>
+     <dt v-show="job.started">Started</dt><dd v-show="job.started">{{formatDate(job.started)}}</dd>
      <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
-     <dt>Duration</dt><dd>{{formatDuration(job.started, job.completed)}}</dd>
+     <dt v-show="job.started">Duration</dt><dd v-show="job.started">{{formatDuration(job.started, job.completed)}}</dd>
     </dl>
     <dl v-show="job.artifacts.length">
      <dt>Artifacts</dt>

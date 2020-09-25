@@ -147,7 +147,8 @@ int main(int argc, char** argv) {
                 if(resp.getResult() != LaminarCi::MethodResult::SUCCESS) {
                     fprintf(stderr, "Failed to queue job '%s'\n", argv[jobNameIndex]);
                     ret = EXIT_OPERATION_FAILED;
-                }
+                } else
+                    printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
             }));
             jobNameIndex += n + 1;
         } while(jobNameIndex < argc);

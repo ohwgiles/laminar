@@ -34,7 +34,7 @@ typedef unsigned int uint;
 
 enum class RunState {
     UNKNOWN,
-    PENDING,
+    QUEUED,
     RUNNING,
     ABORTED,
     FAILED,
@@ -50,14 +50,14 @@ typedef std::unordered_map<std::string, std::string> ParamMap;
 // Represents an execution of a job.
 class Run {
 public:
-    Run(std::string name, ParamMap params, kj::Path&& rootPath);
+    Run(std::string name, uint num, ParamMap params, kj::Path&& rootPath);
     ~Run();
 
     // copying this class would be asking for trouble...
     Run(const Run&) = delete;
     Run& operator=(const Run&) = delete;
 
-    kj::Promise<RunState> start(uint buildNum, RunState lastResult, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise);
+    kj::Promise<RunState> start(RunState lastResult, std::shared_ptr<Context> ctx, const kj::Directory &fsHome, std::function<kj::Promise<int>(kj::Maybe<pid_t>&)> getPromise);
 
     // aborts this run
     bool abort();

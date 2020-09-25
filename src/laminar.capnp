@@ -2,7 +2,7 @@
 
 interface LaminarCi {
 
-    queue @0 (jobName :Text, params :List(JobParam)) -> (result :MethodResult);
+    queue @0 (jobName :Text, params :List(JobParam)) -> (result :MethodResult, buildNum :UInt32);
     start @1 (jobName :Text, params :List(JobParam)) -> (result :MethodResult, buildNum :UInt32);
     run @2 (jobName :Text, params :List(JobParam)) -> (result :JobResult, buildNum :UInt32);
     listQueued @3 () -> (result :List(Text));

@@ -84,7 +84,9 @@ canvas {
 }
 svg.success path   { fill: var(--success); }
 svg.failed path    { fill: var(--failure); }
-svg.running circle { stroke: var(--running); } 
+svg.running circle { stroke: var(--running); }
+svg.queued circle  { fill: var(--nav-fg); }
+svg.queued path    { stroke: white; }
 
 /* sort indicators */
 a.sort {

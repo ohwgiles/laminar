@@ -53,10 +53,13 @@ public:
     kj::Promise<void> queue(QueueContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC queue", jobName);
-        LaminarCi::MethodResult result = laminar.queueJob(jobName, params(context.getParams().getParams()))
-                ? LaminarCi::MethodResult::SUCCESS
-                : LaminarCi::MethodResult::FAILED;
-        context.getResults().setResult(result);
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
+        if(Run* r = run.get()) {
+            context.getResults().setResult(LaminarCi::MethodResult::SUCCESS);
+            context.getResults().setBuildNum(r->build);
+        } else {
+            context.getResults().setResult(LaminarCi::MethodResult::FAILED);
+        }
         return kj::READY_NOW;
     }
 

@@ -127,29 +127,29 @@ chmod +x /var/lib/laminar/cfg/jobs/hello.run
 
 # Triggering a run
 
-When triggering a run, the job is first added to a queue of upcoming tasks. If the server is busy, the job may wait in this queue for a while. It will only be assigned a job number when it leaves this queue and starts executing. The job number may be useful to the client that triggers the run, so there are a few ways to trigger a run.
-
-To add the `hello` job to the queue ("fire-and-forget"), execute
+To queue execution of the `hello` job, run
 
 ```bash
 laminarc queue hello
 ```
 
-In this case, laminarc returns immediately, with its error code indicating whether adding the job to the queue was sucessful.
+In this case, `laminarc` returns immediately, with its error code indicating whether adding the job to the queue was sucessful. The run number will be printed to standard output.
 
-To queue the job and wait until it leaves the queue and starts executing, use
+If the server is busy, a run may wait in the queue for some time. To have `laminarc` instead block until the run leaves the queue and starts executing, use
 
 ```bash
 laminarc start hello
 ```
 
-In this case, laminarc blocks until the job starts executing, or returns immediately if queueing failed. The run number will be printed to standard output.
+In this case, `laminarc` blocks until the job starts executing, or returns immediately if queueing failed. The run number will be printed to standard output.
 
-To launch and run the `hello` job to completion, execute
+Finally, to launch and run the `hello` job to completion, execute
 
 ```bash
 laminarc run hello
 ```
+
+In this case, laminarc's return value indicates whether the run completed successfully.
 
 In all cases, a started run means the `/var/lib/laminar/cfg/jobs/hello.run` script will be executed, with a working directory of `/var/lib/laminar/run/hello/1` (or current run number)
 

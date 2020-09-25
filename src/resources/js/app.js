@@ -23,10 +23,10 @@ const timeScale = function(max){
   : { scale:function(v){return v;}, label:'Seconds' };
 }
 const ServerEventHandler = function() {
-  function setupEventSource(path, query, next, comp) {
-    const es = new EventSource(document.head.baseURI + path.substr(1) + query);
+  function setupEventSource(to, query, next, comp) {
+    const es = new EventSource(document.head.baseURI + to.path.substr(1) + query);
     es.comp = comp;
-    es.path = path; // save for later in case we need to add query params
+    es.path = to.path; // save for later in case we need to add query params
     es.onmessage = function(msg) {
       msg = JSON.parse(msg.data);
       // "status" is the first message the server always delivers.
@@ -55,7 +55,7 @@ const ServerEventHandler = function() {
           comp.$root.clockSkew = msg.time - Math.floor((new Date()).getTime()/1000);
           comp.$root.connected = true;
           // Component-specific callback handler
-          comp[msg.type](msg.data);
+          comp[msg.type](msg.data, to.params);
         });
       } else {
         // at this point, the component must be defined
@@ -72,7 +72,7 @@ const ServerEventHandler = function() {
     es.onerror = function(e) {
       this.comp.$root.connected = false;
       setTimeout(() => {
-        this.comp.es = setupEventSource(path, query, null, this.comp);
+        this.comp.es = setupEventSource(to, query, null, this.comp);
       }, this.comp.esReconnectInterval);
       if(this.comp.esReconnectInterval < 7500)
         this.comp.esReconnectInterval *= 1.5;
@@ -82,11 +82,11 @@ const ServerEventHandler = function() {
   }
   return {
     beforeRouteEnter(to, from, next) {
-      setupEventSource(to.path, '', (fn) => { next(fn); });
+      setupEventSource(to, '', (fn) => { next(fn); });
     },
     beforeRouteUpdate(to, from, next) {
       this.es.close();
-      setupEventSource(to.path, '', (fn) => { fn(this); next(); });
+      setupEventSource(to, '', (fn) => { fn(this); next(); });
     },
     beforeRouteLeave(to, from, next) {
       this.es.close();
@@ -114,6 +114,11 @@ const Utils = {
                  <path d="m 19,20 c 2,8 12,29 15,32 -5,5 -18,21 -21,26 2,3 8,15 11,18 4,-6 17,-21
                   21,-26 5,5 11,15 15,20 8,-2 15,-9 20,-15 -3,-3 -17,-18 -20,-24 3,-5 23,-26 30,-33 -3,-5 -8,-9
                   -12,-12 -6,5 -26,26 -29,30 -6,-8 -11,-15 -15,-23 -3,0 -12,5 -15,7 z" />
+                </svg>`
+           : (result == 'queued') ? /* clock */
+                `<svg class="status queued" viewBox="0 0 100 100">
+                  <circle r="50" cy="50" cx="50" />
+                  <path d="m 50,15 0,35 17,17" stroke-width="10" fill="none" />
                 </svg>`
            : /* spinner */
                 `<svg class="status running" viewBox="0 0 100 100">
@@ -656,49 +661,46 @@ const Run = function() {
       return state;
     },
     methods: {
-      status: function(data) {
-        // Check for the /latest endpoint. An intuitive check might be
-        //  if(this.$route.params.number == 'latest'), but unfortunately
-        // after calling $router.replace, we re-enter status() before
-        // $route.params is updated. Instead, assume that if there is
-        // no 'started' field, we should redirect to the latest number
-        if(!('started' in data) && 'latestNum' in data)
-          return this.$router.replace('/jobs/' + this.$route.params.name + '/' + data.latestNum);
+      status: function(data, params) {
+        // Check for the /latest endpoint
+        if(params.number === 'latest')
+          return this.$router.replace('/jobs/' + params.name + '/' + data.latestNum);
 
+        state.number = parseInt(params.number);
         state.jobsRunning = [];
         state.job = data;
         state.latestNum = data.latestNum;
         state.jobsRunning = [data];
+        state.log = '';
+        if(this.logstream)
+          this.logstream.abort();
+        if(data.started)
+          this.logstream = logFetcher(this, params.name, params.number);
+      },
+      job_queued: function(data) {
+        state.latestNum = data.number;
+        this.$forceUpdate();
       },
       job_started: function(data) {
-        state.latestNum++;
-        this.$forceUpdate();
+        if(data.number === state.number) {
+          state.job = Object.assign(state.job, data);
+          state.job.result = 'running';
+          if(this.logstream)
+            this.logstream.abort();
+          this.logstream = logFetcher(this, data.name, data.number);
+          this.$forceUpdate();
+        }
       },
       job_completed: function(data) {
-        state.job = Object.assign(state.job, data);
-        state.jobsRunning = [];
-        this.$forceUpdate();
+        if(data.number === state.number) {
+          state.job = Object.assign(state.job, data);
+          state.jobsRunning = [];
+          this.$forceUpdate();
+        }
       },
       runComplete: function(run) {
         return !!run && (run.result === 'aborted' || run.result === 'failed' || run.result === 'success');
       },
-    },
-    beforeRouteEnter(to, from, next) {
-      next(vm => {
-        state.log = '';
-        vm.logstream = logFetcher(vm, to.params.name, to.params.number);
-      });
-    },
-    beforeRouteUpdate(to, from, next) {
-      var vm = this;
-      vm.logstream.abort();
-      state.log = '';
-      vm.logstream = logFetcher(vm, to.params.name, to.params.number);
-      next();
-    },
-    beforeRouteLeave(to, from, next) {
-      this.logstream.abort();
-      next();
     }
   };
 }();

@@ -136,18 +136,9 @@ void Laminar::loadCustomizations() {
 }
 
 uint Laminar::latestRun(std::string job) {
-    auto it = activeJobs.byJobName().equal_range(job);
-    if(it.first == it.second) {
-        uint result = 0;
-        db->stmt("SELECT MAX(number) FROM builds WHERE name = ?")
-                .bind(job)
-                .fetch<uint>([&](uint x){
-            result = x;
-        });
-        return result;
-    } else {
-        return (*--it.second)->build;
-    }
+    if(auto it = buildNums.find(job); it != buildNums.end())
+        return it->second;
+    return 0;
 }
 
 bool Laminar::handleLogRequest(std::string name, uint num, std::string& output, bool& complete) {
@@ -231,30 +222,24 @@ std::string Laminar::getStatus(MonitorScope scope) {
     j.set("time", time(nullptr));
     j.startObject("data");
     if(scope.type == MonitorScope::RUN) {
-        db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,parentJob,parentBuild FROM builds WHERE name = ? AND number = ?")
+        db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,parentJob,parentBuild,q.lr IS NOT NULL,q.lr FROM builds "
+                 "LEFT JOIN (SELECT name n, MAX(number), completedAt-startedAt lr FROM builds WHERE result IS NOT NULL GROUP BY n) q ON q.n = name "
+                 "WHERE name = ? AND number = ?")
         .bind(scope.job, scope.num)
-        .fetch<time_t, time_t, time_t, int, std::string, std::string, uint>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint parentBuild) {
-            j.set("queued", started-queued);
+        .fetch<time_t, time_t, time_t, int, std::string, std::string, uint, uint, uint>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint parentBuild, uint lastRuntimeKnown, uint lastRuntime) {
+            j.set("queued", queued);
             j.set("started", started);
-            j.set("completed", completed);
-            j.set("result", to_string(RunState(result)));
+            if(completed)
+              j.set("completed", completed);
+            j.set("result", to_string(completed ? RunState(result) : started ? RunState::RUNNING : RunState::QUEUED));
             j.set("reason", reason);
             j.startObject("upstream").set("name", parentJob).set("num", parentBuild).EndObject(2);
+            if(lastRuntimeKnown)
+              j.set("etc", started + lastRuntime);
         });
-        if(const Run* run = activeRun(scope.job, scope.num)) {
-            j.set("queued", run->startedAt - run->queuedAt);
-            j.set("started", run->startedAt);
-            j.set("result", to_string(RunState::RUNNING));
-            j.set("reason", run->reason());
-            j.startObject("upstream").set("name", run->parentName).set("num", run->parentBuild).EndObject(2);
-            db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
-             .bind(run->name)
-             .fetch<uint>([&](uint lastRuntime){
-                j.set("etc", run->startedAt + lastRuntime);
-            });
-        }
         if(auto it = buildNums.find(scope.job); it != buildNums.end())
             j.set("latestNum", int(it->second));
+
         j.startArray("artifacts");
         populateArtifacts(j, scope.job, scope.num);
         j.EndArray();
@@ -274,7 +259,8 @@ std::string Laminar::getStatus(MonitorScope scope) {
             order_by = "(completedAt-startedAt) " + direction + ", number DESC";
         else
             order_by = "number DESC";
-        std::string stmt = "SELECT number,startedAt,completedAt,result,reason FROM builds WHERE name = ? ORDER BY "
+        std::string stmt = "SELECT number,startedAt,completedAt,result,reason FROM builds "
+                "WHERE name = ? AND result IS NOT NULL ORDER BY "
                 + order_by + " LIMIT ?,?";
         db->stmt(stmt.c_str())
         .bind(scope.job, scope.page * runsPerPage, runsPerPage)
@@ -288,7 +274,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
              .EndObject();
         });
         j.EndArray();
-        db->stmt("SELECT COUNT(*),AVG(completedAt-startedAt) FROM builds WHERE name = ?")
+        db->stmt("SELECT COUNT(*),AVG(completedAt-startedAt) FROM builds WHERE name = ? AND result IS NOT NULL")
         .bind(scope.job)
         .fetch<uint,uint>([&](uint nRuns, uint averageRuntime){
             j.set("averageRuntime", averageRuntime);
@@ -319,14 +305,17 @@ std::string Laminar::getStatus(MonitorScope scope) {
             }
         }
         j.set("nQueued", nQueued);
-        db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result = ? ORDER BY completedAt DESC LIMIT 1")
+        db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result = ? "
+                 "ORDER BY completedAt DESC LIMIT 1")
         .bind(scope.job, int(RunState::SUCCESS))
         .fetch<int,time_t>([&](int build, time_t started){
             j.startObject("lastSuccess");
             j.set("number", build).set("started", started);
             j.EndObject();
         });
-        db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result <> ? ORDER BY completedAt DESC LIMIT 1")
+        db->stmt("SELECT number,startedAt FROM builds "
+                 "WHERE name = ? AND result <> ? "
+                 "ORDER BY completedAt DESC LIMIT 1")
         .bind(scope.job, int(RunState::SUCCESS))
         .fetch<int,time_t>([&](int build, time_t started){
             j.startObject("lastFailed");
@@ -337,7 +326,9 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.set("description", desc == jobDescriptions.end() ? "" : desc->second);
     } else if(scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
-        db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b JOIN (SELECT name n,MAX(number) l FROM builds GROUP BY n) q ON b.name = q.n AND b.number = q.l")
+        db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b "
+                 "JOIN (SELECT name n,MAX(number) latest FROM builds WHERE result IS NOT NULL GROUP BY n) q "
+                 "ON b.name = q.n AND b.number = latest")
         .fetch<str,uint,time_t,time_t,int>([&](str name,uint number, time_t started, time_t completed, int result){
             j.StartObject();
             j.set("name", name);
@@ -364,7 +355,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.EndObject();
     } else { // Home page
         j.startArray("recent");
-        db->stmt("SELECT * FROM builds ORDER BY completedAt DESC LIMIT 20")
+        db->stmt("SELECT * FROM builds WHERE completedAt IS NOT NULL ORDER BY completedAt DESC LIMIT 20")
         .fetch<str,uint,str,time_t,time_t,time_t,int>([&](str name,uint build,str context,time_t,time_t started,time_t completed,int result){
             j.StartObject();
             j.set("name", name)
@@ -383,7 +374,9 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.set("number", run->build);
             j.set("context", run->context->name);
             j.set("started", run->startedAt);
-            db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
+            db->stmt("SELECT completedAt - startedAt FROM builds "
+                     "WHERE completedAt IS NOT NULL AND name = ? "
+                     "ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
              .fetch<uint>([&](uint lastRuntime){
                 j.set("etc", run->startedAt + lastRuntime);
@@ -586,14 +579,19 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
     if(jobContexts[name].empty())
         jobContexts.at(name).insert("default");
 
-    std::shared_ptr<Run> run = std::make_shared<Run>(name, kj::mv(params), homePath.clone());
+    std::shared_ptr<Run> run = std::make_shared<Run>(name, ++buildNums[name], kj::mv(params), homePath.clone());
     queuedJobs.push_back(run);
+
+    db->stmt("INSERT INTO builds(name,number,queuedAt,parentJob,parentBuild,reason) VALUES(?,?,?,?,?,?)")
+     .bind(run->name, run->build, run->queuedAt, run->parentName, run->parentBuild, run->reason())
+     .exec();
 
     // notify clients
     Json j;
     j.set("type", "job_queued")
         .startObject("data")
         .set("name", name)
+        .set("number", run->build)
         .EndObject();
     http->notifyEvent(j.str(), name.c_str());
 
@@ -620,14 +618,19 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
         if(ctx->canQueue(jobContexts.at(run->name))) {
             RunState lastResult = RunState::UNKNOWN;
 
-            // set the last known result if exists
+            // set the last known result if exists. Runs which haven't started yet should
+            // have completedAt == NULL and thus be at the end of a DESC ordered query
             db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
              .fetch<int>([&](int result){
                 lastResult = RunState(result);
             });
 
-            kj::Promise<RunState> onRunFinished = run->start(buildNums[run->name] + 1, lastResult, ctx, *fsHome,[this](kj::Maybe<pid_t>& pid){return srv.onChildExit(pid);});
+            kj::Promise<RunState> onRunFinished = run->start(lastResult, ctx, *fsHome,[this](kj::Maybe<pid_t>& pid){return srv.onChildExit(pid);});
+
+            db->stmt("UPDATE builds SET node = ?, startedAt = ? WHERE name = ? AND number = ?")
+             .bind(ctx->name, run->startedAt, run->name, run->build)
+             .exec();
 
             ctx->busyExecutors++;
 
@@ -650,16 +653,13 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
             srv.addTask(kj::mv(exec));
             LLOG(INFO, "Started job", run->name, run->build, ctx->name);
 
-            // update next build number
-            buildNums[run->name]++;
-
             // notify clients
             Json j;
             j.set("type", "job_started")
              .startObject("data")
              .set("queueIndex", queueIndex)
              .set("name", run->name)
-             .set("queued", run->startedAt - run->queuedAt)
+             .set("queued", run->queuedAt)
              .set("started", run->startedAt)
              .set("number", run->build)
              .set("reason", run->reason());
@@ -708,10 +708,8 @@ void Laminar::handleRunFinished(Run * r) {
         }
     }
 
-    std::string reason = r->reason();
-    db->stmt("INSERT INTO builds VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
-     .bind(r->name, r->build, ctx->name, r->queuedAt, r->startedAt, completedAt, int(r->result),
-           maybeZipped, logsize, r->parentName, r->parentBuild, reason)
+    db->stmt("UPDATE builds SET completedAt = ?, result = ?, output = ?, outputLen = ? WHERE name = ? AND number = ?")
+     .bind(completedAt, int(r->result), maybeZipped, logsize, r->name, r->build)
      .exec();
 
     // notify clients
@@ -720,7 +718,7 @@ void Laminar::handleRunFinished(Run * r) {
             .startObject("data")
             .set("name", r->name)
             .set("number", r->build)
-            .set("queued", r->startedAt - r->queuedAt)
+            .set("queued", r->queuedAt)
             .set("completed", completedAt)
             .set("started", r->startedAt)
             .set("result", to_string(r->result))
