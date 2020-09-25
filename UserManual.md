@@ -373,6 +373,8 @@ author_email=$(git show -s --format='%ae' $rev)
 laminarc set RECIPIENTS $author_email
 ```
 
+See [notify-email-pretty.sh](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-pretty.sh) and [notify-email-text-log.sh](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-text-log.sh).
+
 ---
 
 # Helper scripts
