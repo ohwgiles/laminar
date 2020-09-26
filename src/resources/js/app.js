@@ -350,20 +350,6 @@ const Home = function() {
             }
           }
         });
-        var chtBuildTimeDist = new Chart(document.getElementById("chartBuildTimeDist"), {
-          type: 'line',
-          data: {
-            labels: ['<30s','30s-1m','1m-5m','5m-10m','10m-20m','20m-40m','40m-60m','>60m'],
-            datasets: [{
-              label: 'Number jobs with average build time in range',
-              data: msg.buildTimeDist,
-              backgroundColor: "#7483af",
-            }]
-          },
-          options: {
-            title: { display: true, text: 'Build time distribution' }
-          }
-        });
       },
       job_queued: function(data) {
         state.jobsQueued.splice(0, 0, data);

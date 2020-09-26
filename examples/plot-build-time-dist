@@ -1,0 +1,46 @@
+#!/usr/bin/env gnuplot
+
+# Deeper insights can be obtained by querying Laminar's database directly.
+# This example uses gnuplot to create a graph of the distribution of the
+# average run time of jobs.
+
+# The following will output a png...
+set terminal pngcairo size 800,580 enhanced font 'Helvetica,10'
+set output 'build-time-distribution.png'
+# ..comment it out to use an interactive widget
+
+# plot style
+set tics font "Helvetica,10"
+set title font "Helvetica,11"
+set xtics nomirror
+set ytics nomirror
+set border 3 back lt 1 lc rgb "#808080"
+set grid back lt 0 lc rgb "#d0d0d0" lw 0.5
+set style line 1 lt 1 lc rgb "#7483af" lw 2
+
+# Fetch the path to Laminar's sqlite database
+db = system("echo $LAMINAR_HOME") . '/laminar.sqlite'
+
+# Label the axes
+set xtics ("<30s" 0, "30s-1m" 1, "1m-5m" 2, "5m-10m" 3, "10m-20m" 4, "20m-40m" 5, "40m-60m" 6, ">60m" 7)
+set ylabel "Number of jobs"
+set xlabel "Average run time"
+set title "Distribution of average run times"
+
+plot '< sqlite3 -separator $''\n'' ' . db . ' \
+  "WITH ba AS (SELECT name,AVG(completedAt-startedAt) a FROM builds GROUP BY name) SELECT \
+    COUNT(CASE WHEN               a <    30 THEN 1 END), \
+    COUNT(CASE WHEN a >=   30 AND a <    60 THEN 1 END), \
+    COUNT(CASE WHEN a >=   60 AND a <   300 THEN 1 END), \
+    COUNT(CASE WHEN a >=  300 AND a <   600 THEN 1 END), \
+    COUNT(CASE WHEN a >=  600 AND a <  1200 THEN 1 END), \
+    COUNT(CASE WHEN a >= 1200 AND a <  2400 THEN 1 END), \
+    COUNT(CASE WHEN a >= 2400 AND a <  3600 THEN 1 END), \
+    COUNT(CASE WHEN a >= 3600               THEN 1 END) FROM ba;"' \
+  using 0:1 with linespoints title '' ls 1
+
+# uncomment this if using an interactive window
+#pause mouse close
+
+# Release the output
+set output

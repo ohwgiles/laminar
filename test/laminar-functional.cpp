@@ -45,7 +45,6 @@ TEST_F(LaminarFixture, EmptyStatusMessageStructure) {
     EXPECT_TRUE(data.HasMember("resultChanged"));
     EXPECT_TRUE(data.HasMember("lowPassRates"));
     EXPECT_TRUE(data.HasMember("buildTimeChanges"));
-    EXPECT_TRUE(data.HasMember("buildTimeDist"));
 }
 
 TEST_F(LaminarFixture, JobNotifyHomePage) {

@@ -458,29 +458,6 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.EndObject();
         });
         j.EndArray();
-
-        j.startArray("buildTimeDist");
-        db->stmt("WITH ba AS (SELECT name,AVG(completedAt-startedAt) a FROM builds GROUP BY name) SELECT "
-                 "COUNT(CASE WHEN               a <    30 THEN 1 END),"
-                 "COUNT(CASE WHEN a >=   30 AND a <    60 THEN 1 END),"
-                 "COUNT(CASE WHEN a >=   60 AND a <   300 THEN 1 END),"
-                 "COUNT(CASE WHEN a >=  300 AND a <   600 THEN 1 END),"
-                 "COUNT(CASE WHEN a >=  600 AND a <  1200 THEN 1 END),"
-                 "COUNT(CASE WHEN a >= 1200 AND a <  2400 THEN 1 END),"
-                 "COUNT(CASE WHEN a >= 2400 AND a <  3600 THEN 1 END),"
-                 "COUNT(CASE WHEN a >= 3600               THEN 1 END) FROM ba")
-                .fetch<uint,uint,uint,uint,uint,uint,uint,uint>([&](uint c1, uint c2, uint c3, uint c4, uint c5, uint c6, uint c7, uint c8){
-            j.Int(c1);
-            j.Int(c2);
-            j.Int(c3);
-            j.Int(c4);
-            j.Int(c5);
-            j.Int(c6);
-            j.Int(c7);
-            j.Int(c8);
-        });
-        j.EndArray();
-
     }
     j.EndObject();
     return j.str();
