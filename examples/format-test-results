@@ -1,21 +1,117 @@
 #!/bin/bash
 
-cat <<EOF
-<!doctype html>
-<head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Laminar</title>
-<link href="/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="col-xs-12">
-<h2>Test report for $lJobName #$lBuildNum</h2>
-EOF
-xsltproc "$(dirname ${BASH_SOURCE[0]})/testreport.xsl" "$1";
-cat <<EOF
-</div>
-</body>
+# This example script takes the XML output of a gtest run and formats
+# it as HTML. It can easily be adapted to other XML test output formats
+# such as JUnit or CTest
+
+# Prepare xml with ./path/to/test --gtest_output=xml:path/to/output.xml
+
+# Usage: format-test-results test_result.xml > output.html
+
+if [ ! -f "$1" ]; then
+  echo "File not found: \"$1\""
+  exit 1
+fi
+
+xsltproc --stringparam JOB $JOB --stringparam RUN $RUN <(cat <<\EOF
+<?xml version="1.0" encoding="utf-8"?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:output method="html" indent="yes" />
+
+<xsl:template match="/">
+<html>
+ <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Test report for <xsl:value-of select="$JOB" /> #<xsl:value-of select="$RUN" /></title>
+  <style>
+   body { font-family: Helvetica Neue, Helvetica, Arial, sans-serif; }
+   label:hover { cursor: pointer; }
+   label:before { content: '+ ' }
+   input[type=checkbox].toggle-collapse { display: none; }
+   input[type=checkbox].toggle-collapse~.collapsible { display: none; }
+   input[type=checkbox].toggle-collapse:checked~.collapsible { display: block; }
+   code { white-space: pre-wrap; color: white; }
+   .failure { background-color: #c73030; color: white; }
+   table { min-width: 720px; border-collapse: collapse; }
+   td, th { padding: 5px; }
+   tr:nth-child(even) td { padding: 0; }
+   tr:nth-child(even) { border-bottom: 1px solid #b3abab; }
+   .testcase { padding: 5px; }
+   .testcase.success:before { content: '✔ '; color: green; }
+  </style>
+ </head>
+ <body>
+  <h1><xsl:value-of select="$JOB" /> #<xsl:value-of select="$RUN" /></h1>
+  <h2>Test Report</h2>
+  <table>
+   <thead>
+    <tr>
+     <th>Suite</th>
+     <th>Tests run</th>
+     <th>Failures</th>
+     <th>Errors</th>
+     <th>Elapsed time</th>
+    </tr>
+   </thead>
+  <xsl:apply-templates select="testsuites" />
+  </table>
+ </body>
 </html>
+</xsl:template>
+
+<xsl:template match="testsuite">
+<xsl:variable name="result">
+ <xsl:choose>
+  <xsl:when test="(@failures &gt; 0) or (@errors &gt; 0)">failure</xsl:when>
+  <xsl:otherwise>success</xsl:otherwise>
+ </xsl:choose>
+</xsl:variable>
+<tr class="{$result}">
+ <td>
+  <label for="suite-{@name}"><xsl:value-of select="@name" /></label>
+ </td>
+ <td><xsl:value-of select="@tests" /></td>
+ <td><xsl:value-of select="@failures" /></td>
+ <td><xsl:value-of select="@errors" /></td>
+ <td><xsl:value-of select="@time" /></td>
+</tr>
+<tr class="toggle-target">
+ <td colspan="5">
+  <input class="toggle-collapse" id="suite-{@name}" type="checkbox" />
+  <div class="collapsible" style="padding-left: 15px;">
+   <xsl:apply-templates select="testcase" />
+  </div>
+ </td>
+</tr>
+</xsl:template>
+
+<xsl:template match="testcase">
+<xsl:choose>
+ <!-- has child nodes? -->
+ <xsl:when test="*">
+  <div class="testcase failure">
+   <xsl:value-of select="@name" /><br />
+   <xsl:apply-templates select="failure" />
+  </div>
+ </xsl:when>
+ <xsl:otherwise>
+  <div class="testcase success">
+   <xsl:value-of select="@name" />
+  </div>
+ </xsl:otherwise>
+</xsl:choose>
+</xsl:template>
+
+<xsl:template match="failure">
+<div style="padding: 5px; background-color: #313235">
+ <code>
+  <xsl:value-of select="@message"/>
+ </code>
+</div>
+</xsl:template>
+
+</xsl:stylesheet>
+
 EOF
+) "$1"
