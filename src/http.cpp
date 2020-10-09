@@ -78,13 +78,13 @@ kj::Maybe<MonitorScope> fromUrl(std::string resource, char* query) {
         return kj::mv(scope);
     }
 
-    if(resource.substr(0, 5) != "/jobs")
-        return nullptr;
-
-    if(resource.length() == 5) {
+    if(resource == "/jobs" || resource == "/wallboard") {
         scope.type = MonitorScope::ALL;
         return kj::mv(scope);
     }
+
+    if(resource.substr(0, 5) != "/jobs")
+        return nullptr;
 
     resource = resource.substr(5);
     size_t split = resource.find('/',1);

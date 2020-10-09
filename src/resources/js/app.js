@@ -390,16 +390,17 @@ const Home = function() {
   };
 }();
 
-const Jobs = function() {
+const All = function(templateId) {
   var state = {
     jobs: [],
     search: '',
     groups: {},
+    regexps: {},
     group: null,
     ungrouped: []
   };
   return {
-    template: '#jobs',
+    template: templateId,
     mixins: [ServerEventHandler, Utils, ProgressUpdater],
     data: function() { return state; },
     methods: {
@@ -418,11 +419,12 @@ const Jobs = function() {
           }
         }
         state.groups = {};
-        Object.keys(msg.groups).map(k => state.groups[k] = new RegExp(msg.groups[k]));
-        state.ungrouped = state.jobs.filter(j => !Object.values(state.groups).some(r => r.test(j.name))).map(j => j.name);
+        Object.keys(msg.groups).forEach(k => state.regexps[k] = new RegExp(state.groups[k] = msg.groups[k]));
+        state.ungrouped = state.jobs.filter(j => !Object.values(state.regexps).some(r => r.test(j.name))).map(j => j.name);
         state.group = state.ungrouped.length ? null : Object.keys(state.groups)[0];
       },
       job_started: function(data) {
+        data.result = 'running'; // for wallboard css
         var updAt = null;
         // jobsRunning must be maintained for ProgressUpdater
         for (var i in state.jobsRunning) {
@@ -447,7 +449,7 @@ const Jobs = function() {
           // first execution of new job. TODO insert without resort
           state.jobs.unshift(data);
           state.jobs.sort(function(a, b){return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;});
-          if(!Object.values(state.groups).some(r => r.test(data.name)))
+          if(!Object.values(state.regexps).some(r => r.test(data.name)))
               state.ungrouped.push(data.name);
         } else {
           state.jobs[updAt] = data;
@@ -473,16 +475,30 @@ const Jobs = function() {
       filteredJobs: function() {
         let ret = [];
         if (state.group)
-          ret = state.jobs.filter(job => state.groups[state.group].test(job.name));
+          ret = state.jobs.filter(job => state.regexps[state.group].test(job.name));
         else
           ret = state.jobs.filter(job => state.ungrouped.includes(job.name));
         if (this.search)
           ret = ret.filter(job => job.name.indexOf(this.search) > -1);
         return ret;
       },
+      wallboardJobs: function() {
+        let ret = [];
+        const expr = (new URLSearchParams(window.location.search)).get('filter');
+        if (expr)
+          ret = state.jobs.filter(job => (new RegExp(expr)).test(job.name));
+        else
+          ret = state.jobs;
+        // sort failed before success, newest first
+        ret.sort((a,b) => a.result == b.result ? a.started - b.started : 2*(b.result == 'success')-1);
+        return ret;
+      },
+      wallboardLink: function() {
+        return '/wallboard' + (state.group ? '?filter=' + state.groups[state.group] : '');
+      }
     }
   };
-}();
+};
 
 var Job = function() {
   var state = {
@@ -751,7 +767,8 @@ new Vue({
     base: document.head.baseURI.substr(location.origin.length),
     routes: [
       { path: '/',                   component: Home },
-      { path: '/jobs',               component: Jobs },
+      { path: '/jobs',               component: All('#jobs') },
+      { path: '/wallboard',          component: All('#wallboard') },
       { path: '/jobs/:name',         component: Job },
       { path: '/jobs/:name/:number', component: Run }
     ],

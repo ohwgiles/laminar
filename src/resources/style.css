@@ -179,6 +179,41 @@ button:not([disabled]) { cursor: pointer; color: var(--main-fg); }
  from { background-position: 1rem 0; } to { background-position: 0 0; }
 }
 
+/* wallboard */
+.wallboard {
+ display: flex;
+ flex-wrap: wrap-reverse;
+ flex-direction: row-reverse;
+ gap: 20px;
+ padding: 20px;
+ position: fixed;
+ height: 100%;
+ width: 100%;
+ overflow: auto;
+ background-color: #000
+}
+.wallboard > div {
+ padding: 30px;
+ flex-grow: 1;
+ background-color: var(--failure);
+ color: var(--nav-fg-light);
+}
+.wallboard > div:hover {
+  cursor: pointer;
+}
+.wallboard > div[data-result="running"] {
+  animation: wallboard-bg-fade 2s ease infinite;
+}
+@keyframes wallboard-bg-fade {
+  from { background-color: #4786ab; }
+  50% { background-color: #446597; }
+  to { background-color: #4786ab; }
+}
+.wallboard > div[data-result="success"] {
+  background-color: var(--success);
+  color: var(--main-fg);
+}
+
 /* connecting overlay */
 #connecting-overlay {
  position: fixed;

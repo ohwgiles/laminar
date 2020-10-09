@@ -122,7 +122,7 @@ inline bool beginsWith(std::string haystack, const char* needle) {
 bool Resources::handleRequest(std::string path, const char** start, const char** end, const char** content_type) {
     // need to keep the list of "application links" synchronised with the angular
     // application. We cannot return a 404 for any of these
-    auto it = beginsWith(path,"/jobs")
+    auto it = beginsWith(path,"/jobs") || path == "/wallboard"
             ? resources.find("/")
             : resources.find(path);
 

@@ -325,16 +325,17 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.set("description", desc == jobDescriptions.end() ? "" : desc->second);
     } else if(scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
-        db->stmt("SELECT name,number,startedAt,completedAt,result FROM builds b "
+        db->stmt("SELECT name,number,startedAt,completedAt,result,reason FROM builds b "
                  "JOIN (SELECT name n,MAX(number) latest FROM builds WHERE result IS NOT NULL GROUP BY n) q "
                  "ON b.name = q.n AND b.number = latest")
-        .fetch<str,uint,time_t,time_t,int>([&](str name,uint number, time_t started, time_t completed, int result){
+        .fetch<str,uint,time_t,time_t,int,str>([&](str name,uint number, time_t started, time_t completed, int result, str reason){
             j.StartObject();
             j.set("name", name);
             j.set("number", number);
             j.set("result", to_string(RunState(result)));
             j.set("started", started);
             j.set("completed", completed);
+            j.set("reason", reason);
             j.EndObject();
         });
         j.EndArray();
