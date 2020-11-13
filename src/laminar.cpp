@@ -784,7 +784,7 @@ kj::Maybe<kj::Own<const kj::ReadableFile>> Laminar::getArtefact(std::string path
 
 bool Laminar::handleBadgeRequest(std::string job, std::string &badge) {
     RunState rs = RunState::UNKNOWN;
-    db->stmt("SELECT result FROM builds WHERE name = ? ORDER BY number DESC LIMIT 1")
+    db->stmt("SELECT result FROM builds WHERE name = ? AND result IS NOT NULL ORDER BY number DESC LIMIT 1")
             .bind(job)
             .fetch<int>([&](int result){
         rs = RunState(result);
