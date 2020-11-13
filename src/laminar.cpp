@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <fstream>
 #include <zlib.h>
 
@@ -35,6 +36,11 @@
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+
+// FNM_EXTMATCH isn't supported under musl
+#if !defined(FNM_EXTMATCH)
+#define FNM_EXTMATCH 0
+#endif
 
 // rapidjson::Writer with a StringBuffer is used a lot in Laminar for
 // preparing JSON messages to send to HTTP clients. A small wrapper
@@ -490,6 +496,16 @@ bool Laminar::loadConfiguration() {
             context->name = name;
             context->numExecutors = conf.get<int>("EXECUTORS", 6);
 
+            std::string jobPtns = conf.get<std::string>("JOBS");
+            std::set<std::string> jobPtnsList;
+            if(!jobPtns.empty()) {
+                std::istringstream iss(jobPtns);
+                std::string job;
+                while(std::getline(iss, job, ','))
+                    jobPtnsList.insert(job);
+            }
+            context->jobPatterns.swap(jobPtnsList);
+
             knownContexts.insert(name);
         }
     }
@@ -522,14 +538,20 @@ bool Laminar::loadConfiguration() {
 
             std::string ctxPtns = conf.get<std::string>("CONTEXTS");
 
+            std::set<std::string> ctxPtnList;
             if(!ctxPtns.empty()) {
                 std::istringstream iss(ctxPtns);
-                std::set<std::string> ctxPtnList;
                 std::string ctx;
                 while(std::getline(iss, ctx, ','))
                     ctxPtnList.insert(ctx);
-                jobContexts[jobName].swap(ctxPtnList);
             }
+            // Must be present both here and in queueJob because otherwise if a context
+            // were created while a job is already queued, the default context would be
+            // dropped when the set of contexts is updated here.
+            if(ctxPtnList.empty())
+                ctxPtnList.insert("default");
+            jobContexts[jobName].swap(ctxPtnList);
+
             std::string desc = conf.get<std::string>("DESCRIPTION");
             if(!desc.empty()) {
                 jobDescriptions[jobName] = desc;
@@ -552,7 +574,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         return nullptr;
     }
 
-    // If the job has no contexts (maybe there is no .conf file at all), add the default context
+    // jobContexts[name] can be empty if there is no .conf file at all
     if(jobContexts[name].empty())
         jobContexts.at(name).insert("default");
 
@@ -588,11 +610,30 @@ void Laminar::abortAll() {
     }
 }
 
+bool Laminar::canQueue(const Context& ctx, const Run& run) const {
+    if(ctx.busyExecutors >= ctx.numExecutors)
+        return false;
+
+    // match may be jobs as defined by the context...
+    for(std::string p : ctx.jobPatterns) {
+        if(fnmatch(p.c_str(), run.name.c_str(), FNM_EXTMATCH) == 0)
+            return true;
+    }
+
+    // ...or context as defined by the job.
+    for(std::string p : jobContexts.at(run.name)) {
+        if(fnmatch(p.c_str(), ctx.name.c_str(), FNM_EXTMATCH) == 0)
+            return true;
+    }
+
+    return false;
+}
+
 bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
     for(auto& sc : contexts) {
         std::shared_ptr<Context> ctx = sc.second;
 
-        if(ctx->canQueue(jobContexts.at(run->name))) {
+        if(canQueue(*ctx, *run)) {
             RunState lastResult = RunState::UNKNOWN;
 
             // set the last known result if exists. Runs which haven't started yet should

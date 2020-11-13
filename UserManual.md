@@ -504,13 +504,23 @@ EXECUTORS=1
 
 ## Associating a job with a context
 
-When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. You can define which contexts the job will associate with by setting, for example,
+When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. There are two ways to associate jobs and contexts. You can specify a comma-separated list of patterns `JOBS` in the context configuration file `/var/lib/laminar/cfg/contexts/CONTEXT.conf`:
+
+```
+JOBS=amd64-target-*,usage-monitor
+```
+
+This approach is often preferred when you have many jobs that need to share limited resources.
+
+Alternatively, you can set
 
 ```
 CONTEXTS=my-env-*,special_context
 ```
 
-in `/var/lib/laminar/cfg/jobs/JOB.conf`. For each of the patterns in the comma-separated list `CONTEXTS`, Laminar will iterate over the known contexts and associate the run with the first context with free executors. Patterns are [glob expressions](http://man7.org/linux/man-pages/man7/glob.7.html).
+in `/var/lib/laminar/cfg/jobs/JOB.conf`. This approach is often preferred when you have a small number of jobs that require exclusive access to an environment and you can supply alternative environments (e.g. target devices), because new contexts can be added without modifying the job configuration.
+
+In both cases, Laminar will iterate over the known contexts and associate the run with the first matching context with free executors. Patterns are [glob expressions](http://man7.org/linux/man-pages/man7/glob.7.html).
 
 If `CONTEXTS` is empty or absent (or if `JOB.conf` doesn't exist), laminar will behave as if `CONTEXTS=default` were defined.
 

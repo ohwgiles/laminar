@@ -105,6 +105,7 @@ private:
     bool loadConfiguration();
     void loadCustomizations();
     void assignNewJobs();
+    bool canQueue(const Context& ctx, const Run& run) const;
     bool tryStartRun(std::shared_ptr<Run> run, int queueIndex);
     void handleRunFinished(Run*);
     // expects that Json has started an array
