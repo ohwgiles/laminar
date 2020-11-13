@@ -253,7 +253,7 @@ const Charts = (() => {
         }
       });
       c.jobCompleted = success => {
-        c.data.datasets[success ? 0 : 1].data[6]++;
+        c.data.datasets[success ? 1 : 0].data[6]++;
         c.update();
       }
       return c;
