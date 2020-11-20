@@ -433,11 +433,14 @@ const Home = templateId => {
         state.lowPassRates = msg.lowPassRates;
         this.$forceUpdate();
 
-        chtUtilization = Charts.createExecutorUtilizationChart("chartUtil", msg.executorsBusy, msg.executorsTotal);
-        chtBuildsPerDay = Charts.createRunsPerDayChart("chartBpd", msg.buildsPerDay);
-        chtBuildsPerJob = Charts.createRunsPerJobChart("chartBpj", msg.buildsPerJob);
-        chtTimePerJob = Charts.createTimePerJobChart("chartTpj", msg.timePerJob);
-        chtBuildTimeChanges = Charts.createRunTimeChangesChart("chartBuildTimeChanges", msg.buildTimeChanges);
+        // defer charts to nextTick because they get DOM elements which aren't rendered yet
+        this.$nextTick(() => {
+          chtUtilization = Charts.createExecutorUtilizationChart("chartUtil", msg.executorsBusy, msg.executorsTotal);
+          chtBuildsPerDay = Charts.createRunsPerDayChart("chartBpd", msg.buildsPerDay);
+          chtBuildsPerJob = Charts.createRunsPerJobChart("chartBpj", msg.buildsPerJob);
+          chtTimePerJob = Charts.createTimePerJobChart("chartTpj", msg.timePerJob);
+          chtBuildTimeChanges = Charts.createRunTimeChangesChart("chartBuildTimeChanges", msg.buildTimeChanges);
+        });
       },
       job_queued: function(data) {
         state.jobsQueued.splice(0, 0, data);
@@ -590,7 +593,11 @@ const Job = templateId => {
         // old chart and recreate it to prevent flickering of old data
         if(chtBt)
           chtBt.destroy();
-        chtBt = Charts.createRunTimeChart("chartBt", msg.recent, msg.averageRuntime);
+
+        // defer chart to nextTick because they get DOM elements which aren't rendered yet
+        this.$nextTick(() => {
+          chtBt = Charts.createRunTimeChart("chartBt", msg.recent, msg.averageRuntime);
+        });
       },
       job_queued: function() {
         state.nQueued++;
