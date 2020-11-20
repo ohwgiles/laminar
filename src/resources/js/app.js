@@ -123,7 +123,10 @@ Vue.mixin({
       // - the current job has started (practically hard to reach)
       clearInterval(this.updateTimer);
       if (val.length) {
-        // TODO: first, a non-animated progress update
+        // set the current progress update first
+        this.jobsRunning.forEach(this.updateProgress);
+        this.$forceUpdate();
+        // then update with animation every second
         this.updateTimer = setInterval(() => {
           this.jobsRunning.forEach(this.updateProgress);
           this.$forceUpdate();

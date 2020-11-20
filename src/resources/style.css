@@ -165,7 +165,6 @@ button:not([disabled]) { cursor: pointer; color: var(--main-fg); }
 }
 .progress-bar {
  height: 100%;
- width: 100%;
  background-color: var(--running);
  background-image: linear-gradient(45deg, transparent 35%, rgba(255,255,255,0.18) 35% 65%, transparent 65%);
  background-size: 1rem;
