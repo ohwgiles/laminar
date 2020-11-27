@@ -3,14 +3,14 @@
 .Sh NAME
 .Nm laminard
 \-
-continuous integration server
+Laminar CI server
 .Sh SYNOPSIS
 .Nm laminard Op Fl v
 .Sh DESCRIPTION
-Start laminar continuous integration server in foreground. If option
+Start Laminar CI server in the foreground. If option
 .Fl v
 is specified, verbose logging is enabled. Other aspects of
-operation are configured with environment variables.
+operation are controlled by environment variables.
 .Sh ENVIRONMENT
 .Bl -tag
 .It Ev LAMINAR_HOME
@@ -45,12 +45,12 @@ requests.
 .Sh FILES
 .Bl -tag
 .It Pa /etc/laminar.conf
-On Debian systems, variable assignments in this file are used by
-system-wide installation of Laminar.
+Variable assignments in this file are exported by systemd or other
+init system before launching the system-wide installation of Laminar.
 .El
 .Sh AUTHORS
 .An Oliver Giles
-created Laminar continuous integration system.
+created Laminar CI.
 .An Dmitry Bogatov
 created this manual page for Debian project (but it can be used
 by others).

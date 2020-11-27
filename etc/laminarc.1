@@ -1,0 +1,71 @@
+.Dd Apr 04, 2019
+.Dt LAMINARC 1
+.Sh NAME
+.Nm laminarc
+\-
+Laminar CI client application
+.Sh SYNOPSIS
+.Nm laminarc Li queue \fIJOB\fR [\fIPARAM=VALUE...\fR] ...
+.Nm laminarc Li queue \fIJOB\fR [\fIPARAM=VALUE...\fR] ...
+.Nm laminarc Li queue \fIJOB\fR [\fIPARAM=VALUE...\fR] ...
+.Nm laminarc Li set \fIPARAM=VALUE...\fR
+.Nm laminarc Li show-jobs
+.Nm laminarc Li show-running
+.Nm laminarc Li show-queued
+.Nm laminarc Li abort \fIJOB\fR \fINUMBER\fR
+.Sh DESCRIPTION
+The
+.Nm laminarc
+program connects to a Laminar server and perform one of following operations:
+.Bl -tag
+.It Sy queue
+adds job(s) (with optional parameters) to the queue and returns immediately.
+.It Sy start
+adds job(s) (with optional parameters) to the queue and returns when the jobs
+begin execution.
+.It Sy run
+adds job(s) (with optional parameters) to the queue and returns when the jobs
+complete execution. The exit code will be non-zero if any of the runs does
+not complete successfully.
+.It Sy set
+sets one or more parameters to be exported as environment variables in subsequent
+scripts for the run identified by the $JOB and $RUN environment variables.
+This is primarily intended for use from within a job execution, where those
+variables are already set by the server.
+.It Sy show-jobs
+list jobs known to the server.
+.It Sy show-running
+list the currently running jobs with their numbers.
+.It Sy show-queued
+list the names and numbers of the jobs waiting in the queue.
+.It Sy abort
+manually abort a currently running job by name and number.
+.El
+.Pp
+The laminar server to connect to is read from the
+.Ev LAMINAR_HOST
+environment variable. If empty, it falls back to
+.Ev LAMINAR_BIND_RPC
+and finally defaults to
+.Ad
+unix-abstract:laminar.
+.Sh ENVIRONMENT
+.Bl -tag
+.It Ev LAMINAR_HOST
+address of server to connect. May be of the form
+.Ad IP:PORT,
+.Ad unix:PATH/TO/SOCKET or
+.Ad unix-abstract:NAME
+.It Ev LAMINAR_BIND_RPC
+fallback server address variable. It is set by
+.Nm laminard
+during execution of scripts.
+.El
+.Sh SEE ALSO
+.Xr laminard 8
+.Sh AUTHORS
+.An Oliver Giles
+created Laminar CI.
+.An Dmitry Bogatov
+created this manual page for the Debian project (but it can be used
+by others).

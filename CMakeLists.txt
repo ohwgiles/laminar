@@ -119,6 +119,19 @@ target_link_libraries(laminard capnp-rpc capnp kj-http kj-async kj pthread sqlit
 add_executable(laminarc src/client.cpp src/version.cpp laminar.capnp.c++)
 target_link_libraries(laminarc capnp-rpc capnp kj-async kj pthread)
 
+## Manpages
+macro(gzip SOURCE)
+    get_filename_component(OUT_FILE ${SOURCE} NAME)
+    add_custom_command(OUTPUT ${OUT_FILE}.gz
+        COMMAND gzip < ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE} > ${OUT_FILE}.gz
+        DEPENDS ${SOURCE})
+endmacro()
+add_custom_target(laminar-manpages ALL DEPENDS laminard.8.gz laminarc.1.gz)
+gzip(etc/laminard.8)
+gzip(etc/laminarc.1)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/laminard.8.gz DESTINATION share/man/man8)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/laminarc.1.gz DESTINATION share/man/man1)
+
 ## Tests
 set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 if(BUILD_TESTS)
