@@ -152,9 +152,7 @@ int main(int argc, char** argv) {
             }));
             jobNameIndex += n + 1;
         } while(jobNameIndex < argc);
-    } else if(strcmp(argv[1], "start") == 0 || strcmp(argv[1], "trigger") == 0) {
-        if(strcmp(argv[1], "trigger") == 0)
-            fprintf(stderr, "Warning: 'trigger' is deprecated, use 'queue' for the old behavior\n");
+    } else if(strcmp(argv[1], "start") == 0) {
         if(argc < 3) {
             fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
             return EXIT_BAD_ARGUMENT;
