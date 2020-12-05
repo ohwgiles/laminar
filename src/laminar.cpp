@@ -427,7 +427,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.startObject("timePerJob");
         db->stmt("SELECT name, AVG(completedAt-startedAt) av FROM builds WHERE completedAt > ? GROUP BY name ORDER BY av DESC LIMIT 8")
                 .bind(time(nullptr) - 7 * 86400)
-                .fetch<str, uint>([&](str job, uint time){
+                .fetch<str, double>([&](str job, double time){
             j.set(job.c_str(), time);
         });
         j.EndObject();
