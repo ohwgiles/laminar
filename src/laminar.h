@@ -90,11 +90,6 @@ public:
     // if the job is unknown.
     bool handleBadgeRequest(std::string job, std::string& badge);
 
-    // Fetches the content of $LAMINAR_HOME/custom/style.css or an empty
-    // string. Ideally, this would instead be served by a proper web server
-    // which handles this url.
-    std::string getCustomCss();
-
     // Aborts a single job
     bool abort(std::string job, uint buildNum);
 

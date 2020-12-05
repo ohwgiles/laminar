@@ -238,12 +238,6 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
                 return writeLogChunk(c, s);
             }).attach(kj::mv(output)).attach(kj::mv(stream)).attach(kj::mv(lw));
         }
-    } else if(url == "/custom/style.css") {
-        responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, "text/css; charset=utf-8");
-        responseHeaders.add("Content-Transfer-Encoding", "binary");
-        std::string css = laminar.getCustomCss();
-        auto stream = response.send(200, "OK", responseHeaders, css.size());
-        return stream->write(css.data(), css.size()).attach(kj::mv(css)).attach(kj::mv(stream));
     } else if(resources->handleRequest(url.cStr(), &start, &end, &content_type)) {
         responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, content_type);
         responseHeaders.add("Content-Encoding", "gzip");

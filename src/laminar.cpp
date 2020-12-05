@@ -826,16 +826,3 @@ R"x(
     return true;
 }
 
-// TODO: deprecate
-std::string Laminar::getCustomCss() {
-    KJ_IF_MAYBE(cssFile, fsHome->tryOpenFile(kj::Path{"custom","style.css"})) {
-        static bool warningShown = false;
-        if(!warningShown) {
-            LLOG(WARNING, "Custom CSS has been deprecated and will be removed from a future release. Use a custom HTML template instead.");
-            warningShown = true;
-        }
-        return (*cssFile)->readAllText().cStr();
-    } else {
-        return std::string();
-    }
-}
