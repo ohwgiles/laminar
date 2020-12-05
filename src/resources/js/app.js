@@ -247,7 +247,7 @@ const Charts = (() => {
           }]
         },
         options:{
-          title: { display: true, text: 'Builds per day' },
+          title: { display: true, text: 'Runs per day' },
           tooltips:{callbacks:{title: (tip, data) => dayNames[tip[0].index].long}},
           scales:{yAxes:[{
             ticks:{userCallback: (label, index, labels) => Number.isInteger(label) ? label: null},
@@ -273,7 +273,7 @@ const Charts = (() => {
           }]
         },
         options:{
-          title: { display: true, text: 'Builds per job' },
+          title: { display: true, text: 'Runs per job' },
           hover: { mode: null },
           scales:{xAxes:[{ticks:{userCallback: (label, index, labels)=> Number.isInteger(label) ? label: null}}]}
         }
@@ -331,7 +331,7 @@ const Charts = (() => {
           }))
         },
         options:{
-          title: { display: true, text: 'Build time changes' },
+          title: { display: true, text: 'Run time changes' },
           legend:{ display: true, position: 'bottom' },
           scales:{
             xAxes:[{ticks:{display: false}}],
