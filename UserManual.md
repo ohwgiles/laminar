@@ -52,15 +52,17 @@ You can build an image that runs `laminard` by default, and contains `laminarc` 
 docker build [-t image:tag] -f docker/Dockerfile .
 ```
 
-Keep in mind that this is meant to be used as a base image to build from, so it contains only the minimum packages required to run laminar. The only shell available by default is sh and it does not even have ssh or git. You can use this image to run a basic build server, but it is recommended that you build a custom image from this base to better suit your needs.
+Keep in mind that this is meant to be used as a base image to build from, so it contains only the minimum packages required to run laminar. The only shell available by default is sh (so scripts with `#!/bin/bash` will fail to execute) and it does not have `ssh` or `git`. You can use this image to run a basic build server, but it is recommended that you build a custom image from this base to better suit your needs.
 
-The container will execute `laminard` by default. To start a laminar server with docker you can simply run the image as a daemon.
+The container will execute `laminard` by default. To start a laminar server with docker you can simply run the image as a daemon, for example:
 
 ```bash
-docker run -d --name laminar_server -p 8080:8080 [-v laminardir|laminar.conf] laminar:latest
+docker run -d --name laminar_server -p 8080:8080 -v path/to/laminardir:/var/lib/laminar --env-file path/to/laminar.conf laminar:latest
 ```
 
-You can customize laminar and persist your data by mounting your laminar directory to `/var/lib/laminar` and/or mounting a custom configuration file to `/etc/laminar.conf`.
+The [`-v` flag](https://docs.docker.com/storage/volumes/#choose-the--v-or---mount-flag) is necessary to persist job scripts and artefacts beyond the container lifetime.
+
+The [`--env-file` flag](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file) is necessary to pass configuration from `laminar.conf` to `laminard` because `laminard` does not read `/etc/laminar.conf` directly but expects variables within to be exported by `systemd` or other process supervisor.
 
 Executing `laminarc` may be done in any of the usual ways, for example:
 
