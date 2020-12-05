@@ -68,6 +68,8 @@ make
 %config(noreplace) %{_sysconfdir}/laminar.conf
 %{_datarootdir}/bash-completion/completions/laminarc
 %{_datarootdir}/zsh/site-functions/_laminarc
+%{_mandir}/man8/laminard.8.gz
+%{_mandir}/man1/laminarc.1.gz
 
 %post
 echo Creating laminar user with home in %{_sharedstatedir}/laminar
