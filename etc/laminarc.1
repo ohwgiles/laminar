@@ -47,14 +47,14 @@ The laminar server to connect to is read from the
 environment variable. If empty, it falls back to
 .Ev LAMINAR_BIND_RPC
 and finally defaults to
-.Ad
-unix-abstract:laminar.
+.Ad unix-abstract:laminar
 .Sh ENVIRONMENT
 .Bl -tag
 .It Ev LAMINAR_HOST
 address of server to connect. May be of the form
 .Ad IP:PORT,
-.Ad unix:PATH/TO/SOCKET or
+.Ad unix:PATH/TO/SOCKET
+or
 .Ad unix-abstract:NAME
 .It Ev LAMINAR_BIND_RPC
 fallback server address variable. It is set by
