@@ -1,6 +1,8 @@
 [Unit]
 Description=Laminar continuous integration service
 After=network.target
+Documentation=man:laminard(8)
+Documentation=https://laminar.ohwg.net/docs.html
 
 [Service]
 User=laminar
