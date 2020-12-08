@@ -94,7 +94,7 @@ static void usage(std::ostream& out) {
     out << "  start JOB_LIST...     queues one or more jobs for execution and blocks until it starts.\n";
     out << "  run JOB_LIST...       queues one or more jobs for execution and blocks until it finishes.\n";
     out << "  set PARAMETER_LIST... sets the given parameters as environment variables in the currently\n";
-    out << "                        runing job. Fails if run outside of a job context.\n";
+    out << "                        running job. Fails if run outside of a job context.\n";
     out << "  abort NAME NUMBER     aborts the run identified by NAME and NUMBER.\n";
     out << "  show-jobs             lists all known jobs.\n";
     out << "  show-queued           lists currently queued jobs.\n";
