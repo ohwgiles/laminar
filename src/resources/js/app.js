@@ -18,86 +18,6 @@ Vue.filter('iecFileSize', bytes => {
     ['B', 'KiB', 'MiB', 'GiB', 'TiB'][exp];
 });
 
-// Mixin handling retrieving dynamic updates from the backend
-Vue.mixin((() => {
-  const setupEventSource = (to, query, next, comp) => {
-    const es = new EventSource(document.head.baseURI + to.path.substr(1) + query);
-    es.comp = comp; // When reconnecting, we already have a component. Usually this will be null.
-    es.to = to; // Save a ref, needed for adding query params for pagination.
-    es.onmessage = function(msg) {
-      msg = JSON.parse(msg.data);
-      // "status" is the first message the server always delivers.
-      // Use this to confirm the navigation. The component is not
-      // created until next() is called, so creating a reference
-      // for other message types must be deferred. There are some extra
-      // subtle checks here. If this eventsource already has a component,
-      // then this is not the first time the status message has been
-      // received. If the frontend requests an update, the status message
-      // should not be handled here, but treated the same as any other
-      // message. An exception is if the connection has been lost - in
-      // that case we should treat this as a "first-time" status message.
-      // !this.comp.es is used to test this condition.
-      if (msg.type === 'status' && (!this.comp || !this.comp.es)) {
-        next(comp => {
-          // Set up bidirectional reference
-          // 1. needed to reference the component for other msg types
-          this.comp = comp;
-          // 2. needed to close the ws on navigation away
-          comp.es = this;
-          comp.esReconnectInterval = 500;
-          // Update html and nav titles
-          document.title = comp.$root.title = msg.title;
-          comp.$root.version = msg.version;
-          // Calculate clock offset (used by ProgressUpdater)
-          comp.$root.clockSkew = msg.time - Math.floor((new Date()).getTime()/1000);
-          comp.$root.connected = true;
-          // Component-specific callback handler
-          comp[msg.type](msg.data, to.params);
-        });
-      } else {
-        // at this point, the component must be defined
-        if (!this.comp)
-          return console.error("Page component was undefined");
-        else {
-          this.comp.$root.connected = true;
-          this.comp.$root.showNotify(msg.type, msg.data);
-          if(typeof this.comp[msg.type] === 'function')
-            this.comp[msg.type](msg.data);
-        }
-      }
-    }
-    es.onerror = function(e) {
-      this.comp.$root.connected = false;
-      setTimeout(() => {
-        // Recrate the EventSource, passing in the existing component
-        this.comp.es = setupEventSource(to, query, null, this.comp);
-      }, this.comp.esReconnectInterval);
-      if(this.comp.esReconnectInterval < 7500)
-        this.comp.esReconnectInterval *= 1.5;
-      this.close();
-    }
-    return es;
-  }
-  return {
-    beforeRouteEnter(to, from, next) {
-      setupEventSource(to, '', (fn) => { next(fn); });
-    },
-    beforeRouteUpdate(to, from, next) {
-      this.es.close();
-      setupEventSource(to, '', (fn) => { fn(this); next(); });
-    },
-    beforeRouteLeave(to, from, next) {
-      this.es.close();
-      next();
-    },
-    methods: {
-      query(q) {
-        this.es.close();
-        setupEventSource(this.es.to, '?' + Object.entries(q).map(([k,v])=>`${k}=${v}`).join('&'), fn => fn(this));
-      }
-    }
-  };
-})());
 
 // Mixin for periodically updating a progress bar
 Vue.mixin({
@@ -577,6 +497,7 @@ const Job = templateId => {
   let chtBt = null;
   return {
     template: templateId,
+    props: ['route'],
     data: () => state,
     methods: {
       status: function(msg) {
@@ -632,6 +553,9 @@ const Job = templateId => {
           state.sort.field = field;
         }
         this.query(state.sort)
+      },
+      query: function(q) {
+        this.$root.$emit('navigate', q);
       }
     }
   };
@@ -674,9 +598,11 @@ const Run = templateId => {
   return {
     template: templateId,
     data: () => state,
+    props: ['route'],
     methods: {
-      status: function(data, params) {
+      status: function(data) {
         // Check for the /latest endpoint
+        const params = this._props.route.params;
         if(params.number === 'latest')
           return this.$router.replace('/jobs/' + params.name + '/' + data.latestNum);
 
@@ -719,6 +645,115 @@ const Run = templateId => {
   };
 };
 
+Vue.component('RouterLink', {
+  name: 'router-link',
+  props: {
+    to:  { type: String },
+    tag: { type: String, default: 'a' }
+  },
+  template: `<component :is="tag" @click="navigate" :href="to"><slot></slot></component>`,
+  methods: {
+    navigate: function(e) {
+      e.preventDefault();
+      history.pushState(null, null, this.to);
+      this.$root.$emit('navigate');
+    }
+  }
+});
+
+Vue.component('RouterView', (() => {
+  const routes = [
+    { path: /^$/,                   component: Home('#home') },
+    { path: /^jobs$/,               component:  All('#jobs') },
+    { path: /^wallboard$/,          component:  All('#wallboard') },
+    { path: /^jobs\/(?<name>[^\/]+)$/,         component:  Job('#job') },
+    { path: /^jobs\/(?<name>[^\/]+)\/(?<number>\d+)$/, component:  Run('#run') }
+  ];
+
+  const resolveRoute = path => {
+    for(i in routes) {
+      const r = routes[i].path.exec(path);
+      if(r)
+        return [routes[i].component, r.groups];
+    }
+  }
+
+  let eventSource = null;
+
+  const setupEventSource = (view, query) => {
+    // drop any existing event source
+    if(eventSource)
+      eventSource.close();
+
+    const path = (location.origin+location.pathname).substr(document.head.baseURI.length);
+    const search = query ? '?' + Object.entries(query).map(([k,v])=>`${k}=${v}`).join('&') : '';
+
+    eventSource = new EventSource(document.head.baseURI + path + search);
+    eventSource.reconnectInterval = 500;
+    eventSource.onmessage = msg => {
+      msg = JSON.parse(msg.data);
+      if(msg.type === 'status') {
+        // Event source is connected. Update static data
+        document.title = view.$root.title = msg.title;
+        view.$root.version = msg.version;
+        // Calculate clock offset (used by ProgressUpdater)
+        view.$root.clockSkew = msg.time - Math.floor((new Date()).getTime()/1000);
+        view.$root.connected = true;
+        [view.currentView, route.params] = resolveRoute(path);
+        // the component won't be instantiated until nextTick
+        view.$nextTick(() => {
+          // component is ready, update it with the data from the eventsource
+          eventSource.comp = view.$children[0];
+          // and finally run the component handler
+          eventSource.comp[msg.type](msg.data);
+        });
+      } else {
+        console.log('another msg!')
+        console.log(msg)
+        // at this point, the component must be defined
+        if (!eventSource.comp)
+          return console.error("Page component was undefined");
+        view.$root.connected = true;
+        view.$root.showNotify(msg.type, msg.data);
+        if(typeof eventSource.comp[msg.type] === 'function')
+          eventSource.comp[msg.type](msg.data);
+      }
+    }
+    eventSource.onerror = err => {
+      let ri = eventSource.reconnectInterval;
+      view.$root.connected = false;
+      setTimeout(() => {
+        setupEventSource(view);
+        if(ri < 7500)
+          ri *= 1.5;
+        eventSource.reconnectInterval = ri
+      }, ri);
+      eventSource.close();
+    }
+  };
+
+  let route = {};
+
+  return {
+    name: 'router-view',
+    template: `<component :is="currentView" :route="route"></component>`,
+    data: () => ({
+      currentView: routes[0].component, // default to home
+      route: route
+    }),
+    created: function() {
+      this.$root.$on('navigate', query => {
+        setupEventSource(this, query);
+      });
+      window.addEventListener('popstate', () => {
+        this.$root.$emit('navigate');
+      });
+      // initial navigation
+      this.$root.$emit('navigate');
+    }
+  };
+})());
+
 new Vue({
   el: '#app',
   data: {
@@ -726,7 +761,8 @@ new Vue({
     version: '',
     clockSkew: 0,
     connected: false,
-    notify: 'localStorage' in window && localStorage.getItem('showNotifications') == 1
+    notify: 'localStorage' in window && localStorage.getItem('showNotifications') == 1,
+    route: { path: '', params: {} }
   },
   computed: {
     supportsNotifications: () =>
@@ -748,16 +784,5 @@ new Vue({
   },
   watch: {
     notify: e => localStorage.setItem('showNotifications', e ? 1 : 0)
-  },
-  router: new VueRouter({
-    mode: 'history',
-    base: document.head.baseURI.substr(location.origin.length),
-    routes: [
-      { path: '/',                   component: Home('#home') },
-      { path: '/jobs',               component:  All('#jobs') },
-      { path: '/wallboard',          component:  All('#wallboard') },
-      { path: '/jobs/:name',         component:  Job('#job') },
-      { path: '/jobs/:name/:number', component:  Run('#run') }
-    ],
-  }),
+  }
 });

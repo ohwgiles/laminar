@@ -11,7 +11,6 @@
  <link rel="manifest" href="/manifest.webmanifest">
  <title>Laminar</title>
  <script src="js/vue.min.js"></script>
- <script src="js/vue-router.min.js"></script>
  <script src="js/ansi_up.js"></script>
  <script src="js/Chart.min.js"></script>
  <script src="js/app.js" defer></script>
@@ -115,13 +114,13 @@
 
  <template id="job"><div id="page-job-main">
   <div style="padding: 15px;">
-   <h2>{{$route.params.name}}</h2>
+   <h2>{{route.params.name}}</h2>
    <div v-html="description"></div>
    <dl>
     <dt>Last Successful Run</dt>
-    <dd><router-link v-if="lastSuccess" :to="'/jobs/'+$route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</dd>
+    <dd><router-link v-if="lastSuccess" :to="'/jobs/'+route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</dd>
     <dt>Last Failed Run</dt>
-    <dd><router-link v-if="lastFailed" :to="'/jobs/'+$route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</dd>
+    <dd><router-link v-if="lastFailed" :to="'/jobs/'+route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</dd>
    </dl>
   </div>
   <div style="display: grid; justify-content: center; padding: 15px;">
@@ -142,7 +141,7 @@
     </tr>
     <tr v-for="job in jobsRunning.concat(jobsRecent)" track-by="$index">
      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
-     <td><router-link :to="'/jobs/'+$route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+     <td><router-link :to="'/jobs/'+route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
      <td class="text-center">{{formatDate(job.started)}}</td>
      <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
      <td class="text-center vp-sm-hide">{{job.reason}}</td>
@@ -159,10 +158,10 @@
  <template id="run"><div style="display: grid; grid-template-rows: auto 1fr">
   <div style="padding: 15px">
    <div style="display: grid; grid-template-columns: auto 25px auto auto 1fr 400px; gap: 5px; align-items: center">
-    <h2 style="white-space: nowrap"><span v-html="runIcon(job.result)"></span> {{$route.params.name}} #{{$route.params.number}}</h2>
+    <h2 style="white-space: nowrap"><span v-html="runIcon(job.result)"></span> {{route.params.name}} #{{route.params.number}}</h2>
     <span></span>
-    <router-link :disabled="$route.params.number == 1" :to="'/jobs/'+$route.params.name+'/'+($route.params.number-1)" tag="button">&laquo;</router-link>
-    <router-link :disabled="$route.params.number == latestNum" :to="'/jobs/'+$route.params.name+'/'+(parseInt($route.params.number)+1)" tag="button">&raquo;</router-link>
+    <router-link :disabled="route.params.number == 1" :to="'/jobs/'+route.params.name+'/'+(route.params.number-1)" tag="button">&laquo;</router-link>
+    <router-link :disabled="route.params.number == latestNum" :to="'/jobs/'+route.params.name+'/'+(parseInt(route.params.number)+1)" tag="button">&raquo;</router-link>
     <span></span>
     <div class="progress" v-show="job.result == 'running'">
      <div class="progress-bar" :class="{overtime:job.overtime,indeterminate:!job.etc}" :style="job.etc && {width:job.progress+'%'}"></div>
@@ -200,7 +199,7 @@
    </router-link>
    <div id="nav-top-links" style="display: grid; grid-auto-flow: column; justify-content: start; gap: 15px; padding: 0 15px; align-items: center; font-size: 16px;">
     <router-link to="/jobs">Jobs</router-link>
-    <router-link v-for="(crumb,i) in _route.path.slice(1).split('/').slice(1,-1)" :to="_route.path.split('/').slice(0,i+3).join('/')">{{crumb}}</router-link>
+    <router-link v-for="(crumb,i) in route.path.slice(1).split('/').slice(1,-1)" :to="route.path.split('/').slice(0,i+3).join('/')">{{crumb}}</router-link>
    </div>
    <div></div>
    <span class="version">{{version}}</span>

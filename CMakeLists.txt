@@ -85,8 +85,6 @@ add_custom_command(OUTPUT index_html_size.h
 # Download 3rd-party frontend JS libs...
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.min.js
 	js/vue.min.js EXPECTED_MD5 fb192338844efe86ec759a40152fcb8e)
-file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.4.8/vue-router.min.js
-	js/vue-router.min.js EXPECTED_MD5 5f51d4dbbf68fd6725956a5a2b865f3b)
 file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v1.3.0/ansi_up.js
         js/ansi_up.js EXPECTED_MD5 158566dc1ff8f2804de972f7e841e2f6)
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js
