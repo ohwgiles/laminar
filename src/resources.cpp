@@ -44,7 +44,6 @@ Resources::Resources()
     INIT_RESOURCE("/js/app.js", js_app_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/vue.min.js", js_vue_min_js, CONTENT_TYPE_JS);
-    INIT_RESOURCE("/js/vue-router.min.js", js_vue_router_min_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/ansi_up.js", js_ansi_up_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/js/Chart.min.js", js_Chart_min_js, CONTENT_TYPE_JS);
     INIT_RESOURCE("/style.css", style_css, CONTENT_TYPE_CSS);
