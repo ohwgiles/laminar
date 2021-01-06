@@ -90,7 +90,7 @@ file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v1.3.0/ansi_up.js
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js
         js/Chart.min.js EXPECTED_MD5 f6c8efa65711e0cbbc99ba72997ecd0e)
 # ...and compile them
-generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue-router.min.js js/vue.min.js
+generate_compressed_bins(${CMAKE_BINARY_DIR} js/vue.min.js
     js/ansi_up.js js/Chart.min.js)
 # (see resources.cpp where these are fetched)
 
