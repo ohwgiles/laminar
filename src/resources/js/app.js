@@ -709,8 +709,6 @@ Vue.component('RouterView', (() => {
           eventSource.comp[msg.type](msg.data);
         });
       } else {
-        console.log('another msg!')
-        console.log(msg)
         // at this point, the component must be defined
         if (!eventSource.comp)
           return console.error("Page component was undefined");
