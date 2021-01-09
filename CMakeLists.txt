@@ -85,8 +85,8 @@ add_custom_command(OUTPUT index_html_size.h
 # Download 3rd-party frontend JS libs...
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.min.js
 	js/vue.min.js EXPECTED_MD5 fb192338844efe86ec759a40152fcb8e)
-file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v1.3.0/ansi_up.js
-        js/ansi_up.js EXPECTED_MD5 158566dc1ff8f2804de972f7e841e2f6)
+file(DOWNLOAD https://raw.githubusercontent.com/drudru/ansi_up/v4.0.4/ansi_up.js
+        js/ansi_up.js EXPECTED_MD5 b31968e1a8fed0fa82305e978161f7f5)
 file(DOWNLOAD https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js
         js/Chart.min.js EXPECTED_MD5 f6c8efa65711e0cbbc99ba72997ecd0e)
 # ...and compile them
