@@ -361,15 +361,17 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.EndObject();
     } else { // Home page
         j.startArray("recent");
-        db->stmt("SELECT * FROM builds WHERE completedAt IS NOT NULL ORDER BY completedAt DESC LIMIT 20")
-        .fetch<str,uint,str,time_t,time_t,time_t,int>([&](str name,uint build,str context,time_t,time_t started,time_t completed,int result){
+        db->stmt("SELECT name,number,node,queuedAt,startedAt,completedAt,result,reason FROM builds WHERE completedAt IS NOT NULL ORDER BY completedAt DESC LIMIT 20")
+        .fetch<str,uint,str,time_t,time_t,time_t,int,str>([&](str name,uint build,str context,time_t queued,time_t started,time_t completed,int result,str reason){
             j.StartObject();
             j.set("name", name)
              .set("number", build)
              .set("context", context)
+             .set("queued", queued)
              .set("started", started)
              .set("completed", completed)
              .set("result", to_string(RunState(result)))
+             .set("reason", reason)
              .EndObject();
         });
         j.EndArray();
