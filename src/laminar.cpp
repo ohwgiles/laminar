@@ -203,18 +203,21 @@ std::list<std::string> Laminar::listKnownJobs() {
     return res;
 }
 
-void Laminar::populateArtifacts(Json &j, std::string job, uint num) const {
+void Laminar::populateArtifacts(Json &j, std::string job, uint num, kj::Path subdir) const {
     kj::Path runArchive{job,std::to_string(num)};
+    runArchive = runArchive.append(subdir);
     KJ_IF_MAYBE(dir, fsHome->tryOpenSubdir("archive"/runArchive)) {
         for(kj::StringPtr file : (*dir)->listNames()) {
             kj::FsNode::Metadata meta = (*dir)->lstat(kj::Path{file});
-            if(meta.type != kj::FsNode::Type::FILE)
-                continue;
-            j.StartObject();
-            j.set("url", archiveUrl + (runArchive/file).toString().cStr());
-            j.set("filename", file.cStr());
-            j.set("size", meta.size);
-            j.EndObject();
+            if(meta.type == kj::FsNode::Type::FILE) {
+                j.StartObject();
+                j.set("url", archiveUrl + (runArchive/file).toString().cStr());
+                j.set("filename", (subdir/file).toString().cStr());
+                j.set("size", meta.size);
+                j.EndObject();
+            } else if(meta.type == kj::FsNode::Type::DIRECTORY) {
+                populateArtifacts(j, job, num, subdir/file);
+            }
         }
     }
 }
