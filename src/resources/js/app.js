@@ -582,9 +582,7 @@ const Run = templateId => {
           if (done)
             return;
           state.log += ansi_up.ansi_to_html(
-            value.replace(/</g,'&lt;')
-                 .replace(/>/g,'&gt;')
-                 .replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m, $1, $2) =>
+            value.replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m, $1, $2) =>
                    '<a href="jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:'+
                    '<a href="jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>'
                  )
