@@ -22,13 +22,13 @@
   <nav>
    <table class="table striped">
     <tr v-for="job in jobsQueued">
-     <td><router-link  :to="'/jobs/'+job.name">{{job.name}}</router-link> <i>queued</i></td>
+     <td><router-link  :to="'jobs/'+job.name">{{job.name}}</router-link> <i>queued</i></td>
     </tr>
     <tr v-for="job in jobsRunning">
      <td>
       <span v-html="runIcon(job.result)"></span>
-      <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>
-      <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>
+      <router-link :to="'jobs/'+job.name">{{job.name}}</router-link>
+      <router-link :to="'jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>
       <small style="float:right;">{{formatDuration(job.started, job.completed)}}</small>
       <div class="progress" style="margin-top: 5px;">
        <div class="progress-bar" :class="{overtime:job.overtime,indeterminate:!job.etc}" :style="job.etc && {width:job.progress+'%'}"></div>
@@ -38,8 +38,8 @@
     <tr v-for="job in jobsRecent">
      <td>
       <span v-html="runIcon(job.result)"></span>
-      <router-link :to="'/jobs/'+job.name">{{job.name}}</router-link>
-      <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link><br>
+      <router-link :to="'jobs/'+job.name">{{job.name}}</router-link>
+      <router-link :to="'jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link><br>
       <small>Took {{formatDuration(job.started, job.completed)}} at {{formatDate(job.started)}}</small>
      </td>
     </tr>
@@ -50,13 +50,13 @@
     <div>
      <h3>Recent regressions</h3>
      <table>
-      <tr v-for="job in resultChanged" v-if="job.lastFailure>job.lastSuccess"><td><router-link :to="'/jobs/'+job.name+'/'+job.lastFailure">{{job.name}} #{{job.lastFailure}}</router-link> since <router-link :to="'/jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link></tr>
+      <tr v-for="job in resultChanged" v-if="job.lastFailure>job.lastSuccess"><td><router-link :to="'jobs/'+job.name+'/'+job.lastFailure">{{job.name}} #{{job.lastFailure}}</router-link> since <router-link :to="'jobs/'+job.name+'/'+job.lastSuccess">#{{job.lastSuccess}}</router-link></tr>
      </table>
     </div>
     <div>
      <h3>Low pass rates</h3>
      <table>
-      <tr v-for="job in lowPassRates"><td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td><td>{{Math.round(job.passRate*100)}}&nbsp;%</td></tr>
+      <tr v-for="job in lowPassRates"><td><router-link :to="'jobs/'+job.name">{{job.name}}</router-link></td><td>{{Math.round(job.passRate*100)}}&nbsp;%</td></tr>
      </table>
     </div>
     <div>
@@ -95,8 +95,8 @@
   </nav>
   <table class="striped" id="job-list">
     <tr v-for="job in filteredJobs()">
-    <td><router-link :to="'/jobs/'+job.name">{{job.name}}</router-link></td>
-    <td style="white-space: nowrap;"><span v-html="runIcon(job.result)"></span> <router-link :to="'/jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></td>
+    <td><router-link :to="'jobs/'+job.name">{{job.name}}</router-link></td>
+    <td style="white-space: nowrap;"><span v-html="runIcon(job.result)"></span> <router-link :to="'jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link></td>
     <td>{{formatDate(job.started)}}</td>
     <td>{{formatDuration(job.started,job.completed)}}</td>
     </tr>
@@ -104,7 +104,7 @@
  </div></template>
  
  <template id="wallboard"><div class="wallboard">
-  <router-link :to="'/jobs/'+job.name+'/'+job.number" tag="div" v-for="job in wallboardJobs()" :data-result="job.result">
+  <router-link :to="'jobs/'+job.name+'/'+job.number" tag="div" v-for="job in wallboardJobs()" :data-result="job.result">
    <span style="font-size: 36px; font-weight: bold;">{{job.name}} #{{job.number}}</span><br>
    <span style="font-size: 30px;">{{formatDate(job.started)}}</span><br>
    <span style="font-size: 26px;">{{job.reason}}</span>
@@ -117,9 +117,9 @@
    <div v-html="description"></div>
    <dl>
     <dt>Last Successful Run</dt>
-    <dd><router-link v-if="lastSuccess" :to="'/jobs/'+route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</dd>
+    <dd><router-link v-if="lastSuccess" :to="'jobs/'+route.params.name+'/'+lastSuccess.number">#{{lastSuccess.number}}</router-link> {{lastSuccess?' - at '+formatDate(lastSuccess.started):'never'}}</dd>
     <dt>Last Failed Run</dt>
-    <dd><router-link v-if="lastFailed" :to="'/jobs/'+route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</dd>
+    <dd><router-link v-if="lastFailed" :to="'jobs/'+route.params.name+'/'+lastFailed.number">#{{lastFailed.number}}</router-link> {{lastFailed?' - at '+formatDate(lastFailed.started):'never'}}</dd>
    </dl>
   </div>
   <div style="display: grid; justify-content: center; padding: 15px;">
@@ -140,7 +140,7 @@
     </tr>
     <tr v-for="job in jobsRunning.concat(jobsRecent)" track-by="$index">
      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
-     <td><router-link :to="'/jobs/'+route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
+     <td><router-link :to="'jobs/'+route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
      <td class="text-center">{{formatDate(job.started)}}</td>
      <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
      <td class="text-center vp-sm-hide">{{job.reason}}</td>
@@ -159,8 +159,8 @@
    <div style="display: grid; grid-template-columns: auto 25px auto auto 1fr 400px; gap: 5px; align-items: center">
     <h2 style="white-space: nowrap"><span v-html="runIcon(job.result)"></span> {{route.params.name}} #{{route.params.number}}</h2>
     <span></span>
-    <router-link :disabled="route.params.number == 1" :to="'/jobs/'+route.params.name+'/'+(route.params.number-1)" tag="button">&laquo;</router-link>
-    <router-link :disabled="route.params.number == latestNum" :to="'/jobs/'+route.params.name+'/'+(parseInt(route.params.number)+1)" tag="button">&raquo;</router-link>
+    <router-link :disabled="route.params.number == 1" :to="'jobs/'+route.params.name+'/'+(route.params.number-1)" tag="button">&laquo;</router-link>
+    <router-link :disabled="route.params.number == latestNum" :to="'jobs/'+route.params.name+'/'+(parseInt(route.params.number)+1)" tag="button">&raquo;</router-link>
     <span></span>
     <div class="progress" v-show="job.result == 'running'">
      <div class="progress-bar" :class="{overtime:job.overtime,indeterminate:!job.etc}" :style="job.etc && {width:job.progress+'%'}"></div>
@@ -169,7 +169,7 @@
    <div id="page-run-detail">
     <dl>
      <dt>Reason</dt><dd>{{job.reason}}</dd>
-     <dt v-show="job.upstream.num > 0">Upstream</dt><dd v-show="job.upstream.num > 0"><router-link :to="'/jobs/'+job.upstream.name">{{job.upstream.name}}</router-link> <router-link :to="'/jobs/'+job.upstream.name+'/'+job.upstream.num">#{{job.upstream.num}}</router-link></li></dd>
+     <dt v-show="job.upstream.num > 0">Upstream</dt><dd v-show="job.upstream.num > 0"><router-link :to="'jobs/'+job.upstream.name">{{job.upstream.name}}</router-link> <router-link :to="'jobs/'+job.upstream.name+'/'+job.upstream.num">#{{job.upstream.num}}</router-link></li></dd>
      <dt>Queued for</dt><dd>{{formatDuration(job.queued, job.started ? job.started : Math.floor(Date.now()/1000))}}</dd>
      <dt v-show="job.started">Started</dt><dd v-show="job.started">{{formatDate(job.started)}}</dd>
      <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
@@ -197,7 +197,7 @@
     <img src="icon.png"> {{title}}
    </router-link>
    <div id="nav-top-links" style="display: grid; grid-auto-flow: column; justify-content: start; gap: 15px; padding: 0 15px; align-items: center; font-size: 16px;">
-    <router-link to="/jobs">Jobs</router-link>
+    <router-link to="jobs">Jobs</router-link>
     <router-link v-for="(crumb,i) in route.path.slice(1).split('/').slice(1,-1)" :to="route.path.split('/').slice(0,i+3).join('/')">{{crumb}}</router-link>
    </div>
    <div></div>
