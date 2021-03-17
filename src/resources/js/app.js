@@ -476,7 +476,7 @@ const All = templateId => {
         return ret;
       },
       wallboardLink: function() {
-        return '/wallboard' + (state.group ? '?filter=' + state.groups[state.group] : '');
+        return 'wallboard' + (state.group ? '?filter=' + state.groups[state.group] : '');
       }
     }
   };
@@ -603,7 +603,7 @@ const Run = templateId => {
         // Check for the /latest endpoint
         const params = this._props.route.params;
         if(params.number === 'latest')
-          return this.$router.replace('/jobs/' + params.name + '/' + data.latestNum);
+          return this.$router.replace('jobs/' + params.name + '/' + data.latestNum);
 
         state.number = parseInt(params.number);
         state.jobsRunning = [];
