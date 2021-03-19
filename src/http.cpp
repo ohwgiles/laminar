@@ -221,9 +221,6 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
             return stream->write(array.begin(), array.size()).attach(kj::mv(array)).attach(kj::mv(file)).attach(kj::mv(stream));
         }
     } else if(parseLogEndpoint(url, name, num)) {
-        auto lw = kj::heap<WithSetRef<LogWatcher>>(logWatchers);
-        lw->job = name;
-        lw->run = num;
         bool complete;
         std::string output;
         if(laminar.handleLogRequest(name, num, output, complete)) {
@@ -232,11 +229,16 @@ kj::Promise<void> Http::request(kj::HttpMethod method, kj::StringPtr url, const 
             // Disables nginx reverse-proxy's buffering. Necessary for dynamic log output.
             responseHeaders.add("X-Accel-Buffering", "no");
             auto stream = response.send(200, "OK", responseHeaders, nullptr);
-            return stream->write(output.data(), output.size()).then([=,s=stream.get(),c=lw.get()]{
+            auto s = stream.get();
+            auto lw = kj::heap<WithSetRef<LogWatcher>>(logWatchers);
+            lw->job = name;
+            lw->run = num;
+            auto promise = writeLogChunk(lw.get(), stream.get()).attach(kj::mv(stream)).attach(kj::mv(lw));
+            return s->write(output.data(), output.size()).attach(kj::mv(output)).then([p=kj::mv(promise),complete]() mutable {
                 if(complete)
                     return kj::Promise<void>(kj::READY_NOW);
-                return writeLogChunk(c, s);
-            }).attach(kj::mv(output)).attach(kj::mv(stream)).attach(kj::mv(lw));
+                return kj::mv(p);
+            });
         }
     } else if(resources->handleRequest(url.cStr(), &start, &end, &content_type)) {
         responseHeaders.set(kj::HttpHeaderId::CONTENT_TYPE, content_type);
@@ -288,7 +290,7 @@ void Http::notifyLog(std::string job, uint run, std::string log_chunk, bool eot)
 {
     for(LogWatcher* lw : logWatchers) {
         if(lw->job == job && lw->run == run) {
-            lw->pendingOutput.push_back(kj::mv(log_chunk));
+            lw->pendingOutput.push_back(log_chunk);
             lw->fulfiller->fulfill(kj::mv(eot));
         }
     }
