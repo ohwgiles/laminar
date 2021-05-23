@@ -774,7 +774,14 @@ void Laminar::handleRunFinished(Run * r) {
         // anyway so hence this (admittedly debatable) optimization.
         if(!fsHome->exists(d))
             break;
-        fsHome->remove(d);
+        // must use a try/catch because remove will throw if deletion fails. Using
+        // tryRemove does not help because it still throws an exception for some
+        // errors such as EACCES
+        try {
+            fsHome->remove(d);
+        } catch(kj::Exception& e) {
+            LLOG(ERROR, "Could not remove directory", e.getDescription());
+        }
     }
 
     fsHome->symlink(kj::Path{"archive", r->name, "latest"}, std::to_string(r->build), kj::WriteMode::CREATE|kj::WriteMode::MODIFY);
