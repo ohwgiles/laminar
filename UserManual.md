@@ -588,6 +588,8 @@ docker run --rm -ti -v $PWD:/root ubuntu /bin/bash -xe <<EOF
 EOF
 ```
 
+For more advanced usage, see [docker-advanced.sh](https://github.com/ohwgiles/laminar/blob/master/examples/docker-advanced.sh)
+
 ---
 
 # Colours in log output
