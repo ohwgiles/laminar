@@ -133,7 +133,7 @@ TEST_F(LaminarFixture, ParamsToEnv) {
 }
 
 TEST_F(LaminarFixture, Abort) {
-    defineJob("job1", "yes");
+    defineJob("job1", "sleep inf");
     auto req = client().runRequest();
     req.setJobName("job1");
     auto res = req.send();
