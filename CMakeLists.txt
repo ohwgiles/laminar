@@ -136,7 +136,7 @@ if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     include_directories(${GTEST_INCLUDE_DIRS} src)
     add_executable(laminar-tests ${LAMINARD_CORE_SOURCES} ${COMPRESSED_BINS} test/main.cpp test/laminar-functional.cpp test/unit-conf.cpp test/unit-database.cpp)
-    target_link_libraries(laminar-tests ${GTEST_LIBRARY} capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
+    target_link_libraries(laminar-tests ${GTEST_LIBRARIES} capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 endif()
 
 set(SYSTEMD_UNITDIR /lib/systemd/system CACHE PATH "Path to systemd unit files")
