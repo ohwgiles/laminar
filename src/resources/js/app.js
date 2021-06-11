@@ -565,6 +565,7 @@ const Job = templateId => {
 const Run = templateId => {
   const utf8decoder = new TextDecoder('utf-8');
   const ansi_up = new AnsiUp;
+  ansi_up.use_classes = true;
   const state = {
     job: { artifacts: [], upstream: {} },
     latestNum: null,

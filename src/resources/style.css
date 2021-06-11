@@ -12,8 +12,6 @@
  --running: #4786ab;
  --warning: #de9a34;
  --link-fg: #2f4579;
- --console-bg: #313235;
- --console-fg: #fff;
  --alt-row-bg: #fafafa;
  --border-grey: #d0d0d0;
 }
@@ -121,10 +119,46 @@ a.sort:not(.dsc):hover:after { border-top-color: var(--main-fg);  }
 a.active { color: var(--main-fg); }
 a.active:hover { text-decoration: none; }
 
-/* run console output */
-.console-log { padding: 15px; background-color: var(--console-bg); }
-.console-log code { white-space: pre-wrap; color: var(--console-fg); }
-.console-log a { color: var(--console-fg); }
+/* run console ansi colors (based on base16-default-dark and base16-bright) */
+:root {
+  --ansi-black: #181818;
+  --ansi-red: #f8f8f8;
+  --ansi-green: #a1b56c;
+  --ansi-yellow: #f7ca88;
+  --ansi-blue: #7cafc2;
+  --ansi-magenta: #ba8baf;
+  --ansi-cyan: #86c1b9;
+  --ansi-white: #d8d8d8;
+  --ansi-brightblack: #000000;
+  --ansi-brightred: #fb0120;
+  --ansi-brightgreen: #a1c659;
+  --ansi-brightyellow: #fda331;
+  --ansi-brightblue: #6fb3d2;
+  --ansi-brightmagenta: #d381c3;
+  --ansi-brightcyan: #76c7b7;
+  --ansi-brightwhite: #e0e0e0;
+}
+.ansi-black-fg { color: var(--ansi-black); } .ansi-black-bg { background-color: var(--ansi-black); }
+.ansi-red-fg { color: var(--ansi-red); } .ansi-red-bg { background-color: var(--ansi-red); }
+.ansi-green-fg { color: var(--ansi-green); } .ansi-green-bg { background-color: var(--ansi-green); }
+.ansi-yellow-fg { color: var(--ansi-yellow); } .ansi-yellow-bg { background-color: var(--ansi-yellow); }
+.ansi-blue-fg { color: var(--ansi-blue); } .ansi-blue-bg { background-color: var(--ansi-blue); }
+.ansi-magenta-fg { color: var(--ansi-magenta); } .ansi-magenta-bg { background-color: var(--ansi-magenta); }
+.ansi-cyan-fg { color: var(--ansi-cyan); } .ansi-cyan-bg { background-color: var(--ansi-cyan); }
+.ansi-white-fg { color: var(--ansi-white); } .ansi-white-bg { background-color: var(--ansi-white); }
+.ansi-bright-black-fg { color: var(--ansi-brightblack); } .ansi-bright-black-bg { background-color: var(--ansi-brightblack); }
+.ansi-bright-red-fg { color: var(--ansi-brightred); } .ansi-bright-red-bg { background-color: var(--ansi-brightred); }
+.ansi-bright-green-fg { color: var(--ansi-brightgreen); } .ansi-bright-green-bg { background-color: var(--ansi-brightgreen); }
+.ansi-bright-yellow-fg { color: var(--ansi-brightyellow); } .ansi-bright-yellow-bg { background-color: var(--ansi-brightyellow); }
+.ansi-bright-blue-fg { color: var(--ansi-brightblue); } .ansi-bright-blue-bg { background-color: var(--ansi-brightblue); }
+.ansi-bright-magenta-fg { color: var(--ansi-brightmagenta); } .ansi-bright-magenta-bg { background-color: var(--ansi-brightmagenta); }
+.ansi-bright-cyan-fg { color: var(--ansi-brightcyan); } .ansi-bright-cyan-bg { background-color: var(--ansi-brightcyan); }
+.ansi-bright-white-fg { color: var(--ansi-brightwhite); } .ansi-bright-white-bg { background-color: var(--ansi-brightwhite); }
+
+/* run console */
+.console-log { padding: 15px; background-color: var(--ansi-black); }
+.console-log code { white-space: pre-wrap; color: var(--ansi-white); }
+.console-log a { color: var(--ansi-brightwhite); }
 
 /* text input (job filtering) */
 input { padding: 5px 8px; }
