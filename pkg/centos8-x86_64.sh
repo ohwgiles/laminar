@@ -8,7 +8,7 @@ VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~u
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM centos:8
-RUN dnf -y install rpm-build cmake make gcc-c++ wget sqlite-devel boost-devel zlib-devel
+RUN dnf -y update && dnf -y install rpm-build cmake make gcc-c++ wget sqlite-devel boost-devel zlib-devel
 EOS
 )
 
@@ -27,7 +27,7 @@ tar xzf capnproto.tar.gz
 tar xzf rapidjson.tar.gz
 
 cd /build/capnproto-0.7.0/c++/
-cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off .
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off .
 make -j4
 make install
 
