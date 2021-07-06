@@ -1,5 +1,5 @@
 ###
-### Copyright 2015-2020 Oliver Giles
+### Copyright 2015-2021 Oliver Giles
 ###
 ### This file is part of Laminar
 ###
@@ -17,12 +17,12 @@
 ### along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ###
 project(laminar)
-cmake_minimum_required(VERSION 2.8)
-cmake_policy(SET CMP0058 NEW)
+cmake_minimum_required(VERSION 3.6)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_CXX_STANDARD 17)
 
-add_definitions("-std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -DDEBUG")
 
 # Allow passing in the version string, for e.g. patched/packaged versions
