@@ -470,6 +470,12 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.EndObject();
         });
         j.EndArray();
+        j.startObject("completedCounts");
+        db->stmt("SELECT name, COUNT(*) FROM builds WHERE result IS NOT NULL GROUP BY name")
+                .fetch<str, uint>([&](str job, uint count){
+            j.set(job.c_str(), count);
+        });
+        j.EndObject();
     }
     j.EndObject();
     return j.str();

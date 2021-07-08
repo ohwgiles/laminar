@@ -90,9 +90,9 @@ Vue.mixin({
       let m = d.getMinutes();
       if (m < 10)
         m = '0' + m;
-      return d.getHours() + ':' + m + ' on ' + 
+      return d.getHours() + ':' + m + ' on ' +
         ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + '. ' +
-        ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + ' ' + 
+        ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + ' ' +
         d.getFullYear();
     },
     // Pretty-print a duration
@@ -203,15 +203,19 @@ const Charts = (() => {
           if (c.data.labels[j] == name) {
             c.data.datasets[0].data[j]++;
             c.update();
-            break;
+            return;
           }
         }
+        // if we get here, it's a new/unknown job
+        c.data.labels.push(name);
+        c.data.datasets[0].data.push(1);
+        c.update();
       }
       return c;
     },
-    createTimePerJobChart: (id, data) => {
+    createTimePerJobChart: (id, data, completedCounts) => {
       const scale = timeScale(Math.max(...Object.values(data)));
-      return new Chart(document.getElementById(id), {
+      const c = new Chart(document.getElementById(id), {
         type: 'horizontalBar',
         data: {
           labels: Object.keys(data),
@@ -232,23 +236,38 @@ const Charts = (() => {
             }
           }]},
           tooltips:{callbacks:{
-            label: (tip, data) => data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel + ' ' + scale.label.toLowerCase()
+            label: (tip, data) => data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel.toFixed(2) + ' ' + scale.label.toLowerCase()
           }}
         }
       });
+      c.jobCompleted = (name, time) => {
+        for (var j = 0; j < c.data.datasets[0].data.length; ++j) {
+          if (c.data.labels[j] == name) {
+            c.data.datasets[0].data[j] = ((completedCounts[name]-1) * c.data.datasets[0].data[j] + time * scale.factor) / completedCounts[name];
+            c.update();
+            return;
+          }
+        }
+        // if we get here, it's a new/unknown job
+        c.data.labels.push(name);
+        c.data.datasets[0].data.push(time * scale.factor);
+        c.update();
+      };
+      return c;
     },
     createRunTimeChangesChart: (id, data) => {
       const scale = timeScale(Math.max(...data.map(e => Math.max(...e.durations))));
-      return new Chart(document.getElementById(id), {
+      const dataValue = (name, durations) => ({
+        label: name,
+        data: durations.map(x => x * scale.factor),
+        borderColor: 'hsl('+(name.hashCode() % 360)+', 27%, 57%)',
+        backgroundColor: 'transparent'
+      });
+      const c = new Chart(document.getElementById(id), {
         type: 'line',
         data: {
           labels: [...Array(10).keys()],
-          datasets: data.map(e => ({
-            label: e.name,
-            data: e.durations.map(x => x * scale.factor),
-            borderColor: 'hsl('+(e.name.hashCode() % 360)+', 27%, 57%)',
-            backgroundColor: 'transparent'
-          }))
+          datasets: data.map(e => dataValue(e.name, e.durations))
         },
         options:{
           title: { display: true, text: 'Run time changes' },
@@ -268,10 +287,25 @@ const Charts = (() => {
           }
         }
       });
+      c.jobCompleted = (name, time) => {
+        for (var j = 0; j < c.data.datasets.length; ++j) {
+          if (c.data.datasets[j].label == name) {
+            if(c.data.datasets[j].data.length == 10)
+              c.data.datasets[j].data.shift();
+            c.data.datasets[j].data.push(time * scale.factor);
+            c.update();
+            return;
+          }
+        }
+        // if we get here, it's a new/unknown job
+        c.data.datasets.push(dataValue(name, [time]));
+        c.update();
+      };
+      return c;
     },
     createRunTimeChart: (id, jobs, avg) => {
       const scale = timeScale(Math.max(...jobs.map(v=>v.completed-v.started)));
-      return new Chart(document.getElementById(id), {
+      const c = new Chart(document.getElementById(id), {
         type: 'bar',
         data: {
           labels: jobs.map(e => '#' + e.number).reverse(),
@@ -319,6 +353,22 @@ const Charts = (() => {
           }}
         }
       });
+      c.jobCompleted = (num, result, time) => {
+        let avg = c.data.datasets[0].data[0].y / scale.factor;
+        avg = ((avg * (num - 1)) + time) / num;
+        c.data.datasets[0].data[0].y = avg * scale.factor;
+        c.data.datasets[0].data[1].y = avg * scale.factor;
+        if(c.data.datasets[1].data.length == 20) {
+          c.data.labels.shift();
+          c.data.datasets[1].data.shift();
+          c.data.datasets[1].backgroundColor.shift();
+        }
+        c.data.labels.push('#' + num);
+        c.data.datasets[1].data.push(time * scale.factor);
+        c.data.datasets[1].backgroundColor.push(result == 'success' ? '#74af77': '#883d3d');
+        c.update();
+      };
+      return c;
     }
   };
 })();
@@ -341,6 +391,7 @@ const Home = templateId => {
     lowPassRates: [],
   };
   let chtUtilization, chtBuildsPerDay, chtBuildsPerJob, chtTimePerJob;
+  let completedCounts;
   return {
     template: templateId,
     data: () => state,
@@ -351,6 +402,7 @@ const Home = templateId => {
         state.jobsRecent = msg.recent;
         state.resultChanged = msg.resultChanged;
         state.lowPassRates = msg.lowPassRates;
+        completedCounts = msg.completedCounts;
         this.$forceUpdate();
 
         // defer charts to nextTick because they get DOM elements which aren't rendered yet
@@ -358,7 +410,7 @@ const Home = templateId => {
           chtUtilization = Charts.createExecutorUtilizationChart("chartUtil", msg.executorsBusy, msg.executorsTotal);
           chtBuildsPerDay = Charts.createRunsPerDayChart("chartBpd", msg.buildsPerDay);
           chtBuildsPerJob = Charts.createRunsPerJobChart("chartBpj", msg.buildsPerJob);
-          chtTimePerJob = Charts.createTimePerJobChart("chartTpj", msg.timePerJob);
+          chtTimePerJob = Charts.createTimePerJobChart("chartTpj", msg.timePerJob, completedCounts);
           chtBuildTimeChanges = Charts.createRunTimeChangesChart("chartBuildTimeChanges", msg.buildTimeChanges);
         });
       },
@@ -373,8 +425,10 @@ const Home = templateId => {
         chtUtilization.executorBusyChanged(true);
       },
       job_completed: function(data) {
-        for (var i = 0; i < state.jobsRunning.length; ++i) {
-          var job = state.jobsRunning[i];
+        if(!(job.name in completedCounts))
+          completedCounts[job.name] = 0;
+        for(let i = 0; i < state.jobsRunning.length; ++i) {
+          const job = state.jobsRunning[i];
           if (job.name == data.name && job.number == data.number) {
             state.jobsRunning.splice(i, 1);
             state.jobsRecent.splice(0, 0, data);
@@ -382,9 +436,28 @@ const Home = templateId => {
             break;
           }
         }
+        for(let i = 0; i < state.resultChanged.length; ++i) {
+          const job = state.resultChanged[i];
+          if(job.name == data.name) {
+            job[data.result === 'success' ? 'lastSuccess' : 'lastFailure'] = data.number;
+            this.$forceUpdate();
+            break;
+          }
+        }
+        for(let i = 0; i < state.lowPassRates.length; ++i) {
+          const job = state.lowPassRates[i];
+          if(job.name == data.name) {
+            job.passRate = ((completedCounts[job.name] - 1) * job.passRate + (data.result === 'success' ? 1 : 0)) / completedCounts[job.name];
+            this.$forceUpdate();
+            break;
+          }
+        }
+        completedCounts[job.name]++;
         chtBuildsPerDay.jobCompleted(data.result === 'success')
         chtUtilization.executorBusyChanged(false);
-        chtBuildsPerJob.jobCompleted(data.name)
+        chtBuildsPerJob.jobCompleted(data.name);
+        chtTimePerJob.jobCompleted(data.name, data.completed - data.started);
+        chtBuildTimeChanges.jobCompleted(data.name, data.completed - data.started);
       }
     }
   };
@@ -494,7 +567,7 @@ const Job = templateId => {
     pages: 0,
     sort: {}
   };
-  let chtBt = null;
+  let chtBuildTime = null;
   return {
     template: templateId,
     props: ['route'],
@@ -512,12 +585,12 @@ const Job = templateId => {
 
         // "status" comes again if we change page/sorting. Delete the
         // old chart and recreate it to prevent flickering of old data
-        if(chtBt)
-          chtBt.destroy();
+        if(chtBuildTime)
+          chtBuildTime.destroy();
 
         // defer chart to nextTick because they get DOM elements which aren't rendered yet
         this.$nextTick(() => {
-          chtBt = Charts.createRunTimeChart("chartBt", msg.recent, msg.averageRuntime);
+          chtBuildTime = Charts.createRunTimeChart("chartBt", msg.recent, msg.averageRuntime);
         });
       },
       job_queued: function() {
@@ -534,8 +607,8 @@ const Job = templateId => {
             state.jobsRunning.splice(i, 1);
             state.jobsRecent.splice(0, 0, data);
             this.$forceUpdate();
-            // TODO: update the chart
         }
+        chtBuildTime.jobCompleted(data.number, data.result, data.completed - data.started);
       },
       page_next: function() {
         state.sort.page++;
