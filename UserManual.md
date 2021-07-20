@@ -86,7 +86,7 @@ Laminar's configuration file may be found at `/etc/laminar.conf`. Laminar will s
 
 Edit `/etc/laminar.conf` and change `LAMINAR_BIND_HTTP` to `IPADDR:PORT`, `unix:PATH/TO/SOCKET` or `unix-abstract:SOCKETNAME`. `IPADDR` may be `*` to bind on all interfaces. The default is `*:8080`.
 
-Do not attempt to run laminar on port 80. This requires running as `root`, and Laminar will not drop privileges when executing job scripts! For a more complete integrated solution (including SSL), run laminar as a reverse proxy behind a regular webserver.
+Do not attempt to run laminar on port 80. This requires running as `root`, and Laminar will not drop privileges when executing job scripts! For a more complete integrated solution (including SSL), run laminar behind a regular webserver acting as a reverse proxy.
 
 ## Running behind a reverse proxy
 
@@ -94,7 +94,7 @@ A reverse proxy is required if you want Laminar to share a port with other web s
 
 If you use [artefacts](#Archiving-artefacts), note that Laminar is not designed as a file server, and better performance will be achieved by allowing the frontend web server to serve the archive directory directly (e.g. using a `Location` directive).
 
-Laminar uses Sever Sent Events to provide a responsive, auto-updating display without polling. Most frontend webservers should handle this without any extra configuration.
+Laminar uses Server Sent Events to provide a responsive, auto-updating display without polling. Most frontend webservers should handle this without any extra configuration.
 
 If you use a reverse proxy to host Laminar at a subfolder instead of a subdomain root, the `<base href>` needs to be updated to ensure all links point to their proper targets. This can be done by setting `LAMINAR_BASE_URL` in `/etc/laminar.conf`.
 
@@ -240,7 +240,7 @@ Additionally, the raw log output may be fetched over a plain HTTP request to htt
 
 # Job chains
 
-A typical pipeline may involve several steps, such as build, test and deploy. Depending on the project, these may be broken up into seperate laminar jobs for maximal flexibility.
+A typical pipeline may involve several steps, such as build, test and deploy. Depending on the project, these may be broken up into separate laminar jobs for maximal flexibility.
 
 The preferred way to accomplish this in Laminar is to use the same method as [regular run triggering](#Triggering-a-run), that is, calling `laminarc` directly in your `example.run` scripts.
 
@@ -366,7 +366,7 @@ fi
 
 Of course, you can make this as pretty as you like. A [helper script](#Helper-scripts) can be a good choice here.
 
-If you want to send to different addresses dependending on the job, replace `engineering@company.com` above with a variable, e.g. `$RECIPIENTS`, and set `RECIPIENTS=nora@company.com,joe@company.com` in `/var/lib/laminar/cfg/jobs/JOB.env`. See [Environment variables](#Environment-variables).
+If you want to send to different addresses depending on the job, replace `engineering@company.com` above with a variable, e.g. `$RECIPIENTS`, and set `RECIPIENTS=nora@company.com,joe@company.com` in `/var/lib/laminar/cfg/jobs/JOB.env`. See [Environment variables](#Environment-variables).
 
 You could also update the `$RECIPIENTS` variable dynamically based on the build itself. For example, if your run script accepts a parameter `$rev` which is a git commit id, as part of your job's `.after` script you could do the following:
 
