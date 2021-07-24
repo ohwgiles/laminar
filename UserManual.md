@@ -98,6 +98,8 @@ Laminar uses Server Sent Events to provide a responsive, auto-updating display w
 
 If you use a reverse proxy to host Laminar at a subfolder instead of a subdomain root, the `<base href>` needs to be updated to ensure all links point to their proper targets. This can be done by setting `LAMINAR_BASE_URL` in `/etc/laminar.conf`.
 
+See [this example configuration file for nginx](https://github.com/ohwgiles/laminar/blob/master/examples/nginx-ssl-reverse-proxy.conf).
+
 ## More configuration options
 
 See the [reference section](#Service-configuration-file)
