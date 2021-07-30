@@ -377,7 +377,7 @@ author_email=$(git show -s --format='%ae' $rev)
 laminarc set RECIPIENTS $author_email
 ```
 
-See [notify-email-pretty.sh](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-pretty.sh) and [notify-email-text-log.sh](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-text-log.sh).
+See [examples/notify-email-pretty](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-pretty) and [examples/notify-email-text-log](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-text-log).
 
 ---
 
@@ -590,7 +590,7 @@ docker run --rm -ti -v $PWD:/root ubuntu /bin/bash -xe <<EOF
 EOF
 ```
 
-For more advanced usage, see [docker-advanced.sh](https://github.com/ohwgiles/laminar/blob/master/examples/docker-advanced.sh)
+For more advanced usage, see [examples/docker-advanced](https://github.com/ohwgiles/laminar/blob/master/examples/docker-advanced)
 
 ---
 
