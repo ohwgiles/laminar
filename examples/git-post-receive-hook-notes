@@ -1,0 +1,42 @@
+#!/bin/bash -e
+# Simple post-receive hook that triggers a laminar run
+# for every commit pushed to every branch, and annotates
+# the commit with the run number using a git note.
+# On the cloned repository, useful config is
+#  git config --add remote.origin.fetch "+refs/notes/*:refs/notes/*"
+# to automatically fetch all notes from the origin, and
+#  git config --add notes.displayRef "refs/notes/*"
+# to display all notes in the git log by default
+
+# The laminar job to trigger
+LAMINAR_JOB=my-project
+
+# Default notes ref is refs/notes/commits
+NOTES_REF=refs/notes/ci
+
+# For each ref pushed...
+while read old new ref; do
+	# Skip tags, notes, etc. Only do heads.
+	# Extend this to only trigger on specific branches.
+	if [[ $ref != refs/heads/* ]]; then
+		continue
+	fi
+	# Otherwise, for each new commit in the ref...
+	# (to only trigger on the newest, set commit=$new and delete the loop)
+	git rev-list $([[ $old =~ ^0+$ ]] && echo $new || echo $old..$new) | while read commit; do
+		# Queue the laminar run
+		run=$(laminarc queue $LAMINAR_JOB commit=$commit ref=$ref)
+		echo "Started Laminar $run for commit $commit to ref $ref"
+
+		# Add a git note about the run
+		blob=$(echo -n "Laminar-Run: $run" | git hash-object -w --stdin)
+		if last_note=$(git show-ref -s $NOTES_REF); then
+			git read-tree $last_note
+			p_arg=-p
+		fi
+		git update-index --add --cacheinfo 100644 $blob $commit
+		tree=$(git write-tree)
+		new_note=$(echo "Notes added by post-receive hook" | git commit-tree $tree $p_arg $last_note)
+		git update-ref $NOTES_REF $new_note $last_note
+	done
+done

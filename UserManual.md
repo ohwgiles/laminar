@@ -198,6 +198,8 @@ This is what [git hooks](https://git-scm.com/book/gr/v2/Customizing-Git-Git-Hook
 LAMINAR_REASON="Push to git repository" laminarc queue example-build
 ```
 
+For a more advanced example, see [examples/git-post-receive-hook-notes](https://github.com/ohwgiles/laminar/blob/master/examples/git-post-receive-hook-notes)
+
 What if your git server is not the same machine as the laminar instance?
 
 ## Triggering on a remote laminar instance
