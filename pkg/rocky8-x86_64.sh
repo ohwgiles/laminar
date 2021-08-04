@@ -4,10 +4,10 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~upstream_centos8
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~upstream_rocky8
 
 DOCKER_TAG=$(docker build -q - <<EOS
-FROM centos:8
+FROM rockylinux/rockylinux:8
 RUN dnf -y update && dnf -y install rpm-build cmake make gcc-c++ wget sqlite-devel boost-devel zlib-devel
 EOS
 )
