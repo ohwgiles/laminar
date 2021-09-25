@@ -655,11 +655,20 @@ const Run = templateId => {
           value = utf8decoder.decode(value);
           if (done)
             return;
+          // output may contain private ANSI CSI escape sequence to point to
+          // downstream jobs. ansi_up (correctly) discards unknown sequences,
+          // so they must be matched before passing through ansi_up. ansi_up
+          // also (correctly) escapes HTML, so they need to be converted back
+          // to links after going through ansi_up.
+          // A better solution one day would be if ansi_up were to provide
+          // a callback interface for handling unknown sequences.
           state.log += ansi_up.ansi_to_html(
             value.replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m, $1, $2) =>
-                   '<a href="jobs/'+$1+'" onclick="return vroute(this);">'+$1+'</a>:'+
-                   '<a href="jobs/'+$1+'/'+$2+'" onclick="return vroute(this);">#'+$2+'</a>'
-                 )
+              '~~~~LAMINAR_RUN~'+$1+':'+$2+'~'
+            )
+          ).replace(/~~~~LAMINAR_RUN~([^:]+):(\d+)~/g, (m, $1, $2) =>
+            '<a href="jobs/'+$1+'" onclick="return LaminarApp.navigate(this.href);">'+$1+'</a>:'+
+            '<a href="jobs/'+$1+'/'+$2+'" onclick="return LaminarApp.navigate(this.href);">#'+$2+'</a>'
           );
           vm.$forceUpdate();
           return pump();
@@ -825,7 +834,7 @@ Vue.component('RouterView', (() => {
   };
 })());
 
-new Vue({
+const LaminarApp = new Vue({
   el: '#app',
   data: {
     title: '', // populated by status message
@@ -851,6 +860,11 @@ new Vue({
         new Notification('Job ' + data.result, {
           body: data.name + ' ' + '#' + data.number + ': ' + data.result
         });
+    },
+    navigate: function(path) {
+      history.pushState(null, null, path);
+      this.$emit('navigate');
+      return false;
     }
   },
   watch: {
