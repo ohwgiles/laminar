@@ -19,7 +19,7 @@ Throughout this document, the fixed base path `/var/lib/laminar` is used. This i
 
 Since Debian Bullseye, Laminar is available in [the official repositories](https://packages.debian.org/search?searchon=sourcenames&keywords=laminar).
 
-Alternatively, pre-built upstream packages are available for Debian 10 (Bullseye) on x86_64 and armhf, and for Rocky/CentOS/RHEL 7 and 8 on x86_64.
+Alternatively, pre-built upstream packages are available for Debian 10 (Buster) on x86_64 and armhf, and for Rocky/CentOS/RHEL 7 and 8 on x86_64.
 
 Finally, Laminar may be built from source for any Linux distribution.
 
