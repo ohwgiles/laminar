@@ -172,5 +172,7 @@ kj::Promise<void> Server::handleFdRead(kj::AsyncInputStream* stream, char* buffe
 
 void Server::taskFailed(kj::Exception &&exception) {
     //kj::throwFatalException(kj::mv(exception));
-    fprintf(stderr, "taskFailed: %s\n", exception.getDescription().cStr());
+    // prettier
+    fprintf(stderr, "fatal: %s\n", exception.getDescription().cStr());
+    exit(EXIT_FAILURE);
 }
