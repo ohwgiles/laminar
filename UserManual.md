@@ -222,13 +222,13 @@ Then, point `laminarc` to the new location using an environment variable:
 LAMINAR_HOST=192.168.1.1:9997 laminarc queue example
 ```
 
-If you need more flexibility, consider running the communication channel as a regular unix socket and applying user and group permissions to the file. To achieve this, set
+If you need more flexibility, consider running the communication channel as a regular unix socket. Setting
 
 ```
 LAMINAR_BIND_RPC=unix:/var/run/laminar.sock
 ```
 
-or similar path in `/etc/laminar.conf`.
+or similar path in `/etc/laminar.conf` will result in a socket with group read/write permissions (`660`), so any user in the `laminar` group can queue a job.
 
 This can be securely and flexibly combined with remote triggering using `ssh`. There is no need to allow the client full shell access to the server machine, the ssh server can restrict certain users to certain commands (in this case `laminarc`). See [the authorized_keys section of the sshd man page](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT) for further information.
 

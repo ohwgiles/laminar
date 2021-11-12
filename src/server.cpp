@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2019 Oliver Giles
+/// Copyright 2015-2021 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -30,6 +30,7 @@
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <sys/signalfd.h>
+#include <sys/stat.h>
 
 // Size of buffer used to read from file descriptors. Should be
 // a multiple of sizeof(struct signalfd_siginfo) == 128
@@ -117,8 +118,11 @@ void Server::listenRpc(Rpc &rpc, kj::StringPtr rpcBindAddress)
     if(rpcBindAddress.startsWith("unix:"))
         unlink(rpcBindAddress.slice(strlen("unix:")).cStr());
     listeners->add(ioContext.provider->getNetwork().parseAddress(rpcBindAddress)
-              .then([this,&rpc](kj::Own<kj::NetworkAddress>&& addr) {
-        return acceptRpcClient(rpc, addr->listen());
+              .then([this,&rpc,rpcBindAddress](kj::Own<kj::NetworkAddress>&& addr) {
+        kj::Own<kj::ConnectionReceiver> listener = addr->listen();
+        if(rpcBindAddress.startsWith("unix:"))
+            chmod(rpcBindAddress.slice(strlen("unix:")).cStr(), 0660);
+        return acceptRpcClient(rpc, kj::mv(listener));
     }));
 
 }
@@ -128,8 +132,11 @@ void Server::listenHttp(Http &http, kj::StringPtr httpBindAddress)
     if(httpBindAddress.startsWith("unix:"))
         unlink(httpBindAddress.slice(strlen("unix:")).cStr());
     listeners->add(ioContext.provider->getNetwork().parseAddress(httpBindAddress)
-              .then([this,&http](kj::Own<kj::NetworkAddress>&& addr) {
-        return http.startServer(ioContext.lowLevelProvider->getTimer(), addr->listen());
+              .then([this,&http,httpBindAddress](kj::Own<kj::NetworkAddress>&& addr) {
+        kj::Own<kj::ConnectionReceiver> listener = addr->listen();
+        if(httpBindAddress.startsWith("unix:"))
+            chmod(httpBindAddress.slice(strlen("unix:")).cStr(), 0660);
+        return http.startServer(ioContext.lowLevelProvider->getTimer(), kj::mv(listener));
     }));
 }
 
