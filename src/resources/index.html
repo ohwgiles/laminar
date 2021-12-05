@@ -22,7 +22,12 @@
   <nav>
    <table class="table striped">
     <tr v-for="job in jobsQueued">
-     <td><router-link  :to="'jobs/'+job.name">{{job.name}}</router-link> <i>queued</i></td>
+     <td>
+      <span v-html="runIcon(job.result)"></span>
+      <router-link :to="'jobs/'+job.name">{{job.name}}</router-link>
+      <router-link :to="'jobs/'+job.name+'/'+job.number">#{{job.number}}</router-link>
+      <i>queued</i>
+     </td>
     </tr>
     <tr v-for="job in jobsRunning">
      <td>
@@ -134,15 +139,11 @@
      <th class="text-center">Duration <a class="sort" :class="(sort.field=='duration'?sort.order:'')" v-on:click="do_sort('duration')">&nbsp;</a></th>
      <th class="text-center vp-sm-hide">Reason <a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
     </tr></thead>
-    <tr v-show="nQueued">
-     <td style="width:1px"><span v-html="runIcon('queued')"></span></td>
-     <td colspan="4"><i>{{nQueued}} run(s) queued</i></td>
-    </tr>
-    <tr v-for="job in jobsRunning.concat(jobsRecent)" track-by="$index">
+    <tr v-for="job in jobsQueued.concat(jobsRunning).concat(jobsRecent)" track-by="$index">
      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
      <td><router-link :to="'jobs/'+route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
-     <td class="text-center">{{formatDate(job.started)}}</td>
-     <td class="text-center">{{formatDuration(job.started, job.completed)}}</td>
+     <td class="text-center"><span v-if="job.result!='queued'">{{formatDate(job.started)}}</span></td>
+     <td class="text-center"><span v-if="job.result!='queued'">{{formatDuration(job.started, job.completed)}}</span></td>
      <td class="text-center vp-sm-hide">{{job.reason}}</td>
     </tr>
    </table>

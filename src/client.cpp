@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2020 Oliver Giles
+/// Copyright 2015-2021 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
         }
         auto queued = laminar.listQueuedRequest().send().wait(waitScope);
         for(auto it : queued.getResult()) {
-            printf("%s\n", it.cStr());
+            printf("%s:%d\n", it.getJob().cStr(), it.getBuildNum());
         }
     } else if(strcmp(argv[1], "show-running") == 0) {
         if(argc != 2) {

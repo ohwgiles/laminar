@@ -397,8 +397,8 @@ const Home = templateId => {
     data: () => state,
     methods: {
       status: function(msg) {
-        state.jobsQueued = msg.queued;
-        state.jobsRunning = msg.running;
+        state.jobsQueued = msg.queued.reverse();
+        state.jobsRunning = msg.running.reverse();
         state.jobsRecent = msg.recent;
         state.resultChanged = msg.resultChanged;
         state.lowPassRates = msg.lowPassRates;
@@ -559,11 +559,11 @@ const All = templateId => {
 const Job = templateId => {
   const state = {
     description: '',
+    jobsQueued: [],
     jobsRunning: [],
     jobsRecent: [],
     lastSuccess: null,
     lastFailed: null,
-    nQueued: 0,
     pages: 0,
     sort: {}
   };
@@ -575,11 +575,11 @@ const Job = templateId => {
     methods: {
       status: function(msg) {
         state.description = msg.description;
-        state.jobsRunning = msg.running;
+        state.jobsQueued = msg.queued.reverse();
+        state.jobsRunning = msg.running.reverse();
         state.jobsRecent = msg.recent;
         state.lastSuccess = msg.lastSuccess;
         state.lastFailed = msg.lastFailed;
-        state.nQueued = msg.nQueued;
         state.pages = msg.pages;
         state.sort = msg.sort;
 
@@ -593,11 +593,12 @@ const Job = templateId => {
           chtBuildTime = Charts.createRunTimeChart("chartBt", msg.recent, msg.averageRuntime);
         });
       },
-      job_queued: function() {
-        state.nQueued++;
+      job_queued: function(data) {
+        state.jobsQueued.splice(0, 0, data);
+        this.$forceUpdate();
       },
       job_started: function(data) {
-        state.nQueued--;
+        state.jobsQueued.splice(state.jobsQueued.length - data.queueIndex - 1, 1);
         state.jobsRunning.splice(0, 0, data);
         this.$forceUpdate();
       },

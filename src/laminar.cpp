@@ -306,13 +306,17 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.EndObject();
         }
         j.EndArray();
-        int nQueued = 0;
+        j.startArray("queued");
         for(const auto& run : queuedJobs) {
             if (run->name == scope.job) {
-                nQueued++;
+                j.StartObject();
+                j.set("number", run->build);
+                j.set("result", to_string(RunState::QUEUED));
+                j.set("reason", run->reason());
+                j.EndObject();
             }
         }
-        j.set("nQueued", nQueued);
+        j.EndArray();
         db->stmt("SELECT number,startedAt FROM builds WHERE name = ? AND result = ? "
                  "ORDER BY completedAt DESC LIMIT 1")
         .bind(scope.job, int(RunState::SUCCESS))
@@ -399,6 +403,8 @@ std::string Laminar::getStatus(MonitorScope scope) {
         for(const auto& run : queuedJobs) {
             j.StartObject();
             j.set("name", run->name);
+            j.set("number", run->build);
+            j.set("result", to_string(RunState::QUEUED));
             j.EndObject();
         }
         j.EndArray();
@@ -602,6 +608,8 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         .startObject("data")
         .set("name", name)
         .set("number", run->build)
+        .set("result", to_string(RunState::QUEUED))
+        .set("reason", run->reason())
         .EndObject();
     http->notifyEvent(j.str(), name.c_str());
 

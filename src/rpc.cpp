@@ -101,7 +101,9 @@ public:
         auto res = context.getResults().initResult(queue.size());
         int i = 0;
         for(auto it : queue) {
-            res.set(i++, it->name);
+            res[i].setJob(it->name);
+            res[i].setBuildNum(it->build);
+            i++;
         }
         return kj::READY_NOW;
     }
