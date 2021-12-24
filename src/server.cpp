@@ -137,6 +137,14 @@ void Server::listenHttp(Http &http, kj::StringPtr httpBindAddress)
         if(httpBindAddress.startsWith("unix:"))
             chmod(httpBindAddress.slice(strlen("unix:")).cStr(), 0660);
         return http.startServer(ioContext.lowLevelProvider->getTimer(), kj::mv(listener));
+    }).catch_([this,&http,httpBindAddress](kj::Exception&&e) mutable -> kj::Promise<void> {
+        if(e.getType() == kj::Exception::Type::DISCONNECTED) {
+            LLOG(ERROR, "HTTP disconnect, restarting server", e.getDescription());
+            listenHttp(http, httpBindAddress);
+            return kj::READY_NOW;
+        }
+        // otherwise propagate the exception
+        return kj::mv(e);
     }));
 }
 
