@@ -643,7 +643,7 @@ const Run = templateId => {
   const state = {
     job: { artifacts: [], upstream: {} },
     latestNum: null,
-    log: '',
+    logComplete: false,
   };
   const logFetcher = (vm, name, num) => {
     const abort = new AbortController();
@@ -651,27 +651,52 @@ const Run = templateId => {
       // ATOW pipeThrough not supported in Firefox
       //const reader = res.body.pipeThrough(new TextDecoderStream).getReader();
       const reader = res.body.getReader();
+      const target = document.getElementsByTagName('code')[0];
+      let logToRender = '';
+      let logComplete = false;
+      let tid = null;
+
+      function updateUI() {
+        // output may contain private ANSI CSI escape sequence to point to
+        // downstream jobs. ansi_up (correctly) discards unknown sequences,
+        // so they must be matched before passing through ansi_up. ansi_up
+        // also (correctly) escapes HTML, so they need to be converted back
+        // to links after going through ansi_up.
+        // A better solution one day would be if ansi_up were to provide
+        // a callback interface for handling unknown sequences.
+        // Also, update the DOM directly rather than using a binding through
+        // Vue, the performance is noticeably better with large logs.
+        target.innerHTML += ansi_up.ansi_to_html(
+          logToRender.replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m, $1, $2) =>
+            '~~~~LAMINAR_RUN~'+$1+':'+$2+'~'
+          )
+        ).replace(/~~~~LAMINAR_RUN~([^:]+):(\d+)~/g, (m, $1, $2) =>
+          '<a href="jobs/'+$1+'" onclick="return LaminarApp.navigate(this.href);">'+$1+'</a>:'+
+          '<a href="jobs/'+$1+'/'+$2+'" onclick="return LaminarApp.navigate(this.href);">#'+$2+'</a>'
+        );
+        logToRender = '';
+        if (logComplete) {
+          // output finished
+          state.logComplete = true;
+        }
+      }
+
       return function pump() {
         return reader.read().then(({done, value}) => {
-          value = utf8decoder.decode(value);
-          if (done)
+          if (done) {
+            // do not set state.logComplete directly, because rendering
+            // may take some time, and we don't want the progress indicator
+            // to disappear before rendering is complete. Instead, delay
+            // it until after the log has been added to the DOM
+            logComplete = true;
             return;
-          // output may contain private ANSI CSI escape sequence to point to
-          // downstream jobs. ansi_up (correctly) discards unknown sequences,
-          // so they must be matched before passing through ansi_up. ansi_up
-          // also (correctly) escapes HTML, so they need to be converted back
-          // to links after going through ansi_up.
-          // A better solution one day would be if ansi_up were to provide
-          // a callback interface for handling unknown sequences.
-          state.log += ansi_up.ansi_to_html(
-            value.replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m, $1, $2) =>
-              '~~~~LAMINAR_RUN~'+$1+':'+$2+'~'
-            )
-          ).replace(/~~~~LAMINAR_RUN~([^:]+):(\d+)~/g, (m, $1, $2) =>
-            '<a href="jobs/'+$1+'" onclick="return LaminarApp.navigate(this.href);">'+$1+'</a>:'+
-            '<a href="jobs/'+$1+'/'+$2+'" onclick="return LaminarApp.navigate(this.href);">#'+$2+'</a>'
-          );
-          vm.$forceUpdate();
+          }
+          logToRender += utf8decoder.decode(value);
+          // sometimes logs can be very large, and we are calling pump()
+          // furiously to get all the data to the client. To prevent straining
+          // the client renderer, buffer the data and delay the UI updates.
+          clearTimeout(tid);
+          tid = setTimeout(updateUI, 125);
           return pump();
         });
       }();
@@ -694,7 +719,9 @@ const Run = templateId => {
         state.job = data;
         state.latestNum = data.latestNum;
         state.jobsRunning = [data];
-        state.log = '';
+        state.logComplete = false;
+        // DOM is used directly for performance
+        document.getElementsByTagName('code')[0].innerHTML = '';
         if(this.logstream)
           this.logstream.abort();
         if(data.started)

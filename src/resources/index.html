@@ -187,8 +187,8 @@
    </div>
   </div>
   <div class="console-log">
-   <code v-html="log"></code>
-   <span v-show="job.result == 'running'" v-html="runIcon('running')" style="display: block;"></span>
+   <code></code>
+   <span v-show="!logComplete" v-html="runIcon('running')" style="display: block;"></span>
   </div>
  </div></template>
 
