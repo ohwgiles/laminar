@@ -38,6 +38,7 @@ public:
         // set up empty directory structure
         fs->openSubdir(kj::Path{"cfg"}, kj::WriteMode::CREATE);
         fs->openSubdir(kj::Path{"cfg", "jobs"}, kj::WriteMode::CREATE);
+        fs->openSubdir(kj::Path{"cfg", "contexts"}, kj::WriteMode::CREATE);
     }
     void clean() {
         // rm -rf in config folder

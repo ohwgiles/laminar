@@ -98,6 +98,14 @@ public:
         return { res.getResult(), kj::mv(log) };
     }
 
+    void setNumExecutors(int nexec) {
+        KJ_IF_MAYBE(f, tmp.fs->tryOpenFile(kj::Path{"cfg", "contexts", "default.conf"},
+                kj::WriteMode::CREATE | kj::WriteMode::MODIFY | kj::WriteMode::CREATE_PARENT)) {
+            std::string content = "EXECUTORS=" + std::to_string(nexec);
+            (*f)->writeAll(content);
+        }
+    }
+
     kj::String stripLaminarLogLines(const kj::String& str) {
         auto out = kj::heapString(str.size());
         char *o = out.begin();
