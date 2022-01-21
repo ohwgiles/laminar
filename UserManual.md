@@ -713,6 +713,7 @@ Finally, variables supplied on the command-line call to `laminarc queue`, `lamin
 - `queue [JOB [PARAMS...]]...` adds one or more jobs to the queue with optional parameters, returning immediately.
 - `start [JOB [PARAMS...]]...` starts one or more jobs with optional parameters, returning when the jobs begin execution.
 - `run [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters and waits for the completion of all jobs.
+- `--next` may be passed before `JOB` in order to place the job at the front of the queue instead of at the end.
 - `set [VARIABLE=VALUE]...` sets one or more variables to be exported in subsequent scripts for the run identified by the `$JOB` and `$RUN` environment variables
 - `show-jobs` shows the known jobs on the server (`$LAMINAR_HOME/cfg/jobs/*.run`).
 - `show-running` shows the currently running jobs with their numbers.

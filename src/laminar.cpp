@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2020 Oliver Giles
+/// Copyright 2015-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -585,7 +585,7 @@ bool Laminar::loadConfiguration() {
     return true;
 }
 
-std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
+std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params, bool frontOfQueue) {
     if(!fsHome->exists(kj::Path{"cfg","jobs",name+".run"})) {
         LLOG(ERROR, "Non-existent job", name);
         return nullptr;
@@ -596,7 +596,10 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         jobContexts.at(name).insert("default");
 
     std::shared_ptr<Run> run = std::make_shared<Run>(name, ++buildNums[name], kj::mv(params), homePath.clone());
-    queuedJobs.push_back(run);
+    if(frontOfQueue)
+        queuedJobs.push_front(run);
+    else
+        queuedJobs.push_back(run);
 
     db->stmt("INSERT INTO builds(name,number,queuedAt,parentJob,parentBuild,reason) VALUES(?,?,?,?,?,?)")
      .bind(run->name, run->build, run->queuedAt, run->parentName, run->parentBuild, run->reason())
@@ -609,6 +612,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params) {
         .set("name", name)
         .set("number", run->build)
         .set("result", to_string(RunState::QUEUED))
+        .set("queueIndex", frontOfQueue ? 0 : (queuedJobs.size() - 1))
         .set("reason", run->reason())
         .EndObject();
     http->notifyEvent(j.str(), name.c_str());

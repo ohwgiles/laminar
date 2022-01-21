@@ -415,7 +415,7 @@ const Home = templateId => {
         });
       },
       job_queued: function(data) {
-        state.jobsQueued.splice(0, 0, data);
+        state.jobsQueued.splice(state.jobsQueued.length - data.queueIndex, 0, data);
         this.$forceUpdate();
       },
       job_started: function(data) {
@@ -594,7 +594,7 @@ const Job = templateId => {
         });
       },
       job_queued: function(data) {
-        state.jobsQueued.splice(0, 0, data);
+        state.jobsQueued.splice(state.jobsQueued.length - data.queueIndex, 0, data);
         this.$forceUpdate();
       },
       job_started: function(data) {

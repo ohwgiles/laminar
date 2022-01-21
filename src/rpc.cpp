@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2019 Oliver Giles
+/// Copyright 2015-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -53,7 +53,7 @@ public:
     kj::Promise<void> queue(QueueContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC queue", jobName);
-        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()), context.getParams().getFrontOfQueue());
         if(Run* r = run.get()) {
             context.getResults().setResult(LaminarCi::MethodResult::SUCCESS);
             context.getResults().setBuildNum(r->build);
@@ -67,7 +67,7 @@ public:
     kj::Promise<void> start(StartContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC start", jobName);
-        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()), context.getParams().getFrontOfQueue());
         if(Run* r = run.get()) {
             return r->whenStarted().then([context,r]() mutable {
                 context.getResults().setResult(LaminarCi::MethodResult::SUCCESS);
@@ -83,7 +83,7 @@ public:
     kj::Promise<void> run(RunContext context) override {
         std::string jobName = context.getParams().getJobName();
         LLOG(INFO, "RPC run", jobName);
-        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()));
+        std::shared_ptr<Run> run = laminar.queueJob(jobName, params(context.getParams().getParams()), context.getParams().getFrontOfQueue());
         if(run) {
             return run->whenFinished().then([context,run](RunState state) mutable {
                 context.getResults().setResult(fromRunState(state));

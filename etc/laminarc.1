@@ -27,6 +27,9 @@ begin execution.
 adds job(s) (with optional parameters) to the queue and returns when the jobs
 complete execution. The exit code will be non-zero if any of the runs does
 not complete successfully.
+.It \t
+\fB--next\fR may be passed to \fBqueue\fR, \fBstart\fR or \fBrun\fR in order
+to place the job at the front of the queue instead of at the end.
 .It Sy set
 sets one or more parameters to be exported as environment variables in subsequent
 scripts for the run identified by the $JOB and $RUN environment variables.

@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2021 Oliver Giles
+/// Copyright 2015-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -87,12 +87,14 @@ static void printTriggerLink(const char* job, uint run) {
 
 static void usage(std::ostream& out) {
     out << "laminarc version " << laminar_version() << "\n";
-    out << "Usage: laminarc [-h|--help] COMMAND [PARAMETERS...]]\n";
+    out << "Usage: laminarc [-h|--help] COMMAND\n";
     out << "  -h|--help       show this help message\n";
     out << "where COMMAND is:\n";
     out << "  queue JOB_LIST...     queues one or more jobs for execution and returns immediately.\n";
     out << "  start JOB_LIST...     queues one or more jobs for execution and blocks until it starts.\n";
     out << "  run JOB_LIST...       queues one or more jobs for execution and blocks until it finishes.\n";
+    out << "                        JOB_LIST may be prepended with --next, in this case the job will\n";
+    out << "                        be pushed to the front of the queue instead of the end.\n";
     out << "  set PARAMETER_LIST... sets the given parameters as environment variables in the currently\n";
     out << "                        running job. Fails if run outside of a job context.\n";
     out << "  abort NAME NUMBER     aborts the run identified by NAME and NUMBER.\n";
@@ -132,16 +134,25 @@ int main(int argc, char** argv) {
 
     auto& waitScope = client.getWaitScope();
 
-    if(strcmp(argv[1], "queue") == 0) {
-        if(argc < 3) {
-            fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
+    int jobNameIndex = 2;
+    bool frontOfQueue = false;
+
+    if(strcmp(argv[1], "queue") == 0 || strcmp(argv[1], "start") == 0 || strcmp(argv[1], "run") == 0) {
+        if(argc < 3 || (strcmp(argv[2], "--next") == 0 && argc < 4)) {
+            fprintf(stderr, "Usage %s %s JOB_LIST...\n", argv[0], argv[1]);
             return EXIT_BAD_ARGUMENT;
         }
-        int jobNameIndex = 2;
-        // make a request for each job specified on the commandline
+        if(strcmp(argv[2], "--next") == 0) {
+            frontOfQueue = true;
+            jobNameIndex++;
+        }
+    }
+
+    if(strcmp(argv[1], "queue") == 0) {
         do {
             auto req = laminar.queueRequest();
             req.setJobName(argv[jobNameIndex]);
+            req.setFrontOfQueue(frontOfQueue);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
             ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::QueueResults> resp){
                 if(resp.getResult() != LaminarCi::MethodResult::SUCCESS) {
@@ -153,16 +164,10 @@ int main(int argc, char** argv) {
             jobNameIndex += n + 1;
         } while(jobNameIndex < argc);
     } else if(strcmp(argv[1], "start") == 0) {
-        if(argc < 3) {
-            fprintf(stderr, "Usage %s queue <jobName>\n", argv[0]);
-            return EXIT_BAD_ARGUMENT;
-        }
-        kj::Vector<capnp::RemotePromise<LaminarCi::StartResults>> promises;
-        int jobNameIndex = 2;
-        // make a request for each job specified on the commandline
         do {
             auto req = laminar.startRequest();
             req.setJobName(argv[jobNameIndex]);
+            req.setFrontOfQueue(frontOfQueue);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
             ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::StartResults> resp){
                 if(resp.getResult() != LaminarCi::MethodResult::SUCCESS) {
@@ -174,21 +179,16 @@ int main(int argc, char** argv) {
             jobNameIndex += n + 1;
         } while(jobNameIndex < argc);
     } else if(strcmp(argv[1], "run") == 0) {
-        if(argc < 3) {
-            fprintf(stderr, "Usage %s run <jobName>\n", argv[0]);
-            return EXIT_BAD_ARGUMENT;
-        }
-        int jobNameIndex = 2;
-        // make a request for each job specified on the commandline
         do {
             auto req = laminar.runRequest();
             req.setJobName(argv[jobNameIndex]);
+            req.setFrontOfQueue(frontOfQueue);
             int n = setParams(argc - jobNameIndex - 1, &argv[jobNameIndex + 1], req);
             ts.add(req.send().then([&ret,argv,jobNameIndex](capnp::Response<LaminarCi::RunResults> resp){
                 if(resp.getResult() == LaminarCi::JobResult::UNKNOWN)
                     fprintf(stderr, "Failed to start job '%s'\n", argv[2]);
-		else
-		    printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
+                else
+                    printTriggerLink(argv[jobNameIndex], resp.getBuildNum());
                 if(resp.getResult() != LaminarCi::JobResult::SUCCESS)
                     ret = EXIT_RUN_FAILED;
             }));

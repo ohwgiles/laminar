@@ -1,5 +1,5 @@
 ///
-/// Copyright 2019 Oliver Giles
+/// Copyright 2019-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -161,4 +161,28 @@ TEST_F(LaminarFixture, JobDescription) {
     auto data = json["data"].GetObject();
     ASSERT_TRUE(data.HasMember("description"));
     EXPECT_STREQ("bar", data["description"].GetString());
+}
+
+TEST_F(LaminarFixture, QueueFront) {
+    setNumExecutors(0);
+    defineJob("foo", "true");
+    defineJob("bar", "true");
+    auto es = eventSource("/");
+    auto req1 = client().queueRequest();
+    req1.setJobName("foo");
+    auto res1 = req1.send();
+    auto req2 = client().queueRequest();
+    req2.setFrontOfQueue(true);
+    req2.setJobName("bar");
+    auto res2 = req2.send();
+    ioContext->waitScope.poll();
+    setNumExecutors(2);
+    ioContext->waitScope.poll();
+    ASSERT_EQ(5, es->messages().size());
+    auto started1 = es->messages().at(3).GetObject();
+    EXPECT_STREQ("job_started", started1["type"].GetString());
+    EXPECT_STREQ("bar", started1["data"]["name"].GetString());
+    auto started2 = es->messages().at(4).GetObject();
+    EXPECT_STREQ("job_started", started2["type"].GetString());
+    EXPECT_STREQ("foo", started2["data"]["name"].GetString());
 }

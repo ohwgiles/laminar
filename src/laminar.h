@@ -1,5 +1,5 @@
 ///
-/// Copyright 2015-2020 Oliver Giles
+/// Copyright 2015-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -52,7 +52,7 @@ public:
 
     // Queues a job, returns immediately. Return value will be nullptr if
     // the supplied name is not a known job.
-    std::shared_ptr<Run> queueJob(std::string name, ParamMap params = ParamMap());
+    std::shared_ptr<Run> queueJob(std::string name, ParamMap params = ParamMap(), bool frontOfQueue = false);
 
     // Return the latest known number of the named job
     uint latestRun(std::string job);
