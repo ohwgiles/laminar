@@ -1,5 +1,5 @@
 ///
-/// Copyright 2019-2020 Oliver Giles
+/// Copyright 2019-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -33,20 +33,26 @@
 class LaminarFixture : public ::testing::Test {
 public:
     LaminarFixture() {
-        bind_rpc = std::string("unix:/") + tmp.path.toString(true).cStr() + "/rpc.sock";
-        bind_http = std::string("unix:/") + tmp.path.toString(true).cStr() + "/http.sock";
         home = tmp.path.toString(true).cStr();
-        tmp.fs->openSubdir(kj::Path{"cfg", "jobs"}, kj::WriteMode::CREATE | kj::WriteMode::CREATE_PARENT);
+        bind_rpc = std::string("unix:/") + home + "/rpc.sock";
+        bind_http = std::string("unix:/") + home + "/http.sock";
         settings.home = home.c_str();
         settings.bind_rpc = bind_rpc.c_str();
         settings.bind_http = bind_http.c_str();
         settings.archive_url = "/test-archive/";
+    }
+    ~LaminarFixture() noexcept(true) {}
+
+    void SetUp() override {
+        tmp.init();
         server = new Server(*ioContext);
         laminar = new Laminar(*server, settings);
     }
-    ~LaminarFixture() noexcept(true) {
+
+    void TearDown() override {
         delete server;
         delete laminar;
+        tmp.clean();
     }
 
     kj::Own<EventSource> eventSource(const char* path) {

@@ -1,5 +1,5 @@
 ///
-/// Copyright 2018-2020 Oliver Giles
+/// Copyright 2018-2022 Oliver Giles
 ///
 /// This file is part of Laminar
 ///
@@ -28,12 +28,24 @@ class TempDir {
 public:
     TempDir() :
         path(mkdtemp()),
-        fs(kj::newDiskFilesystem()->getRoot().openSubdir(path, kj::WriteMode::CREATE|kj::WriteMode::MODIFY))
+        fs(kj::newDiskFilesystem()->getRoot().openSubdir(path, kj::WriteMode::MODIFY))
     {
     }
     ~TempDir() noexcept {
         kj::newDiskFilesystem()->getRoot().remove(path);
     }
+    void init() {
+        // set up empty directory structure
+        fs->openSubdir(kj::Path{"cfg"}, kj::WriteMode::CREATE);
+        fs->openSubdir(kj::Path{"cfg", "jobs"}, kj::WriteMode::CREATE);
+    }
+    void clean() {
+        // rm -rf in config folder
+        for(kj::StringPtr name : fs->listNames()) {
+            fs->remove(kj::Path{name});
+        }
+    }
+
     kj::Path path;
     kj::Own<const kj::Directory> fs;
 private:
