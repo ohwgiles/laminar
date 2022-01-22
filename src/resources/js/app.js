@@ -667,14 +667,14 @@ const Run = templateId => {
         // a callback interface for handling unknown sequences.
         // Also, update the DOM directly rather than using a binding through
         // Vue, the performance is noticeably better with large logs.
-        target.innerHTML += ansi_up.ansi_to_html(
+        target.insertAdjacentHTML('beforeend', ansi_up.ansi_to_html(
           logToRender.replace(/\033\[\{([^:]+):(\d+)\033\\/g, (m, $1, $2) =>
             '~~~~LAMINAR_RUN~'+$1+':'+$2+'~'
           )
         ).replace(/~~~~LAMINAR_RUN~([^:]+):(\d+)~/g, (m, $1, $2) =>
           '<a href="jobs/'+$1+'" onclick="return LaminarApp.navigate(this.href);">'+$1+'</a>:'+
           '<a href="jobs/'+$1+'/'+$2+'" onclick="return LaminarApp.navigate(this.href);">#'+$2+'</a>'
-        );
+        ));
         logToRender = '';
         if (logComplete) {
           // output finished
