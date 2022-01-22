@@ -655,6 +655,7 @@ const Run = templateId => {
       let logToRender = '';
       let logComplete = false;
       let tid = null;
+      let lastUiUpdate = 0;
 
       function updateUI() {
         // output may contain private ANSI CSI escape sequence to point to
@@ -679,6 +680,9 @@ const Run = templateId => {
           // output finished
           state.logComplete = true;
         }
+
+        lastUiUpdate = Date.now();
+        tid = null;
       }
 
       return function pump() {
@@ -687,16 +691,22 @@ const Run = templateId => {
             // do not set state.logComplete directly, because rendering
             // may take some time, and we don't want the progress indicator
             // to disappear before rendering is complete. Instead, delay
-            // it until after the log has been added to the DOM
+            // it until after the entire log has been rendered
             logComplete = true;
+            // if no render update is pending, schedule one immediately
+            // (do not use the delayed buffering mechanism from below), so
+            // that for the common case of short logs, the loading spinner
+            // disappears immediately as the log is rendered
+            if(tid === null)
+              setTimeout(updateUI, 0);
             return;
           }
-          logToRender += utf8decoder.decode(value);
           // sometimes logs can be very large, and we are calling pump()
           // furiously to get all the data to the client. To prevent straining
           // the client renderer, buffer the data and delay the UI updates.
-          clearTimeout(tid);
-          tid = setTimeout(updateUI, 125);
+          logToRender += utf8decoder.decode(value);
+          if(tid === null)
+            tid = setTimeout(updateUI, Math.max(500 - (Date.now() - lastUiUpdate), 0));
           return pump();
         });
       }();
