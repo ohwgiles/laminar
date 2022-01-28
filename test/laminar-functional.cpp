@@ -178,7 +178,7 @@ TEST_F(LaminarFixture, QueueFront) {
     ioContext->waitScope.poll();
     setNumExecutors(2);
     ioContext->waitScope.poll();
-    ASSERT_EQ(5, es->messages().size());
+    ASSERT_GE(es->messages().size(), 5);
     auto started1 = es->messages().at(3).GetObject();
     EXPECT_STREQ("job_started", started1["type"].GetString());
     EXPECT_STREQ("bar", started1["data"]["name"].GetString());
