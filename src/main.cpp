@@ -26,6 +26,7 @@
 #include <kj/async-unix.h>
 #include <kj/filesystem.h>
 #include <signal.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -51,6 +52,13 @@ static void usage(std::ostream& out) {
     out << "Usage:\n";
     out << "  -h|--help       show this help message\n";
     out << "  -v              enable verbose output\n";
+}
+
+static void on_sighup(int)
+{
+	constexpr const char msg[] = "Laminar received and ignored SIGHUP\n";
+	// write(2) is safe to call inside signal handler.
+	write(STDERR_FILENO, msg, sizeof(msg) - 1);
 }
 
 int main(int argc, char** argv) {
@@ -92,6 +100,7 @@ int main(int argc, char** argv) {
 
     signal(SIGINT, &laminar_quit);
     signal(SIGTERM, &laminar_quit);
+    signal(SIGHUP, &on_sighup);
 
     printf("laminard version %s started\n", laminar_version());
 
