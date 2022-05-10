@@ -29,7 +29,9 @@
 #include <signal.h>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
+#if !defined(__FreeBSD__)
 #include <sys/signalfd.h>
+#endif
 #include <sys/stat.h>
 
 // Size of buffer used to read from file descriptors. Should be
