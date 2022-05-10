@@ -25,6 +25,10 @@
 #include <unistd.h>
 #include <signal.h>
 
+#if defined(__FreeBSD__)
+#include <sys/wait.h>
+#endif
+
 // short syntax helper for kj::Path
 template<typename T>
 inline kj::Path operator/(const kj::Path& p, const T& ext) {
