@@ -21,7 +21,9 @@
 #include <unistd.h>
 #include <queue>
 #include <dirent.h>
+#if !defined(__FreeBSD__)
 #include <sys/prctl.h>
+#endif
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <kj/async-io.h>
@@ -313,12 +315,14 @@ int leader_main(void) {
     // reap orphaned child processes. Stick with the more fundamental onSignal.
     kj::UnixEventPort::captureSignal(SIGCHLD);
 
+#if !defined(__FreeBSD__)
     // Becoming a subreaper means any descendent process whose parent process disappears
     // will be reparented to this one instead of init (or higher layer subreaper).
     // We do this so that the run will wait until all descedents exit before executing
     // the next step.
     prctl(PR_SET_CHILD_SUBREAPER, 1, NULL, NULL, NULL);
-
+#endif
+    
     // Become the leader of a new process group. This is so that all child processes
     // will also get a kill signal when the run is aborted
     setpgid(0, 0);
