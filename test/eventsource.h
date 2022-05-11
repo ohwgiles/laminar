@@ -24,6 +24,12 @@
 #include <rapidjson/document.h>
 #include <vector>
 
+#if defined(__FreeBSD__)
+#include <unistd.h>
+typedef u_long ulong;
+using namespace std;
+#endif
+
 class EventSource {
 public:
     EventSource(kj::AsyncIoContext& ctx, const char* httpConnectAddr, const char* path) :
