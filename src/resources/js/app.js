@@ -543,7 +543,7 @@ const All = templateId => {
         if (expr)
           ret = state.jobs.filter(job => (new RegExp(expr)).test(job.name));
         else
-          ret = state.jobs;
+          ret = [...state.jobs];
         // sort failed before success, newest first
         ret.sort((a,b) => a.result == b.result ? a.started - b.started : 2*(b.result == 'success')-1);
         return ret;
