@@ -482,6 +482,7 @@ const All = templateId => {
         state.jobsRunning = msg.running;
         // mix running and completed jobs
         msg.running.forEach(job => {
+          job.result = 'running';
           const idx = state.jobs.findIndex(j => j.name === job.name);
           if (idx > -1)
             state.jobs[idx] = job;
