@@ -487,7 +487,7 @@ const All = templateId => {
             state.jobs[idx] = job;
           else {
             // special case: first run of a job.
-            state.jobs.unshift(j);
+            state.jobs.unshift(job);
             state.jobs.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
           }
         });
