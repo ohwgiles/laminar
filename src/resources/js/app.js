@@ -159,20 +159,26 @@ const Charts = (() => {
           datasets: [{
             label: 'Failed Builds',
             backgroundColor: "#883d3d",
-            data: data.map(e => e.failed || 0)
+            data: data.map(e => e.failed || 0),
+            fill: true,
           },{
             label: 'Successful Builds',
             backgroundColor: "#74af77",
-            data: data.map(e => e.success || 0)
+            data: data.map(e => e.success || 0),
+            fill: true,
           }]
         },
         options:{
-          title: { display: true, text: 'Runs per day' },
-          tooltips:{callbacks:{title: (tip, data) => dayNames[tip[0].index].long}},
-          scales:{yAxes:[{
-            ticks:{userCallback: (label, index, labels) => Number.isInteger(label) ? label: null},
-            stacked: true
-          }]}
+          plugins: {
+            title: { display: true, text: 'Runs per day' },
+            tooltip:{callbacks:{title: (tip) => dayNames[tip[0].dataIndex].long}},
+          },
+          scales: {
+            y: {
+              ticks:{callback: (label, index, labels) => Number.isInteger(label) ? label: null},
+              stacked: true
+            },
+          },
         }
       });
       c.jobCompleted = success => {
@@ -183,7 +189,7 @@ const Charts = (() => {
     },
     createRunsPerJobChart: (id, data) => {
       const c = new Chart(document.getElementById("chartBpj"), {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
           labels: Object.keys(data),
           datasets: [{
@@ -193,9 +199,16 @@ const Charts = (() => {
           }]
         },
         options:{
-          title: { display: true, text: 'Runs per job' },
+          indexAxis: 'y',
+          plugins: {
+            title: { display: true, text: 'Runs per job' },
+          },
           hover: { mode: null },
-          scales:{xAxes:[{ticks:{userCallback: (label, index, labels)=> Number.isInteger(label) ? label: null}}]}
+          scales: {
+            x: {
+              ticks:{callback: (label, index, labels)=> Number.isInteger(label) ? label: null}
+            }
+          }
         }
       });
       c.jobCompleted = name => {
@@ -216,7 +229,7 @@ const Charts = (() => {
     createTimePerJobChart: (id, data, completedCounts) => {
       const scale = timeScale(Math.max(...Object.values(data)));
       const c = new Chart(document.getElementById(id), {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
           labels: Object.keys(data),
           datasets: [{
@@ -226,18 +239,23 @@ const Charts = (() => {
           }]
         },
         options:{
-          title: { display: true, text: 'Mean run time this week' },
+          indexAxis: 'y',
+          plugins: {
+            title: { display: true, text: 'Mean run time this week' },
+            tooltip:{callbacks:{
+              label: (tip) => tip.dataset.label + ': ' + tip.raw.toFixed(2) + ' ' + scale.label.toLowerCase()
+            }}
+          },
           hover: { mode: null },
-          scales:{xAxes:[{
-            ticks:{userCallback: scale.ticks},
-            scaleLabel: {
-              display: true,
-              labelString: scale.label
+          scales: {
+            x:{
+              ticks: {callback: scale.ticks},
+              title: {
+                display: true,
+                text: scale.label
+              }
             }
-          }]},
-          tooltips:{callbacks:{
-            label: (tip, data) => data.datasets[tip.datasetIndex].label + ': ' + tip.xLabel.toFixed(2) + ' ' + scale.label.toLowerCase()
-          }}
+          },
         }
       });
       c.jobCompleted = (name, time) => {
@@ -270,21 +288,21 @@ const Charts = (() => {
           datasets: data.map(e => dataValue(e.name, e.durations))
         },
         options:{
-          title: { display: true, text: 'Run time changes' },
-          legend:{ display: true, position: 'bottom' },
-          scales:{
-            xAxes:[{ticks:{display: false}}],
-            yAxes:[{
-              ticks:{userCallback: scale.ticks},
-              scaleLabel: {
-                display: true,
-                labelString: scale.label
-              }
-            }]
+          plugins: {
+            legend: { display: true, position: 'bottom' },
+            title: { display: true, text: 'Run time changes' },
+            tooltip: { enabled: false },
           },
-          tooltips:{
-            enabled:false
-          }
+          scales:{
+            x: {ticks: {display: false}},
+            y: {
+              ticks: {callback: scale.ticks},
+              title: {
+                display: true,
+                text: scale.label
+              }
+            }
+          },
         }
       });
       c.jobCompleted = (name, time) => {
@@ -312,45 +330,42 @@ const Charts = (() => {
           datasets: [{
             label: 'Average',
             type: 'line',
-            data: [{x:0, y:avg * scale.factor}, {x:1, y:avg * scale.factor}],
+            data: Array(jobs.length).fill(avg*scale.factor),
             borderColor: '#7483af',
             backgroundColor: 'transparent',
-            xAxisID: 'avg',
             pointRadius: 0,
             pointHitRadius: 0,
             pointHoverRadius: 0,
           },{
             label: 'Build time',
             backgroundColor: jobs.map(e => e.result == 'success' ? '#74af77': '#883d3d').reverse(),
+            barPercentage: 1.0,
+            categoryPercentage: 0.95,
             data: jobs.map(e => (e.completed - e.started) * scale.factor).reverse()
           }]
         },
         options: {
-          title: { display: true, text: 'Build time' },
+          plugins: {
+            title: { display: true, text: 'Build time' },
+            tooltip: {
+              callbacks:{
+                label: (tip) => scale.ticks(tip.raw) + ' ' + scale.label.toLowerCase()
+              }
+            }
+          },
           hover: { mode: null },
           scales:{
-            xAxes:[{
-              categoryPercentage: 0.95,
-              barPercentage: 1.0
-            },{
-              id: 'avg',
-              type: 'linear',
-              ticks: {
-                display: false
-              },
-              gridLines: {
+            x: {
+              grid: {
                 display: false,
                 drawBorder: false
               }
-            }],
-            yAxes:[{
-              ticks:{userCallback: scale.ticks},
-              scaleLabel:{display: true, labelString: scale.label}
-            }]
+            },
+            y: {
+              ticks: {callback: scale.ticks},
+              title: {display: true, text: scale.label}
+            }
           },
-          tooltips:{callbacks:{
-            label: (tip, data) => scale.ticks(tip.yLabel) + ' ' + scale.label.toLowerCase()
-          }}
         }
       });
       c.jobCompleted = (num, result, time) => {
@@ -374,13 +389,11 @@ const Charts = (() => {
 })();
 
 // For all charts, set miniumum Y to 0
-Chart.scaleService.updateScaleDefaults('linear', {
-    ticks: { suggestedMin: 0 }
-});
+Chart.defaults.scales.linear = { ticks: { suggestedMin: 0 } };
 // Don't display legend by default
-Chart.defaults.global.legend.display = false;
+Chart.defaults.plugins.legend.display = false;
 // Disable tooltip hover animations
-Chart.defaults.global.hover.animationDuration = 0;
+Chart.defaults.plugins.tooltip.animation = false;
 
 // Component for the / endpoint
 const Home = templateId => {
