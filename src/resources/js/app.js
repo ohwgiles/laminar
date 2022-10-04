@@ -129,7 +129,8 @@ const Charts = (() => {
           }]
         },
         options: {
-          hover: { mode: null }
+          hover: { mode: null },
+          aspectRatio: 2
         }
       });
       c.executorBusyChanged = busy => {
@@ -161,11 +162,13 @@ const Charts = (() => {
             backgroundColor: "#883d3d",
             data: data.map(e => e.failed || 0),
             fill: true,
+            tension: 0.35,
           },{
             label: 'Successful Builds',
             backgroundColor: "#74af77",
             data: data.map(e => e.success || 0),
             fill: true,
+            tension: 0.35,
           }]
         },
         options:{
@@ -279,7 +282,8 @@ const Charts = (() => {
         label: name,
         data: durations.map(x => x * scale.factor),
         borderColor: 'hsl('+(name.hashCode() % 360)+', 27%, 57%)',
-        backgroundColor: 'transparent'
+        backgroundColor: 'transparent',
+        tension: 0.35,
       });
       const c = new Chart(document.getElementById(id), {
         type: 'line',
@@ -389,7 +393,7 @@ const Charts = (() => {
 })();
 
 // For all charts, set miniumum Y to 0
-Chart.defaults.scales.linear = { ticks: { suggestedMin: 0 } };
+Chart.defaults.scales.linear.suggestedMin = 0;
 // Don't display legend by default
 Chart.defaults.plugins.legend.display = false;
 // Disable tooltip hover animations
