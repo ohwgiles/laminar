@@ -332,15 +332,6 @@ const Charts = (() => {
         data: {
           labels: jobs.map(e => '#' + e.number).reverse(),
           datasets: [{
-            label: 'Average',
-            type: 'line',
-            data: Array(jobs.length).fill(avg*scale.factor),
-            borderColor: '#7483af',
-            backgroundColor: 'transparent',
-            pointRadius: 0,
-            pointHitRadius: 0,
-            pointHoverRadius: 0,
-          },{
             label: 'Build time',
             backgroundColor: jobs.map(e => e.result == 'success' ? '#74af77': '#883d3d').reverse(),
             barPercentage: 1.0,
@@ -366,25 +357,40 @@ const Charts = (() => {
               }
             },
             y: {
-              ticks: {callback: scale.ticks},
+              suggestedMax: avg * scale.factor,
+              ticks: {callback: scale.ticks },
               title: {display: true, text: scale.label}
             }
           },
-        }
+        },
+        plugins: [{
+          afterDraw: (chart, args, options) => {
+            const {ctx, avg, chartArea, scales:{y:yaxis}} = chart;
+            const y = chartArea.top + yaxis.height - avg * scale.factor * yaxis.height / yaxis.end;
+            ctx.save();
+            ctx.beginPath();
+            ctx.translate(chartArea.left, y);
+            ctx.moveTo(0,0);
+            ctx.lineTo(chartArea.width, 0);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#7483af';
+            ctx.stroke();
+            ctx.restore();
+          }
+        }]
       });
+      c.avg = avg;
       c.jobCompleted = (num, result, time) => {
-        let avg = c.data.datasets[0].data[0].y / scale.factor;
-        avg = ((avg * (num - 1)) + time) / num;
-        c.data.datasets[0].data[0].y = avg * scale.factor;
-        c.data.datasets[0].data[1].y = avg * scale.factor;
-        if(c.data.datasets[1].data.length == 20) {
+        c.avg = ((c.avg * (num - 1)) + time) / num;
+        c.options.scales.y.suggestedMax = avg * scale.factor;
+        if(c.data.datasets[0].data.length == 20) {
           c.data.labels.shift();
-          c.data.datasets[1].data.shift();
-          c.data.datasets[1].backgroundColor.shift();
+          c.data.datasets[0].data.shift();
+          c.data.datasets[0].backgroundColor.shift();
         }
         c.data.labels.push('#' + num);
-        c.data.datasets[1].data.push(time * scale.factor);
-        c.data.datasets[1].backgroundColor.push(result == 'success' ? '#74af77': '#883d3d');
+        c.data.datasets[0].data.push(time * scale.factor);
+        c.data.datasets[0].backgroundColor.push(result == 'success' ? '#74af77': '#883d3d');
         c.update();
       };
       return c;
