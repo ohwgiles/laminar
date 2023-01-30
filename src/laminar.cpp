@@ -95,11 +95,31 @@ Laminar::Laminar(Server &server, Settings settings) :
     db = new Database((homePath/"laminar.sqlite").toString(true).cStr());
     // Prepare database for first use
     // TODO: error handling
-    db->exec("CREATE TABLE IF NOT EXISTS builds("
-             "name TEXT, number INT UNSIGNED, node TEXT, queuedAt INT, "
-             "startedAt INT, completedAt INT, result INT, output TEXT, "
-             "outputLen INT, parentJob TEXT, parentBuild INT, reason TEXT, "
-             "PRIMARY KEY (name, number))");
+    const char *create_table_stmt =
+        "CREATE TABLE IF NOT EXISTS builds("
+        "name TEXT, number INT UNSIGNED, node TEXT, queuedAt INT, "
+        "startedAt INT, completedAt INT, result INT, output TEXT, "
+        "outputLen INT, parentJob TEXT, parentBuild INT, reason TEXT, "
+        "PRIMARY KEY (name, number DESC))";
+    db->exec(create_table_stmt);
+
+    // Migrate from (name, number) primary key to (name, number DESC).
+    // SQLite does not allow to alter primary key of existing table, so
+    // we have to create a new table.
+    db->stmt("SELECT sql LIKE '%, PRIMARY KEY (name, number))' "
+             "FROM sqlite_master WHERE type = 'table' AND name = 'builds'")
+    .fetch<int>([&](int has_old_index) {
+        if (has_old_index) {
+            LLOG(INFO, "Migrating table to the new primary key");
+            db->exec("BEGIN TRANSACTION");
+            db->exec("ALTER TABLE builds RENAME TO builds_old");
+            db->exec(create_table_stmt);
+            db->exec("INSERT INTO builds SELECT * FROM builds_old");
+            db->exec("DROP TABLE builds_old");
+            db->exec("COMMIT");
+        }
+    });
+
     db->exec("CREATE INDEX IF NOT EXISTS idx_completion_time ON builds("
              "completedAt DESC)");
 
@@ -338,9 +358,8 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.set("description", desc == jobDescriptions.end() ? "" : desc->second);
     } else if(scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
-        db->stmt("SELECT name,number,startedAt,completedAt,result,reason FROM builds b "
-                 "JOIN (SELECT name n,MAX(number) latest FROM builds WHERE result IS NOT NULL GROUP BY n) q "
-                 "ON b.name = q.n AND b.number = latest")
+        db->stmt("SELECT name, number, startedAt, completedAt, result, reason "
+                 "FROM builds GROUP BY name HAVING number = MAX(number)")
         .fetch<str,uint,time_t,time_t,int,str>([&](str name,uint number, time_t started, time_t completed, int result, str reason){
             j.StartObject();
             j.set("name", name);
