@@ -158,7 +158,7 @@
  <template id="run"><div style="display: grid; grid-template-rows: auto 1fr">
   <div style="padding: 15px">
    <div style="display: grid; grid-template-columns: auto 25px auto auto 1fr 400px; gap: 5px; align-items: center">
-    <h2 style="white-space: nowrap"><span v-html="runIcon(job.result)"></span> {{route.params.name}} #{{route.params.number}}</h2>
+    <h2 style="white-space: nowrap"><span v-html="runIcon(job.result)"></span> <router-link :to="'jobs/'+route.params.name">{{route.params.name}}</router-link> #{{route.params.number}}</h2>
     <span></span>
     <router-link :disabled="route.params.number == 1" :to="'jobs/'+route.params.name+'/'+(route.params.number-1)" tag="button">&laquo;</router-link>
     <router-link :disabled="route.params.number == latestNum" :to="'jobs/'+route.params.name+'/'+(parseInt(route.params.number)+1)" tag="button">&raquo;</router-link>
