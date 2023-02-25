@@ -7,7 +7,7 @@ Documentation=https://laminar.ohwg.net/docs.html
 [Service]
 User=laminar
 EnvironmentFile=-/etc/laminar.conf
-ExecStart=@CMAKE_INSTALL_PREFIX@/sbin/laminard
+ExecStart=@CMAKE_INSTALL_PREFIX@/sbin/laminard -v
 
 [Install]
 WantedBy=multi-user.target
