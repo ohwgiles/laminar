@@ -131,9 +131,16 @@ kj::Promise<void> Http::cleanupPeers(kj::Timer& timer)
 {
     return timer.afterDelay(15 * kj::SECONDS).then([&]{
         for(EventPeer* p : eventPeers) {
-            // an empty SSE message is a colon followed by two newlines
-            p->pendingOutput.push_back(":\n\n");
-            p->fulfiller->fulfill();
+            // Even single threaded, if load causes this timeout to be serviced
+            // before writeEvents has created a fulfiller, or if an exception
+            // caused the destruction of the promise but attach(peer) hasn't yet
+            // removed it from the eventPeers list, we will see a null fulfiller
+            // here
+            if(p->fulfiller) {
+                // an empty SSE message is a colon followed by two newlines
+                p->pendingOutput.push_back(":\n\n");
+                p->fulfiller->fulfill();
+            }
         }
         return cleanupPeers(timer);
     }).eagerlyEvaluate(nullptr);
