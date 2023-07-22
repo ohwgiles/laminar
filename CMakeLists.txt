@@ -16,8 +16,8 @@
 ### You should have received a copy of the GNU General Public License
 ### along with Laminar.  If not, see <http://www.gnu.org/licenses/>
 ###
-project(laminar)
 cmake_minimum_required(VERSION 3.6)
+project(laminar)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
