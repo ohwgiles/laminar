@@ -28,9 +28,8 @@
 
 #include <signal.h>
 #include <sys/eventfd.h>
-#include <sys/inotify.h>
-#include <sys/signalfd.h>
 #include <sys/stat.h>
+#include <sys/inotify.h>
 
 // Size of buffer used to read from file descriptors. Should be
 // a multiple of sizeof(struct signalfd_siginfo) == 128

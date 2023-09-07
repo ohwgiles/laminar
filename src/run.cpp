@@ -21,9 +21,15 @@
 #include "conf.h"
 #include "log.h"
 
+#include <sys/wait.h>
 #include <iostream>
 #include <unistd.h>
 #include <signal.h>
+
+#if defined(__FreeBSD__)
+#include <sys/sysctl.h>
+#include <sys/limits.h>
+#endif
 
 // short syntax helper for kj::Path
 template<typename T>
@@ -153,7 +159,20 @@ kj::Promise<RunState> Run::start(RunState lastResult, std::shared_ptr<Context> c
         // main() by calling leader_main()
         char* procName;
         if(asprintf(&procName, "{laminar} %s:%d", name.data(), build) > 0)
+#if defined(__FreeBSD__)
+        {
+            int  sysctl_rq[] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+            size_t self_exe_len = PATH_MAX;
+            char self_exe[PATH_MAX];
+
+            if (sysctl(sysctl_rq, 4, self_exe, &self_exe_len, NULL, 0))
+                _exit(EXIT_FAILURE);
+
+            execl(self_exe, procName, NULL); // does not return
+        }
+#else
             execl("/proc/self/exe", procName, NULL); // does not return
+#endif
         _exit(EXIT_FAILURE);
     }
 
