@@ -21,6 +21,7 @@
 #include <sqlite3.h>
 #include <string.h>
 #include <math.h>
+#include <cstdint>
 
 struct StdevCtx {
     double mean;
