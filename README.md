@@ -16,7 +16,8 @@ On Debian Bullseye, this can be done with:
 
 ```bash
 sudo apt install \
-		 capnproto cmake g++ libboost-dev libcapnp-dev libsqlite3-dev rapidjson-dev zlib1g-dev
+		 capnproto cmake g++ libboost-dev libcapnp-dev \
+     libsqlite3-dev rapidjson-dev zlib1g-dev pkg-config
 ```
 
 Then compile and install laminar with:
