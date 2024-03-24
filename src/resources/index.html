@@ -138,6 +138,8 @@
      <th class="text-center">Started <a class="sort" :class="(sort.field=='started'?sort.order:'')" v-on:click="do_sort('started')">&nbsp;</a></th>
      <th class="text-center">Duration <a class="sort" :class="(sort.field=='duration'?sort.order:'')" v-on:click="do_sort('duration')">&nbsp;</a></th>
      <th class="text-center vp-sm-hide">Reason <a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
+     <th class="text-center vp-sm-hide">Branch <a class="sort" :class="(sort.field=='sourceBranch'?sort.order:'')" v-on:click="do_sort('sourceBranch')">&nbsp;</a></th>
+     <th class="text-center vp-sm-hide">Version <a class="sort" :class="(sort.field=='sourceVersion'?sort.order:'')" v-on:click="do_sort('sourceVersion')">&nbsp;</a></th>
     </tr></thead>
     <tr v-for="job in jobsQueued.concat(jobsRunning).concat(jobsRecent)" track-by="$index">
      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
@@ -145,6 +147,8 @@
      <td class="text-center"><span v-if="job.result!='queued'">{{formatDate(job.started)}}</span></td>
      <td class="text-center"><span v-if="job.result!='queued'">{{formatDuration(job.started, job.completed)}}</span></td>
      <td class="text-center vp-sm-hide">{{job.reason}}</td>
+     <td class="text-center vp-sm-hide">{{job.sourceBranch}}</td>
+     <td class="text-center vp-sm-hide">{{job.sourceVersion}}</td>
     </tr>
    </table>
    <div style="float: right; margin: 15px; display: inline-grid; grid-auto-flow: column; gap: 10px; align-items: center">
@@ -176,8 +180,10 @@
      <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
      <dt v-show="job.started">Duration</dt><dd v-show="job.started">{{formatDuration(job.started, job.completed)}}</dd>
     </dl>
-    <dl v-show="job.artifacts.length">
-     <dt>Artifacts</dt>
+    <dl>
+     <dt v-show="job.sourceBranch.length">Branch</dt><dd>{{job.sourceBranch}}</dd>
+     <dt v-show="job.sourceVersion.length">Version</dt><dd>{{job.sourceVersion}}</dd>
+     <dt v-show="job.artifacts.length">Artifacts</dt>
      <dd>
       <ul style="margin-bottom: 0">
        <li v-for="art in job.artifacts"><a :href="art.url" target="_self">{{art.filename}}</a> [{{ art.size | iecFileSize }}]</li>

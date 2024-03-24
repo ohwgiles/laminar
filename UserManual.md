@@ -706,6 +706,17 @@ Note that definitions in these files are not expanded by a shell, so `FOO="bar"`
 
 Finally, variables supplied on the command-line call to `laminarc queue`, `laminarc start` or `laminarc run` will be available. See [parameterized runs](#Parameterized-runs)
 
+## Feedback environment variables
+
+The build scripts can send back environment variables to laminar. Therefore it 
+can create an file "build.env" in the build folder. After the build, the file 
+is parsed.
+
+The following variables are used by laminar:
+
+- `SOURCE_BRANCH` branch that was used in the SCM-checkout (git, svn etc) for building
+- `SOURCE_VERSION` release version of the build
+
 ## laminarc
 
 `laminarc` commands are:

@@ -70,6 +70,10 @@ Run::Run(std::string name, uint num, ParamMap pm, kj::Path&& rootPath) :
                 parentBuild = atoi(it->second.c_str());
             } else if(it->first == "=reason") {
                 reasonMsg = it->second;
+            } else if(it->first == "=sourceBranch") {
+                sourceBranchStr = it->second;
+            } else if(it->first == "=sourceVersion") {
+                sourceVersionStr = it->second;
             } else {
                 LLOG(ERROR, "Unknown internal job parameter", it->first);
             }
@@ -200,6 +204,14 @@ std::string Run::reason() const {
     return reasonMsg;
 }
 
+std::string Run::sourceBranch() const {
+    return sourceBranchStr;
+}
+
+std::string Run::sourceVersion() const {
+    return sourceVersionStr;
+}
+
 bool Run::abort() {
     // if the Maybe is empty, wait() was already called on this process
     KJ_IF_MAYBE(p, pid) {
@@ -207,4 +219,33 @@ bool Run::abort() {
         return true;
     }
     return false;
+}
+
+bool Run::digestBuildEnv(const kj::Directory &fsHome)
+{
+    kj::Path runDir{"run"};
+    std::string runNumStr = std::to_string(build);
+
+    // Maybe set from previous build
+    unsetenv("SOURCE_BRANCH");
+    unsetenv("SOURCE_VERSION");
+    
+    if( ! fsHome.exists( runDir/name/runNumStr/"build.env" ) )
+    {
+        return( false );
+    }
+    
+    setEnvFromFile(rootPath, runDir/name/runNumStr/"build.env");
+    
+    if(getenv("SOURCE_BRANCH"))
+    {
+        sourceBranchStr=getenv("SOURCE_BRANCH");
+    }
+    
+    if(getenv("SOURCE_VERSION"))
+    {
+        sourceVersionStr=getenv("SOURCE_VERSION");
+    }
+    
+    return( true );
 }

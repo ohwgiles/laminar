@@ -61,8 +61,11 @@ public:
 
     // aborts this run
     bool abort();
-
+    
+    bool digestBuildEnv(const kj::Directory &fsHome);
     std::string reason() const;
+    std::string sourceBranch() const;
+    std::string sourceVersion() const;
 
     kj::Promise<void> whenStarted() { return startedFork.addBranch(); }
     kj::Promise<RunState> whenFinished() { return finishedFork.addBranch(); }
@@ -96,6 +99,8 @@ private:
 
     kj::Path rootPath;
     std::string reasonMsg;
+    std::string sourceBranchStr;
+    std::string sourceVersionStr;
 
     kj::PromiseFulfillerPair<void> started;
     kj::ForkedPromise<void> startedFork;

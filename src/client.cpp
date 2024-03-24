@@ -46,8 +46,11 @@ static int setParams(int argc, char** argv, T& request) {
     char* job = getenv("JOB");
     char* num = getenv("RUN");
     char* reason = getenv("LAMINAR_REASON");
+    char* srcBranch = getenv("SOURCE_BRANCH");
+    char* srcVersion = getenv("SOURCE_VERSION");
 
-    auto params = request.initParams(n + (job&&num?2:0) + (reason?1:0));
+    auto params = request.initParams(n + (job&&num?2:0) + (reason?1:0)
+                                     + (srcBranch?1:0) + (srcVersion?1:0) );
 
     for(int i = 0; i < n; ++i) {
         char* name = argv[i];
@@ -67,7 +70,15 @@ static int setParams(int argc, char** argv, T& request) {
     }
     if(reason) {
         params[n].setName("=reason");
-        params[n].setValue(reason);
+        params[n++].setValue(reason);
+    }
+    if(srcBranch) {
+        params[n].setName("=sourceBranch");
+        params[n++].setValue(srcBranch);
+    }
+    if(srcVersion) {
+        params[n].setName("=sourceVersion");
+        params[n++].setValue(srcVersion);
     }
 
     return argsConsumed;
