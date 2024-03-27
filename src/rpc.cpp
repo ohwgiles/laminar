@@ -143,6 +143,19 @@ public:
         return kj::READY_NOW;
     }
 
+    kj::Promise<void> tag(TagContext context) override {
+        std::string jobName = context.getParams().getRun().getJob();
+        uint buildNum = context.getParams().getRun().getBuildNum();
+        std::string metaKey = context.getParams().getMetaKey();
+        std::string metaValue = context.getParams().getMetaValue();
+        LLOG(INFO, "RPC tag", jobName, buildNum, metaKey, metaValue);
+        LaminarCi::MethodResult result = laminar.tag(jobName, buildNum, metaKey, metaValue)
+                ? LaminarCi::MethodResult::SUCCESS
+                : LaminarCi::MethodResult::FAILED;
+        context.getResults().setResult(result);
+        return kj::READY_NOW;
+    }
+
 private:
     // Helper to convert an RPC parameter list to a hash map
     ParamMap params(const capnp::List<LaminarCi::JobParam>::Reader& paramReader) {

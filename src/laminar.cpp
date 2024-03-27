@@ -22,6 +22,7 @@
 #include "log.h"
 #include "http.h"
 #include "rpc.h"
+#include "json.h"
 
 #include <sys/wait.h>
 #include <sys/mman.h>
@@ -34,31 +35,10 @@
 
 #define COMPRESS_LOG_MIN_SIZE 1024
 
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-
 // FNM_EXTMATCH isn't supported under musl
 #if !defined(FNM_EXTMATCH)
 #define FNM_EXTMATCH 0
 #endif
-
-// rapidjson::Writer with a StringBuffer is used a lot in Laminar for
-// preparing JSON messages to send to HTTP clients. A small wrapper
-// class here reduces verbosity later for this common use case.
-class Json : public rapidjson::Writer<rapidjson::StringBuffer> {
-public:
-    Json() : rapidjson::Writer<rapidjson::StringBuffer>(buf) { StartObject(); }
-    template<typename T>
-    Json& set(const char* key, T value) { String(key); Int64(value); return *this; }
-    Json& startObject(const char* key) { String(key); StartObject(); return *this; }
-    Json& startArray(const char* key) { String(key); StartArray(); return *this; }
-    const char* str() { EndObject(); return buf.GetString(); }
-private:
-    rapidjson::StringBuffer buf;
-};
-template<> Json& Json::set(const char* key, double value) { String(key); Double(value); return *this; }
-template<> Json& Json::set(const char* key, const char* value) { String(key); String(value); return *this; }
-template<> Json& Json::set(const char* key, std::string value) { String(key); String(value.c_str()); return *this; }
 
 // short syntax helpers for kj::Path
 template<typename T>
@@ -100,7 +80,7 @@ Laminar::Laminar(Server &server, Settings settings) :
         "name TEXT, number INT UNSIGNED, node TEXT, queuedAt INT, "
         "startedAt INT, completedAt INT, result INT, output TEXT, "
         "outputLen INT, parentJob TEXT, parentBuild INT, reason TEXT, "
-        "PRIMARY KEY (name, number DESC))";
+        "metadata TEXT, PRIMARY KEY (name, number DESC))";
     db->exec(create_table_stmt);
 
     // Migrate from (name, number) primary key to (name, number DESC).
@@ -122,6 +102,18 @@ Laminar::Laminar(Server &server, Settings settings) :
 
     db->exec("CREATE INDEX IF NOT EXISTS idx_completion_time ON builds("
              "completedAt DESC)");
+
+    // Update 'metadata' if not existing;
+    db->stmt(
+        "SELECT COUNT(*) AS CNT FROM pragma_table_info('builds')"
+          " WHERE name='metadata'")
+    .fetch<int>([&](int has_metadata) {
+        if( !has_metadata )
+        {
+            LLOG(WARNING, "Updating database to contain 'metadata'");
+            db->exec( "ALTER TABLE 'builds' ADD COLUMN 'metadata' TEXT");
+        }
+    });
 
     // retrieve the last build numbers
     db->stmt("SELECT name, MAX(number) FROM builds GROUP BY name")
@@ -250,17 +242,21 @@ std::string Laminar::getStatus(MonitorScope scope) {
     j.set("time", time(nullptr));
     j.startObject("data");
     if(scope.type == MonitorScope::RUN) {
-        db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,parentJob,parentBuild,q.lr IS NOT NULL,q.lr FROM builds "
+        db->stmt("SELECT queuedAt,startedAt,completedAt,result,reason,metadata,parentJob,parentBuild,q.lr IS NOT NULL,q.lr FROM builds "
                  "LEFT JOIN (SELECT name n, MAX(number), completedAt-startedAt lr FROM builds WHERE result IS NOT NULL GROUP BY n) q ON q.n = name "
                  "WHERE name = ? AND number = ?")
         .bind(scope.job, scope.num)
-        .fetch<time_t, time_t, time_t, int, std::string, std::string, uint, uint, uint>([&](time_t queued, time_t started, time_t completed, int result, std::string reason, std::string parentJob, uint parentBuild, uint lastRuntimeKnown, uint lastRuntime) {
+        .fetch<time_t, time_t, time_t, int, std::string, std::string, std::string, uint, uint, uint>(
+                     [&](time_t queued, time_t started, time_t completed, int result,
+                              std::string reason, std::string metadata,std::string parentJob,
+                              uint parentBuild, uint lastRuntimeKnown, uint lastRuntime) {
             j.set("queued", queued);
             j.set("started", started);
             if(completed)
               j.set("completed", completed);
             j.set("result", to_string(completed ? RunState(result) : started ? RunState::RUNNING : RunState::QUEUED));
             j.set("reason", reason);
+            j.setJsonObject("metadata", metadata);
             j.startObject("upstream").set("name", parentJob).set("num", parentBuild).EndObject(2);
             if(lastRuntimeKnown)
               j.set("etc", started + lastRuntime);
@@ -287,18 +283,19 @@ std::string Laminar::getStatus(MonitorScope scope) {
             order_by = "(completedAt-startedAt) " + direction + ", number DESC";
         else
             order_by = "number DESC";
-        std::string stmt = "SELECT number,startedAt,completedAt,result,reason FROM builds "
+        std::string stmt = "SELECT number,startedAt,completedAt,result,reason,metadata FROM builds "
                 "WHERE name = ? AND result IS NOT NULL ORDER BY "
                 + order_by + " LIMIT ?,?";
         db->stmt(stmt.c_str())
         .bind(scope.job, scope.page * runsPerPage, runsPerPage)
-        .fetch<uint,time_t,time_t,int,str>([&](uint build,time_t started,time_t completed,int result,str reason){
+        .fetch<uint,time_t,time_t,int,str,str>([&](uint build,time_t started,time_t completed,int result,str reason,str metadata){
             j.StartObject();
             j.set("number", build)
              .set("completed", completed)
              .set("started", started)
              .set("result", to_string(RunState(result)))
              .set("reason", reason)
+             .setJsonObject("metadata", metadata)
              .EndObject();
         });
         j.EndArray();
@@ -323,6 +320,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.set("started", run->startedAt);
             j.set("result", to_string(RunState::RUNNING));
             j.set("reason", run->reason());
+            j.setJsonObject("metadata", run->getMetaDataJsonString());
             j.EndObject();
         }
         j.EndArray();
@@ -333,6 +331,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
                 j.set("number", run->build);
                 j.set("result", to_string(RunState::QUEUED));
                 j.set("reason", run->reason());
+                j.setJsonObject("metadata", run->getMetaDataJsonString());
                 j.EndObject();
             }
         }
@@ -358,9 +357,10 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.set("description", desc == jobDescriptions.end() ? "" : desc->second);
     } else if(scope.type == MonitorScope::ALL) {
         j.startArray("jobs");
-        db->stmt("SELECT name, number, startedAt, completedAt, result, reason "
+        db->stmt("SELECT name, number, startedAt, completedAt, result, reason, metadata "
                  "FROM builds GROUP BY name HAVING number = MAX(number)")
-        .fetch<str,uint,time_t,time_t,int,str>([&](str name,uint number, time_t started, time_t completed, int result, str reason){
+        .fetch<str,uint,time_t,time_t,int,str,str>([&](str name,uint number,
+                  time_t started, time_t completed, int result, str reason, str metadata){
             j.StartObject();
             j.set("name", name);
             j.set("number", number);
@@ -368,6 +368,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
             j.set("started", started);
             j.set("completed", completed);
             j.set("reason", reason);
+            j.setJsonObject("metadata", metadata);
             j.EndObject();
         });
         j.EndArray();
@@ -387,8 +388,9 @@ std::string Laminar::getStatus(MonitorScope scope) {
         j.EndObject();
     } else { // Home page
         j.startArray("recent");
-        db->stmt("SELECT name,number,node,queuedAt,startedAt,completedAt,result,reason FROM builds WHERE completedAt IS NOT NULL ORDER BY completedAt DESC LIMIT 20")
-        .fetch<str,uint,str,time_t,time_t,time_t,int,str>([&](str name,uint build,str context,time_t queued,time_t started,time_t completed,int result,str reason){
+        db->stmt("SELECT name,number,node,queuedAt,startedAt,completedAt,result,reason,metadata"
+                 " FROM builds WHERE completedAt IS NOT NULL ORDER BY completedAt DESC LIMIT 20")
+        .fetch<str,uint,str,time_t,time_t,time_t,int,str,str>([&](str name,uint build,str context,time_t queued,time_t started,time_t completed,int result,str reason,str metadata){
             j.StartObject();
             j.set("name", name)
              .set("number", build)
@@ -398,6 +400,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
              .set("completed", completed)
              .set("result", to_string(RunState(result)))
              .set("reason", reason)
+             .setJsonObject("metadata", metadata)
              .EndObject();
         });
         j.EndArray();
@@ -620,8 +623,9 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params, bool f
     else
         queuedJobs.push_back(run);
 
-    db->stmt("INSERT INTO builds(name,number,queuedAt,parentJob,parentBuild,reason) VALUES(?,?,?,?,?,?)")
-     .bind(run->name, run->build, run->queuedAt, run->parentName, run->parentBuild, run->reason())
+    db->stmt("INSERT INTO builds(name,number,queuedAt,parentJob,parentBuild,reason,metadata) VALUES(?,?,?,?,?,?,?)")
+     .bind(run->name, run->build, run->queuedAt, run->parentName, run->parentBuild,
+                  run->reason(), run->getMetaDataJsonString())
      .exec();
 
     // notify clients
@@ -633,6 +637,7 @@ std::shared_ptr<Run> Laminar::queueJob(std::string name, ParamMap params, bool f
         .set("result", to_string(RunState::QUEUED))
         .set("queueIndex", frontOfQueue ? 0 : (queuedJobs.size() - 1))
         .set("reason", run->reason())
+        .setJsonObject("metadata", run->getMetaDataJsonString())
         .EndObject();
     http->notifyEvent(j.str(), name.c_str());
 
@@ -650,6 +655,18 @@ void Laminar::abortAll() {
     for(std::shared_ptr<Run> run : activeJobs) {
         run->abort();
     }
+}
+
+bool Laminar::tag(std::string job, uint buildNum, std::string key, std::string value)
+{
+   if(Run* run = activeRun(job, buildNum))
+       return run->tag(key, value);
+   else
+   {
+      LLOG(WARNING, "No active run with ", job, buildNum);
+   }
+
+   return true;
 }
 
 bool Laminar::canQueue(const Context& ctx, const Run& run) const {
@@ -722,7 +739,8 @@ bool Laminar::tryStartRun(std::shared_ptr<Run> run, int queueIndex) {
              .set("queued", run->queuedAt)
              .set("started", run->startedAt)
              .set("number", run->build)
-             .set("reason", run->reason());
+             .set("reason", run->reason())
+             .setJsonObject("metadata", run->getMetaDataJsonString());
             db->stmt("SELECT completedAt - startedAt FROM builds WHERE name = ? ORDER BY completedAt DESC LIMIT 1")
              .bind(run->name)
              .fetch<uint>([&](uint etc){
@@ -768,8 +786,8 @@ void Laminar::handleRunFinished(Run * r) {
         }
     }
 
-    db->stmt("UPDATE builds SET completedAt = ?, result = ?, output = ?, outputLen = ? WHERE name = ? AND number = ?")
-     .bind(completedAt, int(r->result), maybeZipped, logsize, r->name, r->build)
+    db->stmt("UPDATE builds SET completedAt = ?, result = ?, output = ?, outputLen = ?, metadata = ? WHERE name = ? AND number = ?")
+     .bind(completedAt, int(r->result), maybeZipped, logsize, r->getMetaDataJsonString(), r->name, r->build)
      .exec();
 
     // notify clients
@@ -782,7 +800,8 @@ void Laminar::handleRunFinished(Run * r) {
             .set("completed", completedAt)
             .set("started", r->startedAt)
             .set("result", to_string(r->result))
-            .set("reason", r->reason());
+            .set("reason", r->reason())
+            .setJsonObject("metadata", r->getMetaDataJsonString());
     j.startArray("artifacts");
     populateArtifacts(j, r->name, r->build);
     j.EndArray();

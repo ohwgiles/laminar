@@ -318,6 +318,7 @@ button:not([disabled]) { cursor: pointer; color: var(--main-fg); }
 #page-run-detail {
   display: grid;
   grid-template-columns: minmax(400px, auto) 1fr;
+  align-items: start;
   gap: 5px;
 }
 @media (max-width: 780px) {

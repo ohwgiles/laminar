@@ -176,13 +176,17 @@
      <dt v-show="runComplete(job)">Completed</dt><dd v-show="job.completed">{{formatDate(job.completed)}}</dd>
      <dt v-show="job.started">Duration</dt><dd v-show="job.started">{{formatDuration(job.started, job.completed)}}</dd>
     </dl>
-    <dl v-show="job.artifacts.length">
-     <dt>Artifacts</dt>
-     <dd>
+    <dl>
+     <dt v-show="job.artifacts.length">Artifacts</dt>
+     <dd v-show="job.artifacts.length">
       <ul style="margin-bottom: 0">
        <li v-for="art in job.artifacts"><a :href="art.url" target="_self">{{art.filename}}</a> [{{ art.size | iecFileSize }}]</li>
       </ul>
      </dd>
+     <template v-show="Object.keys(job.metadata).length" v-for="(value, key) in job.metadata">
+       <dt>{{key}}</dt>
+       <dd>{{value}}</dd>
+     </template>
     </dl>
    </div>
   </div>

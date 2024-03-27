@@ -208,3 +208,20 @@ bool Run::abort() {
     }
     return false;
 }
+
+bool Run::tag(const std::string& key, const std::string& value)
+{
+   LLOG(INFO, "Setting tag ", key, value );
+   metaDataMap[key]=value;
+   return true;
+}
+
+std::string Run::getMetaDataJsonString()
+{
+   Json j;
+   for (const auto& [key, value] : metaDataMap)
+   {
+      j.set(key.c_str(), value);
+   }
+   return( std::string(j.str()) );
+}
