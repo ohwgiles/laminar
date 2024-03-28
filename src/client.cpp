@@ -90,17 +90,19 @@ static void usage(std::ostream& out) {
     out << "Usage: laminarc [-h|--help] COMMAND\n";
     out << "  -h|--help       show this help message\n";
     out << "where COMMAND is:\n";
-    out << "  queue JOB_LIST...     queues one or more jobs for execution and returns immediately.\n";
-    out << "  start JOB_LIST...     queues one or more jobs for execution and blocks until it starts.\n";
-    out << "  run JOB_LIST...       queues one or more jobs for execution and blocks until it finishes.\n";
-    out << "                        JOB_LIST may be prepended with --next, in this case the job will\n";
-    out << "                        be pushed to the front of the queue instead of the end.\n";
-    out << "  set PARAMETER_LIST... sets the given parameters as environment variables in the currently\n";
-    out << "                        running job. Fails if run outside of a job context.\n";
-    out << "  abort NAME NUMBER     aborts the run identified by NAME and NUMBER.\n";
-    out << "  show-jobs             lists all known jobs.\n";
-    out << "  show-queued           lists currently queued jobs.\n";
-    out << "  show-running          lists currently running jobs.\n";
+    out << "  queue JOB_LIST...          queues one or more jobs for execution and returns immediately.\n";
+    out << "  start JOB_LIST...          queues one or more jobs for execution and blocks until it starts.\n";
+    out << "  run JOB_LIST...            queues one or more jobs for execution and blocks until it finishes.\n";
+    out << "                             JOB_LIST may be prepended with --next, in this case the job will\n";
+    out << "                             be pushed to the front of the queue instead of the end.\n";
+    out << "  set PARAMETER_LIST...      sets the given parameters as environment variables in the currently\n";
+    out << "                             running job. Fails if run outside of a job context.\n";
+    out << "  abort NAME NUMBER          aborts the run identified by NAME and NUMBER.\n";
+    out << "  tag NAME NUMBER KEY VALUE  sets an key/value pair in the metadata for an run by NAME and NUMBER.\n";
+    out << "                             This is intended to be used by the build scripts, not the user.\n";
+    out << "  show-jobs                  lists all known jobs.\n";
+    out << "  show-queued                lists currently queued jobs.\n";
+    out << "  show-running               lists currently running jobs.\n";
     out << "JOB_LIST is of the form:\n";
     out << "  [JOB_NAME [PARAMETER_LIST...]]...\n";
     out << "PARAMETER_LIST is of the form:\n";
@@ -244,6 +246,20 @@ int main(int argc, char** argv) {
         for(auto it : running.getResult()) {
             printf("%s:%d\n", it.getJob().cStr(), it.getBuildNum());
         }
+    } else if(strcmp(argv[1], "tag") == 0) {
+        if(argc != 6) {
+            fprintf(stderr, "Usage %s tag <jobName> <jobNumber> <metaKey> <metaValue>\n", argv[0]);
+            return EXIT_BAD_ARGUMENT;
+        }
+        auto req = laminar.tagRequest();
+        req.getRun().setJob(argv[2]);
+        req.getRun().setBuildNum(atoi(argv[3]));
+        req.setMetaKey( argv[4] );
+        req.setMetaValue( argv[5] );
+        ts.add(req.send().then([&ret](capnp::Response<LaminarCi::TagResults> resp){
+            if(resp.getResult() != LaminarCi::MethodResult::SUCCESS)
+                ret = EXIT_OPERATION_FAILED;
+        }));
     } else {
         fprintf(stderr, "Unknown command %s\n", argv[1]);
         return EXIT_BAD_ARGUMENT;

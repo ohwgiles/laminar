@@ -494,6 +494,22 @@ TIMEOUT=120
 
 ---
 
+# Adding metadata to runs
+
+With the `laminarc tag` command the build scripts can augment runs with metadata.
+This can be SCM-oriented information like the used branch or release-version.
+The metadata is a list of key/value pairs.
+The metadata is automatically shown in the run-view of a job in the web UI.
+
+Each call of `laminarc tag` can assign one key/value pair.
+
+Example:
+```
+laminarc tag $JOBNAME $NUMBER Branch "$(git -C $WORKSPACE branch --show-current)"
+```
+
+---
+
 # Contexts
 
 In Laminar, each run of a job is associated with a context. The context defines an integer number of *executors*, which is the amount of runs which the context will accept simultaneously. A context may also provide additional environment variables.

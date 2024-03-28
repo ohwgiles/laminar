@@ -8,7 +8,7 @@ VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM debian:11-slim
-RUN apt-get update && apt-get install -y wget cmake g++ capnproto libcapnp-dev rapidjson-dev libsqlite3-dev libboost-dev zlib1g-dev
+RUN apt-get update && apt-get install -y wget cmake g++ capnproto libcapnp-dev rapidjson-dev libsqlite3-dev libboost-dev zlib1g-dev pkg-config
 EOS
 )
 
@@ -34,6 +34,8 @@ Depends: libcapnp-0.7.0, libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 echo /etc/laminar.conf > laminar/DEBIAN/conffiles
+mkdir -p laminar/etc
+mv laminar/usr/etc/laminar.conf laminar/etc/laminar.conf
 cat <<EOF > laminar/DEBIAN/postinst
 #!/bin/bash
 echo Creating laminar user with home in /var/lib/laminar

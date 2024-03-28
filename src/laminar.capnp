@@ -9,6 +9,7 @@ interface LaminarCi {
     listRunning @4 () -> (result :List(Run));
     listKnown @5 () -> (result :List(Text));
     abort @6 (run :Run) -> (result :MethodResult);
+    tag @7 (run :Run, metaKey :Text, metaValue: Text) -> (result :MethodResult);
 
     struct Run {
         job @0 :Text;

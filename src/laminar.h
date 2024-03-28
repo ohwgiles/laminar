@@ -96,6 +96,9 @@ public:
     // Abort all running jobs
     void abortAll();
 
+    // Store metadata for an run
+    bool tag(std::string job, uint buildNum, std::string key, std::string value);
+
 private:
     bool loadConfiguration();
     void loadCustomizations();

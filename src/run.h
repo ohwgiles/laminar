@@ -19,7 +19,10 @@
 #ifndef LAMINAR_RUN_H_
 #define LAMINAR_RUN_H_
 
+#include "json.h"
+
 #include <string>
+#include <map>
 #include <queue>
 #include <list>
 #include <functional>
@@ -62,6 +65,11 @@ public:
     // aborts this run
     bool abort();
 
+    // store metadata into run
+    bool tag(const std::string& key, const std::string& value);
+    // Return the meta as JSON text
+    std::string getMetaDataJsonString();
+
     std::string reason() const;
 
     kj::Promise<void> whenStarted() { return startedFork.addBranch(); }
@@ -101,6 +109,8 @@ private:
     kj::ForkedPromise<void> startedFork;
     kj::PromiseFulfillerPair<RunState> finished;
     kj::ForkedPromise<RunState> finishedFork;
+
+    std::map<std::string, std::string> metaDataMap;
 };
 
 // All this below is a somewhat overengineered method of keeping track of
