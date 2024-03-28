@@ -1,5 +1,5 @@
 ###
-### Copyright 2015-2021 Oliver Giles
+### Copyright 2015-2024 Oliver Giles
 ###
 ### This file is part of Laminar
 ###
@@ -164,8 +164,8 @@ target_link_libraries(laminard CapnProto::capnp-rpc CapnProto::capnp CapnProto::
                                CapnProto::kj Threads::Threads SQLite::SQLite3 ZLIB::ZLIB)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-pkg_check_modules(INOTIFY REQUIRED libinotify)
-target_link_libraries(laminard ${INOTIFY_LINK_LIBRARIES})
+    pkg_check_modules(INOTIFY REQUIRED libinotify)
+    target_link_libraries(laminard ${INOTIFY_LINK_LIBRARIES})
 endif()
 
 ## Client
@@ -194,16 +194,16 @@ if(BUILD_TESTS)
     target_link_libraries(laminar-tests ${GTEST_LIBRARIES} capnp-rpc capnp kj-http kj-async kj pthread sqlite3 z)
 endif()
 
-set(SYSTEMD_UNITDIR /lib/systemd/system CACHE PATH "Path to systemd unit files")
 set(BASH_COMPLETIONS_DIR /usr/share/bash-completion/completions CACHE PATH "Path to bash completions directory")
 set(ZSH_COMPLETIONS_DIR /usr/share/zsh/site-functions CACHE PATH "Path to zsh completions directory")
 install(TARGETS laminard RUNTIME DESTINATION sbin)
 install(TARGETS laminarc RUNTIME DESTINATION bin)
-install(FILES etc/laminarc-completion.bash DESTINATION ${CMAKE_INSTALL_PREFIX}${BASH_COMPLETIONS_DIR} RENAME laminarc)
-install(FILES etc/laminarc-completion.zsh DESTINATION ${CMAKE_INSTALL_PREFIX}${ZSH_COMPLETIONS_DIR} RENAME _laminarc)
+install(FILES etc/laminar.conf DESTINATION /etc)
+install(FILES etc/laminarc-completion.bash DESTINATION ${BASH_COMPLETIONS_DIR} RENAME laminarc)
+install(FILES etc/laminarc-completion.zsh DESTINATION ${ZSH_COMPLETIONS_DIR} RENAME _laminarc)
 
-if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-    install(FILES etc/laminar.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    set(SYSTEMD_UNITDIR /lib/systemd/system CACHE PATH "Path to systemd unit files")
     configure_file(etc/laminar.service.in laminar.service @ONLY)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/laminar.service DESTINATION ${CMAKE_INSTALL_PREFIX}${SYSTEMD_UNITDIR})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/laminar.service DESTINATION ${SYSTEMD_UNITDIR})
 endif()
