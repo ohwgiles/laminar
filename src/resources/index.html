@@ -131,6 +131,9 @@
    <canvas id="chartBt"></canvas>
   </div>
   <div style="grid-column: 1/-1">
+   <div v-show="false">{{metaDataKeys=["XBranch", "XVersion"]}}</div>
+   <div v-show="false">{{allJobs=jobsQueued.concat(jobsRunning).concat(jobsRecent)}}</div>
+   <div v-show="false">{{metaDataKeys=uniteMetadataKeys(allJobs)}}</div>
    <table class="striped">
     <thead><tr>
      <th><a class="sort" :class="(sort.field=='result'?sort.order:'')" v-on:click="do_sort('result')">&nbsp;</a></th>
@@ -138,13 +141,15 @@
      <th class="text-center">Started <a class="sort" :class="(sort.field=='started'?sort.order:'')" v-on:click="do_sort('started')">&nbsp;</a></th>
      <th class="text-center">Duration <a class="sort" :class="(sort.field=='duration'?sort.order:'')" v-on:click="do_sort('duration')">&nbsp;</a></th>
      <th class="text-center vp-sm-hide">Reason <a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
+     <th class="text-center vp-sm-hide" v-for="(value, key) in metaDataKeys">{{key}}<a class="sort" :class="(sort.field=='reason'?sort.order:'')" v-on:click="do_sort('reason')">&nbsp;</a></th>
     </tr></thead>
-    <tr v-for="job in jobsQueued.concat(jobsRunning).concat(jobsRecent)" track-by="$index">
+    <tr v-for="job in allJobs" track-by="$index">
      <td style="width:1px"><span v-html="runIcon(job.result)"></span></td>
      <td><router-link :to="'jobs/'+route.params.name+'/'+job.number">#{{job.number}}</router-link></td>
      <td class="text-center"><span v-if="job.result!='queued'">{{formatDate(job.started)}}</span></td>
      <td class="text-center"><span v-if="job.result!='queued'">{{formatDuration(job.started, job.completed)}}</span></td>
      <td class="text-center vp-sm-hide">{{job.reason}}</td>
+     <td class="text-center vp-sm-hide" v-for="(value, key) in metaDataKeys">{{job.metadata[key]}}</td>
     </tr>
    </table>
    <div style="float: right; margin: 15px; display: inline-grid; grid-auto-flow: column; gap: 10px; align-items: center">

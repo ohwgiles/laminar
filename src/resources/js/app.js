@@ -105,6 +105,22 @@ Vue.mixin({
         return Math.floor((end-start)/60) + ' minutes, ' + ((end-start)%60) + ' seconds';
       else
         return (end-start) + ' seconds';
+    },
+    // collect all keys in available in the metadata of a list of given jobs
+    uniteMetadataKeys: function(jobs) {
+      let keyList = {};
+      for(let i = 0; i < jobs.length; i++) {
+        let metadata = jobs[i].metadata;
+        for(var key in metadata)
+        {
+          if(! keyList.hasOwnProperty(key) )
+          {
+            keyList[key]=0
+          }
+          keyList[key]+=1
+        }
+      }
+      return( keyList );
     }
   }
 });
@@ -579,7 +595,7 @@ const All = templateId => {
   };
 };
 
-// Component for the /job/:name endpoint
+// Component for the /jobs/:name endpoint
 const Job = templateId => {
   const state = {
     description: '',
