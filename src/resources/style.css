@@ -122,7 +122,7 @@ a.active:hover { text-decoration: none; }
 /* run console ansi colors (based on base16-default-dark and base16-bright) */
 :root {
   --ansi-black: #181818;
-  --ansi-red: #ff0000;
+  --ansi-red: #ab4642;
   --ansi-green: #a1b56c;
   --ansi-yellow: #f7ca88;
   --ansi-blue: #7cafc2;
