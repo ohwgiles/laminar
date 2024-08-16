@@ -12,7 +12,7 @@ See [the website](https://laminar.ohwg.net) and the [documentation](https://lami
 
 First install development packages for `capnproto (version 0.7.0 or newer)`, `rapidjson`, `sqlite` and `boost` (for the header-only `multi_index_container` library) from your distribution's repository or other source.
 
-On Debian Bullseye, this can be done with:
+On Debian Bookworm, this can be done with:
 
 ```bash
 sudo apt install capnproto cmake g++ libboost-dev libcapnp-dev libsqlite3-dev \

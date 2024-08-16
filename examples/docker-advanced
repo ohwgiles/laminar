@@ -9,7 +9,7 @@ set -x
 
 # Simple way of getting the docker build tag:
 tag=$(docker build -q - <<\EOF
-	FROM debian:bullseye
+	FROM debian:bookworm
 	RUN apt-get update && apt-get install -y build-essential
 EOF
 )
@@ -19,7 +19,7 @@ EOF
 
 exec {pfd}<><(:) # get a new pipe
 docker build - <<\EOF |
-	FROM debian:bullseye
+	FROM debian:bookworm
 	RUN apt-get update && apt-get install -y build-essential
 EOF
 tee >(awk '/Successfully built/{print $3}' >&$pfd) # parse output to pipe
