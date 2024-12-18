@@ -119,7 +119,16 @@ tar xzf hello-2.10.tar.gz
 cd hello-2.10
 ./configure
 make
+
+# save permanently to the job's run archive directory
+mv ./hello "$ARCHIVE/"
 ```
+
+If everything went well, the absolute path to the freshly compiled `hello` binary is `$LAMINAR_HOME/archive/hello/latest/hello`, which prints
+```
+Hello, world!
+```
+upon execution.
 
 Laminar uses your script's exit code to determine whether to mark the run as successful or failed. If your script is written in bash, the [`-e` option](http://tldp.org/LDP/abs/html/options.html) is helpful for this. See also [Exit and Exit Status](http://tldp.org/LDP/abs/html/exit-status.html).
 
