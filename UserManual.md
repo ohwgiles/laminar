@@ -247,9 +247,9 @@ Consider using [webhook](https://github.com/adnanh/webhook) or a similar applica
 
 ## Viewing job logs
 
-A job's console output can be viewed on the Web UI at http://localhost:8080/jobs/$NAME/$NUMBER.
+A job's console output can be viewed on the Web UI at http://localhost:8080/jobs/$JOB/$RUN.
 
-Additionally, the raw log output may be fetched over a plain HTTP request to http://localhost:8080/log/$NAME/$NUMBER. The response will be chunked, allowing this mechanism to also be used for in-progress jobs. Furthermore, the special endpoint http://localhost:8080/log/$NAME/latest will redirect to the most recent log output. Be aware that the use of this endpoint may be subject to races when new jobs start.
+Additionally, the raw log output may be fetched over a plain HTTP request to http://localhost:8080/log/$JOB/$RUN. The response will be chunked, allowing this mechanism to also be used for in-progress jobs. Furthermore, the special endpoint http://localhost:8080/log/$JOB/latest will redirect to the most recent log output. Be aware that the use of this endpoint may be subject to races when new jobs start.
 
 ---
 
@@ -285,7 +285,7 @@ laminarc run example-test-$TARGET_PLATFORM
 
 # Parameterized runs
 
-Any argument passed to `laminarc` of the form `var=value` will be exposed as an environment variable in the corresponding build scripts. For example:
+Any argument passed to `laminarc` of the form `KEY=VALUE` will be exposed as an environment variable in the corresponding build scripts. For example:
 
 ```bash
 laminarc queue example foo=bar
@@ -344,9 +344,9 @@ echo $foo            # prints "bar"
 
 # Archiving artefacts
 
-Laminar's default behaviour is to remove the run directory `/var/lib/laminar/run/JOB/RUN` after its completion. This prevents the typical CI disk usage explosion and encourages the user to judiciously select artefacts for archive.
+Laminar's default behaviour is to remove the run directory `/var/lib/laminar/run/$JOB/$RUN` after its completion. This prevents the typical CI disk usage explosion and encourages the user to judiciously select artefacts for archive.
 
-Laminar provides an archive directory `/var/lib/laminar/archive/JOB/RUN` and exposes its path in `$ARCHIVE`. `example-build.after` might look like this:
+Laminar provides an archive directory `/var/lib/laminar/archive/$JOB/$RUN` and exposes its path in `$ARCHIVE`. `example-build.after` might look like this:
 
 ```bash
 #!/bin/bash -xe
@@ -381,7 +381,7 @@ fi
 
 Of course, you can make this as pretty as you like. A [helper script](#Helper-scripts) can be a good choice here.
 
-If you want to send to different addresses depending on the job, replace `engineering@company.com` above with a variable, e.g. `$RECIPIENTS`, and set `RECIPIENTS=nora@company.com,joe@company.com` in `/var/lib/laminar/cfg/jobs/JOB.env`. See [Environment variables](#Environment-variables).
+If you want to send to different addresses depending on the job, replace `engineering@company.com` above with a variable, e.g. `$RECIPIENTS`, and set `RECIPIENTS=nora@company.com,joe@company.com` in `/var/lib/laminar/cfg/jobs/$JOB.env`. See [Environment variables](#Environment-variables).
 
 You could also update the `$RECIPIENTS` variable dynamically based on the build itself. For example, if your run script accepts a parameter `$rev` which is a git commit id, as part of your job's `.after` script you could do the following:
 
@@ -444,7 +444,7 @@ cmake $WORKSPACE/myproject
 make -j4
 ```
 
-Laminar will automatically create the workspace for a job if it doesn't exist when a job is executed. In this case, the `/var/lib/laminar/cfg/jobs/JOBNAME.init` will be executed if it exists. This is an excellent place to prepare the workspace to a state where subsequent builds can rely on its content:
+Laminar will automatically create the workspace for a job if it doesn't exist when a job is executed. In this case, the `/var/lib/laminar/cfg/jobs/$JOB.init` will be executed if it exists. This is an excellent place to prepare the workspace to a state where subsequent builds can rely on its content:
 
 ```bash
 #!/bin/bash -e
@@ -491,7 +491,7 @@ make -C src
 
 ## After a timeout
 
-To configure a maximum execution time in seconds for a job, add a line to `/var/lib/laminar/cfg/jobs/JOBNAME.conf`:
+To configure a maximum execution time in seconds for a job, add a line to `/var/lib/laminar/cfg/jobs/$JOB.conf`:
 
 ```
 TIMEOUT=120
@@ -499,7 +499,7 @@ TIMEOUT=120
 
 ## Manually
 
-`laminarc abort $JOBNAME $NUMBER`
+`laminarc abort $JOB $RUN`
 
 ---
 
@@ -521,7 +521,7 @@ EXECUTORS=1
 
 ## Associating a job with a context
 
-When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. There are two ways to associate jobs and contexts. You can specify a comma-separated list of patterns `JOBS` in the context configuration file `/var/lib/laminar/cfg/contexts/CONTEXT.conf`:
+When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. There are two ways to associate jobs and contexts. You can specify a comma-separated list of patterns `JOBS` in the context configuration file `/var/lib/laminar/cfg/contexts/$CONTEXT.conf`:
 
 ```
 JOBS=amd64-target-*,usage-monitor
@@ -535,15 +535,15 @@ Alternatively, you can set
 CONTEXTS=my-env-*,special_context
 ```
 
-in `/var/lib/laminar/cfg/jobs/JOB.conf`. This approach is often preferred when you have a small number of jobs that require exclusive access to an environment and you can supply alternative environments (e.g. target devices), because new contexts can be added without modifying the job configuration.
+in `/var/lib/laminar/cfg/jobs/$JOB.conf`. This approach is often preferred when you have a small number of jobs that require exclusive access to an environment and you can supply alternative environments (e.g. target devices), because new contexts can be added without modifying the job configuration.
 
 In both cases, Laminar will iterate over the known contexts and associate the run with the first matching context with free executors. Patterns are [glob expressions](http://man7.org/linux/man-pages/man7/glob.7.html).
 
-If `CONTEXTS` is empty or absent (or if `JOB.conf` doesn't exist), laminar will behave as if `CONTEXTS=default` were defined.
+If `CONTEXTS` is empty or absent (or if `$JOB.conf` doesn't exist), laminar will behave as if `CONTEXTS=default` were defined.
 
 ## Adding environment to a context
 
-Append desired environment variables to `/var/lib/laminar/cfg/contexts/CONTEXT_NAME.env`:
+Append desired environment variables to `/var/lib/laminar/cfg/contexts/$CONTEXT.env`:
 
 ```
 DUT_IP=192.168.3.2
@@ -637,7 +637,7 @@ Changes to this file are detected immediately and will be visible on next page r
 
 ## Adding a description to a job
 
-Edit `/var/lib/laminar/cfg/jobs/$JOBNAME.conf`:
+Edit `/var/lib/laminar/cfg/jobs/$JOB.conf`:
 
 ```
 DESCRIPTION=Anything here will appear on the job page in the frontend <em>unescaped</em>.
@@ -657,7 +657,7 @@ An example customization can be found at [cweagans/semantic-laminar-theme](https
 
 # Badges
 
-Laminar will serve a job's current status as a pretty badge at the url `/badge/JOBNAME.svg`. This can be used as a link to your server instance from your Github README.md file or cat blog:
+Laminar will serve a job's current status as a pretty badge at the url `/badge/$JOB.svg`. This can be used as a link to your server instance from your Github README.md file or cat blog:
 
 ```
 <a href="https://my-example-laminar-server.com/jobs/my-project">
