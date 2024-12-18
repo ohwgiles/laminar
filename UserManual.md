@@ -276,7 +276,7 @@ else
   laminarc run example-downstream-regular
 fi
 
-laminarc run example-test-$TARGET_PLATFORM
+laminarc run "example-test-$TARGET_PLATFORM"
 ```
 
 `laminarc` reads the `$JOB` and `$RUN` variables set by `laminard` and passes them as part of the queue/start/run request so the dependency chain can always be traced back.
@@ -337,7 +337,7 @@ Then in `example.run`
 
 ```bash
 #!/bin/bash
-echo $foo            # prints "bar"
+echo "$foo"           # prints "bar"
 ```
 
 ---
@@ -350,7 +350,7 @@ Laminar provides an archive directory `/var/lib/laminar/archive/$JOB/$RUN` and e
 
 ```bash
 #!/bin/bash -xe
-cp example.out $ARCHIVE/
+cp example.out "$ARCHIVE/"
 ```
 
 This folder structure has been chosen to make it easy for system administrators to host the archive on a separate partition or network drive.
@@ -386,8 +386,8 @@ If you want to send to different addresses depending on the job, replace `engine
 You could also update the `$RECIPIENTS` variable dynamically based on the build itself. For example, if your run script accepts a parameter `$rev` which is a git commit id, as part of your job's `.after` script you could do the following:
 
 ```bash
-author_email=$(git show -s --format='%ae' $rev)
-laminarc set RECIPIENTS $author_email
+author_email=$(git show -s --format='%ae' "$rev")
+laminarc set RECIPIENTS "$author_email"
 ```
 
 See [examples/notify-email-pretty](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-pretty) and [examples/notify-email-text-log](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-text-log).
@@ -426,21 +426,21 @@ For example, the following script creates a tarball containing both compiled out
 git clone /path/to/sources .
 make
 # Use a hardlink so the arguments to tar will be relative to the CWD
-ln $WORKSPACE/StaticAsset.bin ./
+ln "$WORKSPACE/StaticAsset.bin" ./
 tar zc a.out StaticAsset.bin > MyProject.tar.gz
 # Archive the artefact (consider moving this to the .after script)
-mv MyProject.tar.gz $ARCHIVE/
+mv MyProject.tar.gz "$ARCHIVE/"
 ```
 
 For a project with a large git history, it can be more efficient to store the sources in the workspace:
 
 ```bash
 #!/bin/bash -ex
-cd $WORKSPACE/myproject
+cd "$WORKSPACE/myproject"
 git pull
 cd -
 
-cmake $WORKSPACE/myproject
+cmake "$WORKSPACE/myproject"
 make -j4
 ```
 
@@ -470,16 +470,16 @@ The following example uses [flock](https://linux.die.net/man/1/flock) to efficie
 # Locked subshell for modifying the workspace
 (
   flock 200
-  cd $WORKSPACE
+  cd "$WORKSPACE"
   # Download all the latest commits
   git fetch
-  git checkout $rev
+  git checkout "$rev"
   cd -
   # Fast copy (hard-link) the source from the specific checkout
   # to the build dir. This relies on the fact that git unlinks
   # during checkout, effectively implementing copy-on-write.
-  cp -al $WORKSPACE/src src
-) 200>$WORKSPACE
+  cp -al "$WORKSPACE/src" src
+) 200>"$WORKSPACE"
 
 # run the (much longer) regular build process
 make -C src
@@ -579,11 +579,11 @@ This means the job script `/var/lib/laminar/cfg/jobs/myproject-test.run` can be 
 ```bash
 #!/bin/bash -e
 
-ssh root@$TARGET_IP /bin/bash -xe <<"EOF"
+ssh "root@$TARGET_IP" /bin/bash -xe <<"EOF"
   uname -a
   ...
 EOF
-scp root@$TARGET_IP:result.xml "$ARCHIVE/"
+scp "root@$TARGET_IP:result.xml" "$ARCHIVE/"
 ```
 
 Don't forget to add the `laminar` user's public ssh key to the remote's `authorized_keys`.
