@@ -669,6 +669,41 @@ Laminar will serve a job's current status as a pretty badge at the url `/badge/$
 
 # Reference
 
+## LAMINAR_HOME folder scheme
+
+```
+$LAMINAR_HOME/
+├── cfg/
+│   ├── before
+│   ├── jobs/
+│   │   ├── $JOB.init
+│   │   ├── $JOB.env
+│   │   ├── $JOB.before
+│   │   ├── $JOB.run
+│   │   ├── $JOB.after
+│   │   └── $JOB.conf
+│   ├── after
+│   │   scripts/
+│   │   ├── foo
+│   │   └── bar
+│   ├── env
+│   ├── contexts/
+│   │   ├── $CONTEXT.env
+│   │   └── $CONTEXT.conf
+│   └── groups.conf
+├── archive/
+│   └── $JOB/
+│       └── $RUN/           # $ARCHIVE
+├── run/
+│   └── $JOB/
+│       └── workspace/      # $WORKSPACE
+├── custom/
+│   └── index.html
+└── laminar.sqlite
+```
+
+`LAMINAR_HOME` and its content need to be at least owned by the user specified in `laminar.service`, which defaults to the system user `laminar`.
+
 ## Service configuration file
 
 `laminard` reads the following variables from the environment, which are expected to be sourced by `systemd` from `/etc/laminar.conf`:
