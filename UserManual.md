@@ -39,7 +39,7 @@ wget https://github.com/ohwgiles/laminar/releases/download/1.1/laminar-1.1.upstr
 sudo dnf install ./laminar-1.1.upstream_rocky8-1.x86_64.rpm
 ```
 
-Both install packages will create a new `laminar` user and install (but not activate) a systemd service for launching the laminar daemon.
+Both install packages will create a new `laminar` system user and install (but not activate) a systemd service for launching the laminar daemon.
 
 ## Building from source
 
@@ -228,7 +228,7 @@ If you need more flexibility, consider running the communication channel as a re
 LAMINAR_BIND_RPC=unix:/var/run/laminar.sock
 ```
 
-or similar path in `/etc/laminar.conf` will result in a socket with group read/write permissions (`660`), so any user in the `laminar` group can queue a job.
+or similar path in `/etc/laminar.conf` will result in a socket with group read/write permissions (`660`), so any user in the `laminar` system group can queue a job.
 
 This can be securely and flexibly combined with remote triggering using `ssh`. There is no need to allow the client full shell access to the server machine, the ssh server can restrict certain users to certain commands (in this case `laminarc`). See [the authorized_keys section of the sshd man page](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT) for further information.
 
