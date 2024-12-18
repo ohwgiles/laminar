@@ -691,6 +691,8 @@ When `$JOB` is triggered, the following scripts (relative to `$LAMINAR_HOME/cfg`
 - `jobs/$JOB.after`
 - `after`
 
+Also, as already mentioned above, `LAMINAR_REASON` could be defined alongside with `laminarc` to reflect the execution reason in the web UI.
+
 ## Environment variables
 
 The following variables are available in run scripts:
