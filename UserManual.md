@@ -708,7 +708,10 @@ $LAMINAR_HOME/
 └── laminar.sqlite
 ```
 
-`LAMINAR_HOME` and its content need to be at least owned by the user specified in `laminar.service`, which defaults to the system user `laminar`.
+The user running `laminard` (by default the system user `laminar`)
+- must have read/write access to `laminar.sqlite`,
+- read/execute access to the contents of `cfg` and
+- write access to `archive` and `run` if the running jobs are to have the ability to archive artifacts or utilize the workspace, respectively.
 
 ## Service configuration file
 
