@@ -176,6 +176,13 @@ Also note that all the above commands can simultaneously trigger multiple differ
 laminarc queue test-host test-target
 ```
 
+A human-readable reason for the trigger can be set using the environment variable `LAMINAR_REASON`, which will be stored in the database and displayed in the web UI:
+
+```bash
+LAMINAR_REASON="Smoke detected" laminarc run activate-sprinklers
+```
+
+
 ## Isn't there a "Build Now" button I can click?
 
 This is against the design principles of Laminar and was deliberately excluded. Laminar's web UI is strictly read-only, making it simple to deploy in mixed-permission or public environments without an authentication layer. Furthermore, Laminar tries to encourage ideal continuous integration, where manual triggering is an anti-pattern. Want to make a release? Push a git tag and implement a post-receive hook. Want to re-run a build due to sporadic failure/flaky tests? Fix the tests locally and push a patch. Experience shows that a manual trigger such as a "Build Now" button is often used as a crutch to avoid doing the correct thing, negatively impacting traceability and quality.
@@ -198,7 +205,6 @@ This is what `cron` is for. To trigger a build of `hello` every day at 0300, add
 
 to `laminar`'s crontab. For more information about `cron`, see `man crontab`.
 
-`LAMINAR_REASON` is an optional human-readable string that will be displayed in the web UI as the cause of the build.
 
 ## Triggering on a git commit
 
@@ -726,8 +732,6 @@ When `$JOB` is triggered, the following scripts (relative to `$LAMINAR_HOME/cfg`
 - `jobs/$JOB.after`
 - `after`
 
-Also, as already mentioned above, `LAMINAR_REASON` could be defined alongside with `laminarc` to reflect the execution reason in the web UI.
-
 ## Environment variables
 
 The following variables are available in run scripts:
@@ -767,5 +771,7 @@ Finally, variables supplied on the command-line call to `laminarc queue`, `lamin
 - `abort JOB NUMBER` manually aborts a currently running job by name and number.
 
 `laminarc` connects to `laminard` using the address supplied by the `LAMINAR_HOST` environment variable. If it is not set, `laminarc` will first attempt to use `LAMINAR_BIND_RPC`, which will be available if `laminarc` is executed from a script within `laminard`. If neither `LAMINAR_HOST` nor `LAMINAR_BIND_RPC` is set, `laminarc` will assume a default host of `unix-abstract:laminar`.
+
+`laminarc` reads the environment variable `LAMINAR_REASON` for a human-readable reason. See [Triggering a run](#Triggering-a-run).
 
 All commands return zero on success or a non-zero code if the command could not be executed. `laminarc run` will return a non-zero exit status if any executed job failed.
