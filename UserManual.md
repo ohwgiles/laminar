@@ -675,7 +675,7 @@ Laminar will serve a job's current status as a pretty badge at the url `/badge/$
 
 # Reference
 
-## LAMINAR_HOME folder scheme
+## LAMINAR_HOME directory scheme
 
 ```
 $LAMINAR_HOME/
