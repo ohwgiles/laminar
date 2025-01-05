@@ -17,26 +17,25 @@ Throughout this document, the fixed base path `/var/lib/laminar` is used. This i
 
 # Installing Laminar
 
-For Debian Bullseye, Laminar is available in [the official repositories](https://packages.debian.org/search?searchon=sourcenames&keywords=laminar).
+Pre-built upstream packages are available for Debian on x86_64 and armhf, and for Rocky/CentOS/RHEL on x86_64.
+Please see the [GitHub releases page](https://github.com/ohwgiles/laminar/releases) for the latest versions.
 
-Alternatively, pre-built upstream packages are available for Debian 10 (Buster) on x86_64 and armhf, and for Rocky/CentOS/RHEL 7 and 8 on x86_64.
-
-Finally, Laminar may be built from source for any Linux distribution.
+Also, Laminar may be built from source for any Linux distribution.
 
 ## Installation from upstream packages
 
 Under Debian:
 
 ```bash
-wget https://github.com/ohwgiles/laminar/releases/download/1.1/laminar_1.1-1.upstream-debian10_amd64.deb
-sudo apt install ./laminar_1.1-1.upstream-debian10_amd64.deb
+wget https://github.com/ohwgiles/laminar/releases/download/1.3/laminar_1.3-1.upstream-debian11_amd64.deb
+sudo apt install ./laminar_1.3-1.upstream-debian11_amd64.deb
 ```
 
 Under Rocky/CentOS/RHEL:
 
 ```bash
-wget https://github.com/ohwgiles/laminar/releases/download/1.1/laminar-1.1.upstream_rocky8-1.x86_64.rpm
-sudo dnf install ./laminar-1.1.upstream_rocky8-1.x86_64.rpm
+wget https://github.com/ohwgiles/laminar/releases/download/1.3/laminar-1.3.upstream_rocky8-1.x86_64.rpm
+sudo dnf install ./laminar-1.3.upstream_rocky8-1.x86_64.rpm
 ```
 
 Both install packages will create a new `laminar` system user and install (but not activate) a systemd service for launching the laminar daemon.
