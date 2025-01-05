@@ -123,7 +123,7 @@ make
 mv ./hello "$ARCHIVE/"
 ```
 
-If everything went well, the absolute path to the freshly compiled `hello` binary is `$LAMINAR_HOME/archive/hello/latest/hello`, which prints
+If everything went well, the path to the freshly compiled `hello` binary is `$LAMINAR_HOME/archive/hello/latest/hello`, which prints
 ```
 Hello, world!
 ```
