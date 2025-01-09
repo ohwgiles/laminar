@@ -17,29 +17,28 @@ Throughout this document, the fixed base path `/var/lib/laminar` is used. This i
 
 # Installing Laminar
 
-Since Debian Bullseye, Laminar is available in [the official repositories](https://packages.debian.org/search?searchon=sourcenames&keywords=laminar).
+Pre-built upstream packages are available for Debian on x86_64 and armhf, and for Rocky/CentOS/RHEL on x86_64.
+Please see the [GitHub releases page](https://github.com/ohwgiles/laminar/releases) for the latest versions.
 
-Alternatively, pre-built upstream packages are available for Debian 10 (Buster) on x86_64 and armhf, and for Rocky/CentOS/RHEL 7 and 8 on x86_64.
-
-Finally, Laminar may be built from source for any Linux distribution.
+Also, Laminar may be built from source for any Linux distribution.
 
 ## Installation from upstream packages
 
 Under Debian:
 
 ```bash
-wget https://github.com/ohwgiles/laminar/releases/download/1.1/laminar_1.1-1.upstream-debian10_amd64.deb
-sudo apt install ./laminar_1.1-1.upstream-debian10_amd64.deb
+wget https://github.com/ohwgiles/laminar/releases/download/1.3/laminar_1.3-1.upstream-debian11_amd64.deb
+sudo apt install ./laminar_1.3-1.upstream-debian11_amd64.deb
 ```
 
 Under Rocky/CentOS/RHEL:
 
 ```bash
-wget https://github.com/ohwgiles/laminar/releases/download/1.1/laminar-1.1.upstream_rocky8-1.x86_64.rpm
-sudo dnf install ./laminar-1.1.upstream_rocky8-1.x86_64.rpm
+wget https://github.com/ohwgiles/laminar/releases/download/1.3/laminar-1.3.upstream_rocky8-1.x86_64.rpm
+sudo dnf install ./laminar-1.3.upstream_rocky8-1.x86_64.rpm
 ```
 
-Both install packages will create a new `laminar` user and install (but not activate) a systemd service for launching the laminar daemon.
+Both install packages will create a new `laminar` system user and install (but not activate) a systemd service for launching the laminar daemon.
 
 ## Building from source
 
@@ -119,7 +118,16 @@ tar xzf hello-2.10.tar.gz
 cd hello-2.10
 ./configure
 make
+
+# save permanently to the job's run archive directory
+mv ./hello "$ARCHIVE/"
 ```
+
+If everything went well, the path to the freshly compiled `hello` binary is `$LAMINAR_HOME/archive/hello/latest/hello`, which prints
+```
+Hello, world!
+```
+upon execution.
 
 Laminar uses your script's exit code to determine whether to mark the run as successful or failed. If your script is written in bash, the [`-e` option](http://tldp.org/LDP/abs/html/options.html) is helpful for this. See also [Exit and Exit Status](http://tldp.org/LDP/abs/html/exit-status.html).
 
@@ -167,6 +175,13 @@ Also note that all the above commands can simultaneously trigger multiple differ
 laminarc queue test-host test-target
 ```
 
+A human-readable reason for the trigger can be set using the environment variable `LAMINAR_REASON`, which will be stored in the database and displayed in the web UI:
+
+```bash
+LAMINAR_REASON="Smoke detected" laminarc run activate-sprinklers
+```
+
+
 ## Isn't there a "Build Now" button I can click?
 
 This is against the design principles of Laminar and was deliberately excluded. Laminar's web UI is strictly read-only, making it simple to deploy in mixed-permission or public environments without an authentication layer. Furthermore, Laminar tries to encourage ideal continuous integration, where manual triggering is an anti-pattern. Want to make a release? Push a git tag and implement a post-receive hook. Want to re-run a build due to sporadic failure/flaky tests? Fix the tests locally and push a patch. Experience shows that a manual trigger such as a "Build Now" button is often used as a crutch to avoid doing the correct thing, negatively impacting traceability and quality.
@@ -189,7 +204,6 @@ This is what `cron` is for. To trigger a build of `hello` every day at 0300, add
 
 to `laminar`'s crontab. For more information about `cron`, see `man crontab`.
 
-`LAMINAR_REASON` is an optional human-readable string that will be displayed in the web UI as the cause of the build.
 
 ## Triggering on a git commit
 
@@ -228,7 +242,7 @@ If you need more flexibility, consider running the communication channel as a re
 LAMINAR_BIND_RPC=unix:/var/run/laminar.sock
 ```
 
-or similar path in `/etc/laminar.conf` will result in a socket with group read/write permissions (`660`), so any user in the `laminar` group can queue a job.
+or similar path in `/etc/laminar.conf` will result in a socket with group read/write permissions (`660`), so any user in the `laminar` system group can queue a job.
 
 This can be securely and flexibly combined with remote triggering using `ssh`. There is no need to allow the client full shell access to the server machine, the ssh server can restrict certain users to certain commands (in this case `laminarc`). See [the authorized_keys section of the sshd man page](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT) for further information.
 
@@ -238,9 +252,9 @@ Consider using [webhook](https://github.com/adnanh/webhook) or a similar applica
 
 ## Viewing job logs
 
-A job's console output can be viewed on the Web UI at http://localhost:8080/jobs/$NAME/$NUMBER.
+A job's console output can be viewed on the Web UI at http://localhost:8080/jobs/$JOB/$RUN.
 
-Additionally, the raw log output may be fetched over a plain HTTP request to http://localhost:8080/log/$NAME/$NUMBER. The response will be chunked, allowing this mechanism to also be used for in-progress jobs. Furthermore, the special endpoint http://localhost:8080/log/$NAME/latest will redirect to the most recent log output. Be aware that the use of this endpoint may be subject to races when new jobs start.
+Additionally, the raw log output may be fetched over a plain HTTP request to http://localhost:8080/log/$JOB/$RUN. The response will be chunked, allowing this mechanism to also be used for in-progress jobs. Furthermore, the special endpoint http://localhost:8080/log/$JOB/latest will redirect to the most recent log output. Be aware that the use of this endpoint may be subject to races when new jobs start.
 
 ---
 
@@ -267,7 +281,7 @@ else
   laminarc run example-downstream-regular
 fi
 
-laminarc run example-test-$TARGET_PLATFORM
+laminarc run "example-test-$TARGET_PLATFORM"
 ```
 
 `laminarc` reads the `$JOB` and `$RUN` variables set by `laminard` and passes them as part of the queue/start/run request so the dependency chain can always be traced back.
@@ -276,7 +290,7 @@ laminarc run example-test-$TARGET_PLATFORM
 
 # Parameterized runs
 
-Any argument passed to `laminarc` of the form `var=value` will be exposed as an environment variable in the corresponding build scripts. For example:
+Any argument passed to `laminarc` of the form `KEY=VALUE` will be exposed as an environment variable in the corresponding build scripts. For example:
 
 ```bash
 laminarc queue example foo=bar
@@ -328,20 +342,20 @@ Then in `example.run`
 
 ```bash
 #!/bin/bash
-echo $foo            # prints "bar"
+echo "$foo"           # prints "bar"
 ```
 
 ---
 
 # Archiving artefacts
 
-Laminar's default behaviour is to remove the run directory `/var/lib/laminar/run/JOB/RUN` after its completion. This prevents the typical CI disk usage explosion and encourages the user to judiciously select artefacts for archive.
+Laminar's default behaviour is to remove the run directory `/var/lib/laminar/run/$JOB/$RUN` after its completion. This prevents the typical CI disk usage explosion and encourages the user to judiciously select artefacts for archive.
 
-Laminar provides an archive directory `/var/lib/laminar/archive/JOB/RUN` and exposes its path in `$ARCHIVE`. `example-build.after` might look like this:
+Laminar provides an archive directory `/var/lib/laminar/archive/$JOB/$RUN` and exposes its path in `$ARCHIVE`. `example-build.after` might look like this:
 
 ```bash
 #!/bin/bash -xe
-cp example.out $ARCHIVE/
+cp example.out "$ARCHIVE/"
 ```
 
 This folder structure has been chosen to make it easy for system administrators to host the archive on a separate partition or network drive.
@@ -372,13 +386,13 @@ fi
 
 Of course, you can make this as pretty as you like. A [helper script](#Helper-scripts) can be a good choice here.
 
-If you want to send to different addresses depending on the job, replace `engineering@company.com` above with a variable, e.g. `$RECIPIENTS`, and set `RECIPIENTS=nora@company.com,joe@company.com` in `/var/lib/laminar/cfg/jobs/JOB.env`. See [Environment variables](#Environment-variables).
+If you want to send to different addresses depending on the job, replace `engineering@company.com` above with a variable, e.g. `$RECIPIENTS`, and set `RECIPIENTS=nora@company.com,joe@company.com` in `/var/lib/laminar/cfg/jobs/$JOB.env`. See [Environment variables](#Environment-variables).
 
 You could also update the `$RECIPIENTS` variable dynamically based on the build itself. For example, if your run script accepts a parameter `$rev` which is a git commit id, as part of your job's `.after` script you could do the following:
 
 ```bash
-author_email=$(git show -s --format='%ae' $rev)
-laminarc set RECIPIENTS $author_email
+author_email=$(git show -s --format='%ae' "$rev")
+laminarc set RECIPIENTS "$author_email"
 ```
 
 See [examples/notify-email-pretty](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-pretty) and [examples/notify-email-text-log](https://github.com/ohwgiles/laminar/blob/master/examples/notify-email-text-log).
@@ -417,25 +431,25 @@ For example, the following script creates a tarball containing both compiled out
 git clone /path/to/sources .
 make
 # Use a hardlink so the arguments to tar will be relative to the CWD
-ln $WORKSPACE/StaticAsset.bin ./
+ln "$WORKSPACE/StaticAsset.bin" ./
 tar zc a.out StaticAsset.bin > MyProject.tar.gz
 # Archive the artefact (consider moving this to the .after script)
-mv MyProject.tar.gz $ARCHIVE/
+mv MyProject.tar.gz "$ARCHIVE/"
 ```
 
 For a project with a large git history, it can be more efficient to store the sources in the workspace:
 
 ```bash
 #!/bin/bash -ex
-cd $WORKSPACE/myproject
+cd "$WORKSPACE/myproject"
 git pull
 cd -
 
-cmake $WORKSPACE/myproject
+cmake "$WORKSPACE/myproject"
 make -j4
 ```
 
-Laminar will automatically create the workspace for a job if it doesn't exist when a job is executed. In this case, the `/var/lib/laminar/cfg/jobs/JOBNAME.init` will be executed if it exists. This is an excellent place to prepare the workspace to a state where subsequent builds can rely on its content:
+Laminar will automatically create the workspace for a job if it doesn't exist when a job is executed. In this case, the `/var/lib/laminar/cfg/jobs/$JOB.init` will be executed if it exists. This is an excellent place to prepare the workspace to a state where subsequent builds can rely on its content:
 
 ```bash
 #!/bin/bash -e
@@ -461,16 +475,16 @@ The following example uses [flock](https://linux.die.net/man/1/flock) to efficie
 # Locked subshell for modifying the workspace
 (
   flock 200
-  cd $WORKSPACE
+  cd "$WORKSPACE"
   # Download all the latest commits
   git fetch
-  git checkout $rev
+  git checkout "$rev"
   cd -
   # Fast copy (hard-link) the source from the specific checkout
   # to the build dir. This relies on the fact that git unlinks
   # during checkout, effectively implementing copy-on-write.
-  cp -al $WORKSPACE/src src
-) 200>$WORKSPACE
+  cp -al "$WORKSPACE/src" src
+) 200>"$WORKSPACE"
 
 # run the (much longer) regular build process
 make -C src
@@ -482,7 +496,7 @@ make -C src
 
 ## After a timeout
 
-To configure a maximum execution time in seconds for a job, add a line to `/var/lib/laminar/cfg/jobs/JOBNAME.conf`:
+To configure a maximum execution time in seconds for a job, add a line to `/var/lib/laminar/cfg/jobs/$JOB.conf`:
 
 ```
 TIMEOUT=120
@@ -490,7 +504,7 @@ TIMEOUT=120
 
 ## Manually
 
-`laminarc abort $JOBNAME $NUMBER`
+`laminarc abort $JOB $RUN`
 
 ---
 
@@ -512,7 +526,7 @@ EXECUTORS=1
 
 ## Associating a job with a context
 
-When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. There are two ways to associate jobs and contexts. You can specify a comma-separated list of patterns `JOBS` in the context configuration file `/var/lib/laminar/cfg/contexts/CONTEXT.conf`:
+When trying to start a job, laminar will wait until the job can be matched to a context which has at least one free executor. There are two ways to associate jobs and contexts. You can specify a comma-separated list of patterns `JOBS` in the context configuration file `/var/lib/laminar/cfg/contexts/$CONTEXT.conf`:
 
 ```
 JOBS=amd64-target-*,usage-monitor
@@ -526,15 +540,15 @@ Alternatively, you can set
 CONTEXTS=my-env-*,special_context
 ```
 
-in `/var/lib/laminar/cfg/jobs/JOB.conf`. This approach is often preferred when you have a small number of jobs that require exclusive access to an environment and you can supply alternative environments (e.g. target devices), because new contexts can be added without modifying the job configuration.
+in `/var/lib/laminar/cfg/jobs/$JOB.conf`. This approach is often preferred when you have a small number of jobs that require exclusive access to an environment and you can supply alternative environments (e.g. target devices), because new contexts can be added without modifying the job configuration.
 
 In both cases, Laminar will iterate over the known contexts and associate the run with the first matching context with free executors. Patterns are [glob expressions](http://man7.org/linux/man-pages/man7/glob.7.html).
 
-If `CONTEXTS` is empty or absent (or if `JOB.conf` doesn't exist), laminar will behave as if `CONTEXTS=default` were defined.
+If `CONTEXTS` is empty or absent (or if `$JOB.conf` doesn't exist), laminar will behave as if `CONTEXTS=default` were defined.
 
 ## Adding environment to a context
 
-Append desired environment variables to `/var/lib/laminar/cfg/contexts/CONTEXT_NAME.env`:
+Append desired environment variables to `/var/lib/laminar/cfg/contexts/$CONTEXT.env`:
 
 ```
 DUT_IP=192.168.3.2
@@ -570,11 +584,11 @@ This means the job script `/var/lib/laminar/cfg/jobs/myproject-test.run` can be 
 ```bash
 #!/bin/bash -e
 
-ssh root@$TARGET_IP /bin/bash -xe <<"EOF"
+ssh "root@$TARGET_IP" /bin/bash -xe <<"EOF"
   uname -a
   ...
 EOF
-scp root@$TARGET_IP:result.xml "$ARCHIVE/"
+scp "root@$TARGET_IP:result.xml" "$ARCHIVE/"
 ```
 
 Don't forget to add the `laminar` user's public ssh key to the remote's `authorized_keys`.
@@ -628,7 +642,7 @@ Changes to this file are detected immediately and will be visible on next page r
 
 ## Adding a description to a job
 
-Edit `/var/lib/laminar/cfg/jobs/$JOBNAME.conf`:
+Edit `/var/lib/laminar/cfg/jobs/$JOB.conf`:
 
 ```
 DESCRIPTION=Anything here will appear on the job page in the frontend <em>unescaped</em>.
@@ -648,7 +662,7 @@ An example customization can be found at [cweagans/semantic-laminar-theme](https
 
 # Badges
 
-Laminar will serve a job's current status as a pretty badge at the url `/badge/JOBNAME.svg`. This can be used as a link to your server instance from your Github README.md file or cat blog:
+Laminar will serve a job's current status as a pretty badge at the url `/badge/$JOB.svg`. This can be used as a link to your server instance from your Github README.md file or cat blog:
 
 ```
 <a href="https://my-example-laminar-server.com/jobs/my-project">
@@ -659,6 +673,44 @@ Laminar will serve a job's current status as a pretty badge at the url `/badge/J
 ---
 
 # Reference
+
+## LAMINAR_HOME directory scheme
+
+```
+$LAMINAR_HOME/
+├── cfg/
+│   ├── before
+│   ├── jobs/
+│   │   ├── $JOB.init
+│   │   ├── $JOB.env
+│   │   ├── $JOB.before
+│   │   ├── $JOB.run
+│   │   ├── $JOB.after
+│   │   └── $JOB.conf
+│   ├── after
+│   │   scripts/
+│   │   ├── foo
+│   │   └── bar
+│   ├── env
+│   ├── contexts/
+│   │   ├── $CONTEXT.env
+│   │   └── $CONTEXT.conf
+│   └── groups.conf
+├── archive/
+│   └── $JOB/
+│       └── $RUN/           # $ARCHIVE
+├── run/
+│   └── $JOB/
+│       └── workspace/      # $WORKSPACE
+├── custom/
+│   └── index.html
+└── laminar.sqlite
+```
+
+The user running `laminard` (by default the system user `laminar`)
+- must have read/write access to `laminar.sqlite`,
+- read/execute access to the contents of `cfg` and `custom` and
+- write access to `archive` and `run` if the running jobs are to have the ability to archive artifacts or utilize the workspace, respectively.
 
 ## Service configuration file
 
@@ -714,12 +766,14 @@ Finally, variables supplied on the command-line call to `laminarc queue`, `lamin
 - `start [JOB [PARAMS...]]...` starts one or more jobs with optional parameters, returning when the jobs begin execution.
 - `run [JOB [PARAMS...]]...` triggers one or more jobs with optional parameters and waits for the completion of all jobs.
 - `--next` may be passed before `JOB` in order to place the job at the front of the queue instead of at the end.
-- `set [VARIABLE=VALUE]...` sets one or more variables to be exported in subsequent scripts for the run identified by the `$JOB` and `$RUN` environment variables
+- `set [KEY=VALUE]...` sets one or more variables to be exported in subsequent scripts for the run identified by the `JOB` and `RUN` environment variables
 - `show-jobs` shows the known jobs on the server (`$LAMINAR_HOME/cfg/jobs/*.run`).
 - `show-running` shows the currently running jobs with their numbers.
 - `show-queued` shows the names of the jobs waiting in the queue.
-- `abort JOB NUMBER` manually aborts a currently running job by name and number.
+- `abort JOB RUN` manually aborts a currently running job by name and number.
 
 `laminarc` connects to `laminard` using the address supplied by the `LAMINAR_HOST` environment variable. If it is not set, `laminarc` will first attempt to use `LAMINAR_BIND_RPC`, which will be available if `laminarc` is executed from a script within `laminard`. If neither `LAMINAR_HOST` nor `LAMINAR_BIND_RPC` is set, `laminarc` will assume a default host of `unix-abstract:laminar`.
+
+`laminarc` reads the environment variable `LAMINAR_REASON` for a human-readable reason. See [Triggering a run](#Triggering-a-run).
 
 All commands return zero on success or a non-zero code if the command could not be executed. `laminarc run` will return a non-zero exit status if any executed job failed.
