@@ -701,6 +701,7 @@ $LAMINAR_HOME/
 │       └── $RUN/           # $ARCHIVE
 ├── run/
 │   └── $JOB/
+│       └── $RUN/           # run directory (ephemeral)
 │       └── workspace/      # $WORKSPACE
 ├── custom/
 │   └── index.html
