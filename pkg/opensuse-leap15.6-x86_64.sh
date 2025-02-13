@@ -8,7 +8,7 @@ VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~u
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM opensuse/leap:latest
-RUN zypper --non-interactive refresh && zypper --non-interactive update && zypper --non-interactive install -y rpm-build cmake make gcc-c++ wget sqlite-devel boost-devel zlib-devel capnproto libcapnp-devel rapidjson-devel
+RUN zypper --non-interactive refresh && zypper --non-interactive update && zypper --non-interactive install -y rpm-build cmake make gcc-c++ wget sqlite3-devel boost-devel zlib-devel capnproto libcapnp-devel rapidjson-devel
 EOS
 )
 
@@ -24,7 +24,9 @@ Name: laminar
 Version: $VERSION
 Release: 1
 License: GPL
-Requires: libsqlite3-0 zlib
+URL: https://laminar.ohwg.net/
+BuildArch: x86_64
+BuildRequires: cmake make gcc-c++ sqlite3-devel boost-devel zlib-devel capnproto libcapnp-devel rapidjson-devel
 
 %description
 Lightweight Continuous Integration Service
