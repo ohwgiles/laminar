@@ -158,7 +158,7 @@ a.active:hover { text-decoration: none; }
 /* run console */
 .console-log { padding: 15px; background-color: var(--ansi-black); }
 .console-log code { white-space: pre-wrap; color: var(--ansi-white); }
-.console-log a { color: var(--ansi-brightwhite); }
+.console-log a { color: var(--ansi-brightwhite); text-decoration: underline dotted; }
 
 /* text input (job filtering) */
 input { padding: 5px 8px; }
