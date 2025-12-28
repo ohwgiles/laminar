@@ -143,6 +143,35 @@ public:
         return kj::READY_NOW;
     }
 
+    kj::Promise<void> getLog(GetLogContext context) override {
+        std::string jobName = context.getParams().getRun().getJob();
+        uint buildNum = context.getParams().getRun().getBuildNum();
+        // If buildNum is 0, get the latest run number
+        if(buildNum == 0) {
+            buildNum = laminar.latestRun(jobName);
+            if(buildNum == 0) {
+                // No runs found for this job
+                context.getResults().setOutput("");
+                context.getResults().setComplete(true);
+                context.getResults().setBuildNum(0);
+                return kj::READY_NOW;
+            }
+        }
+        LLOG(INFO, "RPC getLog", jobName, buildNum);
+        std::string output;
+        bool complete;
+        if(laminar.handleLogRequest(jobName, buildNum, output, complete)) {
+            context.getResults().setOutput(output);
+            context.getResults().setComplete(complete);
+            context.getResults().setBuildNum(buildNum);
+        } else {
+            context.getResults().setOutput("");
+            context.getResults().setComplete(true);
+            context.getResults().setBuildNum(buildNum);
+        }
+        return kj::READY_NOW;
+    }
+
 private:
     // Helper to convert an RPC parameter list to a hash map
     ParamMap params(const capnp::List<LaminarCi::JobParam>::Reader& paramReader) {

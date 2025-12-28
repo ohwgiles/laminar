@@ -75,6 +75,13 @@ endif()
 set_source_files_properties(src/version.cpp PROPERTIES COMPILE_DEFINITIONS
 	LAMINAR_VERSION=${LAMINAR_VERSION})
 
+# Set default LAMINAR_HOME based on install prefix
+if(NOT LAMINAR_DEFAULT_HOME)
+    set(LAMINAR_DEFAULT_HOME "${CMAKE_INSTALL_PREFIX}/var")
+endif()
+set_source_files_properties(src/main.cpp PROPERTIES COMPILE_DEFINITIONS
+	LAMINAR_DEFAULT_HOME="${LAMINAR_DEFAULT_HOME}")
+
 # This macro takes a list of files, gzips them and converts the output into
 # object files so they can be linked directly into the application.
 # ld generates symbols based on the string argument given to its executable,

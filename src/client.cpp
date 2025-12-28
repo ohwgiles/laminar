@@ -101,6 +101,7 @@ static void usage(std::ostream& out) {
     out << "  show-jobs             lists all known jobs.\n";
     out << "  show-queued           lists currently queued jobs.\n";
     out << "  show-running          lists currently running jobs.\n";
+    out << "  output-log JOB [RUN]  outputs the log for the specified job and run (defaults to latest).\n";
     out << "JOB_LIST is of the form:\n";
     out << "  [JOB_NAME [PARAMETER_LIST...]]...\n";
     out << "PARAMETER_LIST is of the form:\n";
@@ -244,6 +245,20 @@ int main(int argc, char** argv) {
         for(auto it : running.getResult()) {
             printf("%s:%d\n", it.getJob().cStr(), it.getBuildNum());
         }
+    } else if(strcmp(argv[1], "output-log") == 0) {
+        if(argc < 3 || argc > 4) {
+            fprintf(stderr, "Usage: %s output-log JOB_NAME [RUN_NUMBER]\n", argv[0]);
+            return EXIT_BAD_ARGUMENT;
+        }
+        auto req = laminar.getLogRequest();
+        req.getRun().setJob(argv[2]);
+        // If run number not provided, use 0 to indicate latest
+        uint buildNum = argc == 4 ? atoi(argv[3]) : 0;
+        req.getRun().setBuildNum(buildNum);
+        auto resp = req.send().wait(waitScope);
+        // Print header showing job and actual run number
+        fprintf(stderr, "=== Log for %s #%u ===\n", argv[2], resp.getBuildNum());
+        printf("%s", resp.getOutput().cStr());
     } else {
         fprintf(stderr, "Unknown command %s\n", argv[1]);
         return EXIT_BAD_ARGUMENT;

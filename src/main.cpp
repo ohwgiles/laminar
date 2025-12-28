@@ -88,7 +88,10 @@ int main(int argc, char** argv) {
 
     Settings settings;
     // Default values when none were supplied in $LAMINAR_CONF_FILE (/etc/laminar.conf)
-    settings.home = getenv("LAMINAR_HOME") ?: "/var/lib/laminar";
+#ifndef LAMINAR_DEFAULT_HOME
+#define LAMINAR_DEFAULT_HOME "/var/lib/laminar"
+#endif
+    settings.home = getenv("LAMINAR_HOME") ?: LAMINAR_DEFAULT_HOME;
     settings.bind_rpc = getenv("LAMINAR_BIND_RPC") ?: INTADDR_RPC_DEFAULT;
     settings.bind_http = getenv("LAMINAR_BIND_HTTP") ?: INTADDR_HTTP_DEFAULT;
     settings.archive_url = getenv("LAMINAR_ARCHIVE_URL") ?: ARCHIVE_URL_DEFAULT;

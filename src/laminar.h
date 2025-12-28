@@ -128,6 +128,7 @@ private:
     kj::Path homePath;
     kj::Own<const kj::Directory> fsHome;
     uint numKeepRunDirs;
+    uint numOnDiskLogs;
     std::string archiveUrl;
 
     kj::Own<Http> http;

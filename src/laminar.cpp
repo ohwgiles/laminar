@@ -91,6 +91,7 @@ Laminar::Laminar(Server &server, Settings settings) :
         archiveUrl.append("/");
 
     numKeepRunDirs = 0;
+    numOnDiskLogs = 0;
 
     db = new Database((homePath/"laminar.sqlite").toString(true).cStr());
     // Prepare database for first use
@@ -517,6 +518,9 @@ bool Laminar::loadConfiguration() {
     if(const char* ndirs = getenv("LAMINAR_KEEP_RUNDIRS"))
         numKeepRunDirs = static_cast<uint>(atoi(ndirs));
 
+    if(const char* nlogs = getenv("LAMINAR_ON_DISK_LOGS"))
+        numOnDiskLogs = static_cast<uint>(atoi(nlogs));
+
     std::set<std::string> knownContexts;
 
     KJ_IF_MAYBE(contextsDir, fsHome->tryOpenSubdir(kj::Path{"cfg","contexts"})) {
@@ -772,6 +776,18 @@ void Laminar::handleRunFinished(Run * r) {
      .bind(completedAt, int(r->result), maybeZipped, logsize, r->name, r->build)
      .exec();
 
+    // write uncompressed log to archive directory if enabled
+    if(numOnDiskLogs > 0) {
+        kj::Path archivePath{"archive", r->name, std::to_string(r->build)};
+        try {
+            fsHome->openSubdir(archivePath, kj::WriteMode::CREATE | kj::WriteMode::MODIFY)
+                   ->openFile(kj::Path{"log"}, kj::WriteMode::CREATE | kj::WriteMode::CREATE_PARENT)
+                   ->writeAll(r->log);
+        } catch(kj::Exception& e) {
+            LLOG(ERROR, "Failed to write log to archive", archivePath.toString(), e.getDescription());
+        }
+    }
+
     // notify clients
     Json j;
     j.set("type", "job_completed")
@@ -818,6 +834,20 @@ void Laminar::handleRunFinished(Run * r) {
             fsHome->remove(d);
         } catch(kj::Exception& e) {
             LLOG(ERROR, "Could not remove directory", e.getDescription());
+        }
+    }
+
+    // remove old on-disk logs (independent of run directories)
+    if(numOnDiskLogs > 0) {
+        for(int i = static_cast<int>(oldestActive - numOnDiskLogs); i > 0; i--) {
+            kj::Path logFile{"archive", r->name, std::to_string(i), "log"};
+            if(!fsHome->exists(logFile))
+                break;
+            try {
+                fsHome->remove(logFile);
+            } catch(kj::Exception& e) {
+                LLOG(ERROR, "Could not remove on-disk log", logFile.toString(), e.getDescription());
+            }
         }
     }
 
