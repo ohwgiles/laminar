@@ -669,6 +669,23 @@ const Run = templateId => {
     latestNum: null,
     logComplete: false,
   };
+  // if the page is scrolled to the bottom, the scroll position "sticks"
+  // there and follows new log output as it is rendered, like tail -f.
+  // Any upward scroll disengages this, scrolling back to the bottom
+  // re-engages it. This must be tracked with event listeners rather than
+  // sampled when rendering, because scrolling is handled outside the main
+  // thread: while the main thread is busy rendering a large log chunk,
+  // window.scrollY may still report the old (bottom) position, which
+  // would wrongly yank the page back down and swallow the user's scroll.
+  let stickToBottom = true;
+  window.addEventListener('wheel', evt => {
+    if (evt.deltaY < 0)
+      stickToBottom = false;
+  });
+  window.addEventListener('scroll', () => {
+    stickToBottom = window.innerHeight + window.scrollY >=
+      document.documentElement.scrollHeight - 1;
+  });
   const logFetcher = (vm, name, num) => {
     const abort = new AbortController();
     fetch('log/'+name+'/'+num, {signal:abort.signal}).then(res => {
@@ -704,6 +721,9 @@ const Run = templateId => {
           // output finished
           state.logComplete = true;
         }
+
+        if (stickToBottom)
+          window.scrollTo(0, document.documentElement.scrollHeight);
 
         lastUiUpdate = Date.now();
         tid = null;
