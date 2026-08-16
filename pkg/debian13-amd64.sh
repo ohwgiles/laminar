@@ -1,7 +1,5 @@
 #!/bin/bash -e
 
-set -ex
-
 OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
@@ -9,7 +7,7 @@ SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian13
 
 DOCKER_TAG=$(docker build -q - <<EOS
-FROM debian:trixie-slim
+FROM debian:13-slim
 RUN apt-get update && apt-get install -y wget cmake g++ capnproto libcapnp-dev rapidjson-dev libsqlite3-dev libboost-dev zlib1g-dev pkg-config
 EOS
 )

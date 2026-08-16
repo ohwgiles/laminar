@@ -4,37 +4,32 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~upstream_rocky8
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~upstream_rocky9
 
 DOCKER_TAG=$(docker build -q - <<EOS
-FROM rockylinux/rockylinux:8
-RUN dnf -y update && dnf -y install rpm-build cmake make gcc-c++ wget sqlite-devel boost-devel zlib-devel
+FROM rockylinux/rockylinux:9
+RUN dnf -y update && dnf -y install rpm-build cmake make gcc-c++ wget sqlite-devel boost-devel zlib-devel systemd-units
+RUN mkdir /rapidjson && pushd /rapidjson && \
+	wget -O rapidjson.tar.gz https://github.com/miloyip/rapidjson/archive/v1.1.0.tar.gz && \
+	echo "badd12c511e081fec6c89c43a7027bce  rapidjson.tar.gz" | md5sum -c && \
+	tar xzf rapidjson.tar.gz && \
+	cd rapidjson-1.1.0 && \
+	cmake -DRAPIDJSON_BUILD_EXAMPLES=off . && \
+	make install && \
+	popd && rm -rf /rapidjson
+RUN mkdir /capnproto && pushd /capnproto && \
+	wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/v1.5.0.tar.gz && \
+	echo "cd64102577a89714b9d58494a7e34cee  capnproto.tar.gz" | md5sum -c && \
+	tar xzf capnproto.tar.gz && \
+	cd capnproto-1.5.0/c++ && \
+	cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off . && \
+	make -j4 && \
+	make install && \
+	popd && rm -rf /capnproto
 EOS
 )
 
 docker run --rm -i -v $SOURCE_DIR:/root/rpmbuild/SOURCES/laminar-$VERSION:ro -v $OUTPUT_DIR:/output $DOCKER_TAG bash -xe <<EOS
-mkdir /build
-cd /build
-
-wget -O capnproto.tar.gz https://github.com/capnproto/capnproto/archive/v0.7.0.tar.gz
-wget -O rapidjson.tar.gz https://github.com/miloyip/rapidjson/archive/v1.1.0.tar.gz
-md5sum -c <<EOF
-a9de5f042f4cf05515c2d7dfc7f5df21  capnproto.tar.gz
-badd12c511e081fec6c89c43a7027bce  rapidjson.tar.gz
-EOF
-
-tar xzf capnproto.tar.gz
-tar xzf rapidjson.tar.gz
-
-cd /build/capnproto-0.7.0/c++/
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off .
-make -j4
-make install
-
-cd /build/rapidjson-1.1.0/
-cmake -DRAPIDJSON_BUILD_EXAMPLES=off .
-make install
-
 cd
 cat <<EOF > laminar.spec
 Summary: Lightweight Continuous Integration Service

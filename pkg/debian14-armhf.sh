@@ -8,7 +8,7 @@ VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream
 
 DOCKER_TAG=$(docker build -q - <<EOS
 FROM debian:forky-slim
-RUN apt-get update && apt-get install -y wget cmake g++ capnproto libcapnp-dev rapidjson-dev libsqlite3-dev libboost-dev zlib1g-dev pkg-config
+RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y wget cmake pkg-config crossbuild-essential-armhf capnproto libcapnp-dev:armhf rapidjson-dev:armhf libsqlite3-dev:armhf libboost-dev:armhf zlib1g-dev:armhf
 EOS
 )
 
@@ -17,7 +17,24 @@ docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output $DOCKER_TAG
 mkdir /build
 cd /build
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DLAMINAR_VERSION=$VERSION -DZSH_COMPLETIONS_DIR=/usr/share/zsh/functions/Completion/Unix /laminar
+cat > toolchain.cmake <<\EOF
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+set(CMAKE_PREFIX_PATH /usr/lib/arm-linux-gnueabihf)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(ENV{PKG_CONFIG_PATH} "/usr/lib/arm-linux-gnueabihf/pkgconfig")
+EOF
+
+cd /build
+cmake \
+	-DCMAKE_TOOLCHAIN_FILE=toolchain.cmake \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DLAMINAR_VERSION=$VERSION \
+	-DZSH_COMPLETIONS_DIR=/usr/share/zsh/functions/Completion/Unix \
+	/laminar
 make -j4
 mkdir laminar
 make DESTDIR=laminar install/strip
@@ -28,7 +45,7 @@ Package: laminar
 Version: $VERSION
 Section: 
 Priority: optional
-Architecture: amd64
+Architecture: armhf
 Maintainer: Oliver Giles <web ohwg net>
 Depends: libcapnp-1.1.0, libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
@@ -44,5 +61,5 @@ EOF
 chmod +x laminar/DEBIAN/postinst
 
 dpkg-deb --build laminar
-mv laminar.deb /output/laminar_${VERSION}_amd64.deb
+mv laminar.deb /output/laminar_${VERSION}_armhf.deb
 EOS

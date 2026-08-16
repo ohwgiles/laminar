@@ -4,10 +4,10 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~upstream_suse_leap_15.6
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty | tr - .)~upstream_opensuse16
 
 DOCKER_TAG=$(docker build -q - <<EOS
-FROM opensuse/leap:latest
+FROM opensuse/leap:16
 RUN zypper --non-interactive refresh && zypper --non-interactive update && zypper --non-interactive install -y rpm-build cmake make gcc-c++ wget sqlite3-devel boost-devel zlib-devel capnproto libcapnp-devel rapidjson-devel
 EOS
 )
@@ -17,7 +17,6 @@ docker run --rm -i -v $SOURCE_DIR:/usr/src/packages/SOURCES/laminar-$VERSION:ro 
 mkdir /build
 cd /build
 
-cd
 cat <<EOF > laminar.spec
 Summary: Lightweight Continuous Integration Service
 Name: laminar

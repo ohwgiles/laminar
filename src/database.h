@@ -125,6 +125,7 @@ private:
         void bindValue(int i, uint e);
         void bindValue(int i, long e);
         void bindValue(int i, unsigned long e);
+        void bindValue(int i, long long e);
         void bindValue(int i, const char* e);
         void bindValue(int i, const std::string& e);
 

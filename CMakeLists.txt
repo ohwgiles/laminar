@@ -152,6 +152,10 @@ include_directories(${CAPNP_INCLUDE_DIRS})
 find_package(SQLite3 REQUIRED)
 include_directories(${SQLite3_INCLUDE_DIRS})
 
+if(NOT TARGET SQLite3::SQLite3) # CMake < 4.3
+  add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+endif()
+
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 

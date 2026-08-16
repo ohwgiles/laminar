@@ -4,11 +4,11 @@ OUTPUT_DIR=$PWD
 
 SOURCE_DIR=$(readlink -f $(dirname ${BASH_SOURCE[0]})/..)
 
-VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian11
+VERSION=$(cd "$SOURCE_DIR" && git describe --tags --abbrev=8 --dirty)-1~upstream-debian13
 
 DOCKER_TAG=$(docker build -q - <<EOS
-FROM debian:11-slim
-RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y wget cmake crossbuild-essential-armhf capnproto libcapnp-dev:armhf rapidjson-dev libsqlite3-dev:armhf libboost-dev:armhf zlib1g-dev:armhf
+FROM debian:13-slim
+RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y wget cmake pkg-config crossbuild-essential-armhf capnproto libcapnp-dev:armhf rapidjson-dev:armhf libsqlite3-dev:armhf libboost-dev:armhf zlib1g-dev:armhf
 EOS
 )
 
@@ -17,18 +17,19 @@ docker run --rm -i -v $SOURCE_DIR:/laminar:ro -v $OUTPUT_DIR:/output $DOCKER_TAG
 mkdir /build
 cd /build
 
-cat > toolchain.cmake <<EOF
-SET(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
-SET(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
-set(CMAKE_LIBRARY_ARCHITECTURE arm-linux-gnueabihf)
+cat > toolchain.cmake <<\EOF
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+set(CMAKE_PREFIX_PATH /usr/lib/arm-linux-gnueabihf)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(ENV{PKG_CONFIG_PATH} "/usr/lib/arm-linux-gnueabihf/pkgconfig")
 EOF
 
 cd /build
 cmake \
 	-DCMAKE_TOOLCHAIN_FILE=toolchain.cmake \
-	-DCMAKE_LINKER=/usr/bin/arm-linux-gnueabihf-ld \
-	-DCMAKE_OBJCOPY=/usr/bin/arm-linux-gnueabihf-objcopy \
-	-DCMAKE_STRIP=/usr/bin/arm-linux-gnueabihf-strip \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_INSTALL_PREFIX=/usr \
 	-DLAMINAR_VERSION=$VERSION \
@@ -46,7 +47,7 @@ Section:
 Priority: optional
 Architecture: armhf
 Maintainer: Oliver Giles <web ohwg net>
-Depends: libcapnp-0.7.0, libsqlite3-0, zlib1g
+Depends: libcapnp-1.0.1, libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 echo /etc/laminar.conf > laminar/DEBIAN/conffiles
