@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <fnmatch.h>
 #include <fstream>
+#include <cstdlib>
 #include <zlib.h>
 
 #define COMPRESS_LOG_MIN_SIZE 1024
@@ -872,6 +873,7 @@ R"x(
         return false;
 
     badge = svg;
+    std::free(svg);
     return true;
 }
 
