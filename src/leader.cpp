@@ -34,6 +34,8 @@
 
 #include "run.h"
 
+const int SET_ENV_BUF_SIZE = 1024;
+
 // short syntax helper for kj::Path
 template<typename T>
 inline kj::Path operator/(const kj::Path& p, const T& ext) {
@@ -131,7 +133,7 @@ Leader::Leader(kj::AsyncIoContext &ioContext, kj::Filesystem &fs, const char *jo
 
     LSYSCALL(pipe(setEnvPipe));
     auto event = ioContext.lowLevelProvider->wrapInputFd(setEnvPipe[0], kj::LowLevelAsyncIoProvider::TAKE_OWNERSHIP);
-    auto buffer = kj::heapArrayBuilder<char>(1024);
+    auto buffer = kj::heapArrayBuilder<char>(SET_ENV_BUF_SIZE);
     tasks.add(readEnvPipe(event, buffer.asPtr().begin()).attach(kj::mv(event), kj::mv(buffer)));
 }
 
@@ -295,7 +297,7 @@ kj::Promise<void> Leader::reapChildProcesses()
 }
 
 kj::Promise<void> Leader::readEnvPipe(kj::AsyncInputStream *stream, char *buffer) {
-    return stream->tryRead(buffer, 1, 1024).then([this,stream,buffer](size_t sz) {
+    return stream->tryRead(buffer, 1, SET_ENV_BUF_SIZE - 1).then([this,stream,buffer](size_t sz) {
         if(sz > 0) {
             buffer[sz] = '\0';
             if(char* eq = strchr(buffer, '=')) {
