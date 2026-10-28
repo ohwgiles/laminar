@@ -47,7 +47,7 @@ Section:
 Priority: optional
 Architecture: armhf
 Maintainer: Oliver Giles <web ohwg net>
-Depends: libcapnp-1.1.0, libsqlite3-0, zlib1g
+Depends: libcapnp-1.5.0, libsqlite3-0, zlib1g
 Description: Lightweight Continuous Integration Service
 EOF
 echo /etc/laminar.conf > laminar/DEBIAN/conffiles
