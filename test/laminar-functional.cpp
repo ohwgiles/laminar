@@ -163,6 +163,18 @@ TEST_F(LaminarFixture, JobDescription) {
     EXPECT_STREQ("bar", data["description"].GetString());
 }
 
+TEST_F(LaminarFixture, JobPagesWithoutRuns) {
+    defineJob("foo", "true");
+    auto es = eventSource("/jobs/foo");
+    ioContext->waitScope.poll();
+    ASSERT_EQ(1, es->messages().size());
+    auto json = es->messages().front().GetObject();
+    ASSERT_TRUE(json.HasMember("data"));
+    auto data = json["data"].GetObject();
+    ASSERT_TRUE(data.HasMember("pages"));
+    EXPECT_EQ(1, data["pages"].GetInt());
+}
+
 TEST_F(LaminarFixture, QueueFront) {
     setNumExecutors(0);
     defineJob("foo", "true");

@@ -307,7 +307,7 @@ std::string Laminar::getStatus(MonitorScope scope) {
         .bind(scope.job)
         .fetch<uint,uint>([&](uint nRuns, uint averageRuntime){
             j.set("averageRuntime", averageRuntime);
-            j.set("pages", (nRuns-1) / runsPerPage + 1);
+            j.set("pages", nRuns ? (nRuns-1) / runsPerPage + 1 : 1);
             j.startObject("sort");
             j.set("page", scope.page)
              .set("field", scope.field)
